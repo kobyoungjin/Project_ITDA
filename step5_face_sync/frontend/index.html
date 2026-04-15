@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>잇다(ITDA) — 5단계: 얼굴 표정 + 손동작 동기화</title>
+  <meta name="description" content="MediaPipe FaceLandmarker + Hands로 수어 비수지 기호(표정)와 수지 동작(손)을 3D 아바타에 실시간 동기화 — 잇다 프로젝트 5단계" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── 루트 변수 ────────────────────────────────────── */
+    :root {
+      --bg-deep:    #050810;
+      --bg-glass:   rgba(15, 23, 42, 0.75);
+      --bg-card:    rgba(15, 23, 42, 0.9);
+      --accent-cyan:   #00f2fe;
+      --accent-purple: #7c3aed;
+      --accent-green:  #00e6a0;
+      --accent-orange: #ff9f43;
+      --accent-pink:   #ff6baf;
+      --text-main:  #f8fafc;
+      --text-muted: #94a3b8;
+      --border:     rgba(255, 255, 255, 0.08);
+      --shadow-lg:  0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 배경 그라디언트 */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 50% 60% at 15% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 85% 80%, rgba(0, 242, 254, 0.10) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── 헤더 ─────────────────────────────────────────── */
+    header {
+      position: relative; z-index: 10;
+      padding: 0.85rem 1.5rem;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 1.15rem; font-weight: 800; letter-spacing: -0.04em;
+    }
+    .logo-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+    .logo em { color: var(--accent-cyan); font-style: normal; }
+
+    .header-right { display: flex; align-items: center; gap: 0.6rem; }
+    .badge {
+      padding: 0.2rem 0.65rem; border-radius: 99px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+    }
+    .badge-step   { background: rgba(124,58,237,.2); color: #c4b5fd; border: 1px solid rgba(124,58,237,.3); }
+    .badge-status { background: rgba(0,242,254,.1);  color: var(--accent-cyan); border: 1px solid rgba(0,242,254,.25); }
+
+    /* ── 메인 레이아웃 ────────────────────────────────── */
+    main {
+      flex: 1; position: relative; z-index: 1; overflow: hidden;
+      display: flex;
+    }
+
+    /* ── Three.js 캔버스 ─────────────────────────────── */
+    #three-canvas {
+      flex: 1; display: block;
+    }
+
+    /* ── 웹캠 PIP ─────────────────────────────────────── */
+    #cam-pip {
+      position: absolute;
+      top: 1.2rem; right: 1.2rem;
+      width: 240px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      background: #000;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    #cam-pip:hover { border-color: var(--accent-cyan); transform: scale(1.03); }
+    #cam-pip video { width: 100%; display: block; transform: scaleX(-1); aspect-ratio: 4/3; object-fit: cover; }
+    #vision-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      transform: scaleX(-1); /* Mirror as video */
+    }
+    .pip-label {
+      position: absolute; top: 0.5rem; left: 0.5rem;
+      background: rgba(0,0,0,.6);
+      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; color: #fff;
+      z-index: 5;
+    }
+
+    /* ── HUD 왼쪽 상단 ────────────────────────────────── */
+    .hud {
+      position: absolute; top: 1.2rem; left: 1.2rem;
+      display: flex; flex-direction: column; gap: 0.4rem;
+      pointer-events: none;
+    }
+    .hud-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-cyan);
+      background: rgba(5, 8, 16, 0.65);
+      padding: 3px 10px; border-radius: 6px;
+      border: 1px solid rgba(0,242,254,.15);
+    }
+
+    /* ── 감정 패널 (하단 왼쪽) ───────────────────────── */
+    #emotion-panel {
+      position: absolute;
+      bottom: 5.5rem; left: 1.2rem;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.2rem;
+      width: 220px;
+      display: flex; flex-direction: column; gap: 0.65rem;
+      box-shadow: var(--shadow-lg);
+    }
+    .emotion-title {
+      font-size: 0.65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-muted); margin-bottom: 0.1rem;
+    }
+    .emotion-row { display: flex; flex-direction: column; gap: 0.25rem; }
+    .emotion-label {
+      font-size: 0.72rem; color: var(--text-muted);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .emotion-label span { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; }
+    .emotion-bar-bg {
+      height: 6px; background: rgba(255,255,255,.06);
+      border-radius: 99px; overflow: hidden;
+    }
+    .emotion-bar {
+      height: 100%; border-radius: 99px; width: 0%;
+      font-size: 0.55rem; color: transparent; /* bar text via JS */
+      transition: width 0.1s ease-out;
+    }
+    #bar-angry     { background: linear-gradient(90deg, #ff4757, #ff6baf); }
+    #bar-surprised { background: linear-gradient(90deg, #ffd93d, #ff9f43); }
+    #bar-sad       { background: linear-gradient(90deg, #4a90d9, #7c3aed); }
+
+    /* ── 번역 패널 (하단 중앙) ───────────────────────── */
+    #translation-panel {
+      position: absolute;
+      bottom: 1.2rem; left: 50%;
+      transform: translateX(-50%);
+      width: 72%; max-width: 700px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.1rem 1.5rem;
+      box-shadow: var(--shadow-lg);
+      display: flex; gap: 2rem; align-items: flex-start;
+    }
+    .t-group { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+    .t-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+    .t-output { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+    .t-output em { color: var(--accent-cyan); font-style: normal; border-bottom: 2px solid currentColor; }
+    .t-emotion-badge {
+      display: inline-block;
+      margin-left: 0.5rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
+    /* ── 컨트롤 (하단 우측) ───────────────────────────── */
+    .controls {
+      position: absolute; bottom: 1.2rem; right: 1.2rem;
+      display: flex; flex-direction: column; gap: 0.6rem;
+    }
+    .btn-circle {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: white; font-size: 1.15rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-circle:hover {
+      background: var(--accent-purple);
+      border-color: transparent;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
+    }
+
+    /* ── 비전 상태 오버레이 ──────────────────────────── */
+    #vision-overlay {
+      position: absolute; inset: 0;
+      background: rgba(5,8,16,.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1rem; z-index: 50;
+      transition: opacity 0.5s;
+    }
+    #vision-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loading-spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(0,242,254,.15);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.9rem; color: var(--text-muted); }
+    #vision-status { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-cyan); }
+
+    /* ── 모델 로드 완료 인디케이터 ────────────────────── */
+    #model-status {
+      position: absolute; top: 1.2rem; left: 50%; transform: translateX(-50%);
+      background: rgba(0,230,160,.1);
+      border: 1px solid rgba(0,230,160,.3);
+      border-radius: 99px;
+      padding: 3px 14px;
+      font-size: 0.7rem; color: var(--accent-green);
+      font-weight: 600; letter-spacing: 0.05em;
+      opacity: 0; transition: opacity 0.5s;
+    }
+    #model-status.loaded { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- ── 헤더 ──────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">✋</div>
+      ITDA <em>SIGN</em>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-step">STEP 5</span>
+      <span class="badge badge-status" id="phase-badge">표정 동기화 · 초기화 중…</span>
+    </div>
+  </header>
+
+  <!-- ── 메인 ──────────────────────────────────────────── -->
+  <main>
+    <!-- Three.js 캔버스 -->
+    <canvas id="three-canvas"></canvas>
+
+    <!-- 모델 로드 완료 배지 -->
+    <div id="model-status">🤖 RobotExpressive — LOADED</div>
+
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hud-item" id="fps-display">FPS: --</div>
+      <div class="hud-item" id="joint-status">Joints: LOADING</div>
+    </div>
+
+    <!-- 웹캠 PIP -->
+    <div id="cam-pip">
+      <div class="pip-label">📷 실시간 카메라</div>
+      <video id="vision-video" autoplay muted playsinline></video>
+      <canvas id="vision-canvas"></canvas>
+    </div>
+
+    <!-- 감정 패널 -->
+    <div id="emotion-panel">
+      <div class="emotion-title">🎭 감정 분석 (비수지 기호)</div>
+
+      <div class="emotion-row">
+        <div class="emotion-label">😠 분노 (Angry) <span id="pct-angry">0%</span></div>
+        <div class="emotion-bar-bg">
+          <div class="emotion-bar" id="emotion-angry" id="bar-angry"
+               style="background: linear-gradient(90deg,#ff4757,#ff6baf)"></div>
+        </div>
+      </div>
+
+      <div class="emotion-row">
+        <div class="emotion-label">😲 놀람 (Surprised) <span id="pct-surprised">0%</span></div>
+        <div class="emotion-bar-bg">
+          <div class="emotion-bar" id="emotion-surprised"
+               style="background: linear-gradient(90deg,#ffd93d,#ff9f43)"></div>
+        </div>
+      </div>
+
+      <div class="emotion-row">
+        <div class="emotion-label">😢 슬픔 (Sad) <span id="pct-sad">0%</span></div>
+        <div class="emotion-bar-bg">
+          <div class="emotion-bar" id="emotion-sad"
+               style="background: linear-gradient(90deg,#4a90d9,#7c3aed)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 번역 패널 (하단) -->
+    <div id="translation-panel">
+      <div class="t-group">
+        <div class="t-label">손 동작 인식 (Hands)</div>
+        <div class="t-output" id="hand-output">손을 카메라 앞에 올려주세요 ✋</div>
+      </div>
+      <div class="t-group">
+        <div class="t-label">표정 + 감정 출력</div>
+        <div class="t-output" id="emotion-output">
+          <em>대기 중...</em>
+        </div>
+      </div>
+    </div>
+
+    <!-- 컨트롤 버튼 -->
+    <div class="controls">
+      <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
+      <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
+    </div>
+
+    <!-- 비전 로딩 오버레이 -->
+    <div id="vision-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">MediaPipe 모델 로딩 중...</div>
+      <div id="vision-status">초기화 준비 중</div>
+    </div>
+  </main>
+
+  <!-- ── Three.js Import Map ─────────────────────────── -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three":          "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/":  "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <!-- ── 모듈 로딩 순서: avatar → retargeting → vision ── -->
+  <script type="module" src="./js/avatar.js"></script>
+  <script type="module" src="./js/retargeting.js"></script>
+  <script type="module" src="./js/vision.js"></script>
+
+  <!-- ── UI 제어 스크립트 ────────────────────────────── -->
+  <script type="module">
+    // MediaPipe 준비 완료 → 로딩 오버레이 해제
+    window.addEventListener('itda:vision:ready', () => {
+      document.getElementById('vision-overlay').classList.add('hidden');
+      document.getElementById('phase-badge').textContent = '✅ 얼굴 + 손동작 동기화 중';
+    });
+
+    // 아바타 준비 완료 알림
+    window.addEventListener('itda:avatar:ready', () => {
+      document.getElementById('phase-badge').textContent = '표정 동기화 · 모델 로드 완료';
+    });
+
+    // 감정 Morph Target 값을 HUD 퍼센트에 반영
+    window.addEventListener('itda:face:results', (e) => {
+      const bs = e.detail.blendshapes;
+      const bsMap = Object.fromEntries(bs.map(b => [b.categoryName, b.score]));
+
+      // 주요 Blendshape 값 → 감정 표시
+      const angry     = ((bsMap.browLowererLeft ?? 0) + (bsMap.browLowererRight ?? 0)) / 2;
+      const surprised = ((bsMap.eyeWideLeft    ?? 0) + (bsMap.eyeWideRight    ?? 0) + (bsMap.jawOpen ?? 0)) / 3;
+      const sad       = ((bsMap.mouthFrownLeft ?? 0) + (bsMap.mouthFrownRight ?? 0) + (bsMap.browInnerUp ?? 0)) / 3;
+
+      updateEmotionBar('angry',     angry);
+      updateEmotionBar('surprised', surprised);
+      updateEmotionBar('sad',       sad);
+
+      // 주요 감정 결정
+      const dominant = [
+        { name: '분노 😠', value: angry,     color: '#ff4757', label: 'Angry'     },
+        { name: '놀람 😲', value: surprised,  color: '#ffd93d', label: 'Surprised' },
+        { name: '슬픔 😢', value: sad,        color: '#4a90d9', label: 'Sad'       },
+      ].reduce((a, b) => a.value > b.value ? a : b);
+
+      const emotionEl = document.getElementById('emotion-output');
+      if (dominant.value > 0.08) {
+        emotionEl.innerHTML = `<em style="color:${dominant.color};border-color:${dominant.color}">${dominant.name}</em>
+          <span class="t-emotion-badge" style="background:${dominant.color}22;color:${dominant.color};border:1px solid ${dominant.color}44">
+            ${(dominant.value * 100).toFixed(0)}%
+          </span>`;
+      } else {
+        emotionEl.innerHTML = '<em>중립 😐</em>';
+      }
+    });
+
+    // 손 감지 수 업데이트
+    window.addEventListener('itda:hands:results', (e) => {
+      const count = e.detail.hands.length;
+      document.getElementById('hand-output').textContent =
+        count > 0 ? `${count}개 손 감지됨 — 수어 동작 분석 중 🤝` : '손을 카메라 앞에 올려주세요 ✋';
+    });
+
+    // FPS HUD
+    window.addEventListener('itda:fps:update', (e) => {
+      document.getElementById('fps-display').textContent = `FPS: ${e.detail.fps.toFixed(0)}`;
+    });
+
+    function updateEmotionBar(emotion, value) {
+      const clipped = Math.min(1, Math.max(0, value));
+      const pct = (clipped * 100).toFixed(1);
+      const barEl = document.getElementById(`emotion-${emotion}`);
+      const pctEl = document.getElementById(`pct-${emotion}`);
+      if (barEl) barEl.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = Math.round(parseFloat(pct)) + '%';
+    }
+
+    // 컨트롤 버튼
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      window.ITDAAvatar5?.reset();
+    });
+
+    document.getElementById('btn-cam').addEventListener('click', () => {
+      // OrbitControls target 초기화는 avatar.js 내부이므로 페이지 재로드로 대체
+      window.location.reload();
+    });
+
+    // 자동 시작
+    window.ITDAVision5?.init();
+  </script>
+
+</body>
+</html>
