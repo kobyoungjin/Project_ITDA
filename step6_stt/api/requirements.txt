@@ -1,0 +1,22 @@
+# 6+9단계 STT + 오디오 분석 서버 의존성
+# pip install -r requirements.txt
+
+# ── 웹 서버 ───────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.0.0
+python-multipart>=0.0.9
+
+# ── Whisper STT ───────────────────────────────
+# faster-whisper: openai-whisper 대비 CPU에서 4배 빠름
+faster-whisper>=1.0.0
+
+# ── 9단계: 오디오 분석 ────────────────────────
+librosa>=0.10.0       # 오디오 특징 추출 (ZCR, 스펙트럼, 에너지)
+soundfile>=0.12.0     # 오디오 파일 I/O
+numpy>=1.24.0         # 수치 연산
+
+# ── 오디오 처리 (ffmpeg 필요) ─────────────────
+# Windows: winget install ffmpeg
+# Mac:     brew install ffmpeg
+# Ubuntu:  apt install ffmpeg

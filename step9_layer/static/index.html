@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>잇다(ITDA) — 9단계: 오디오 분석 + 실시간 레이어링</title>
+  <meta name="description" content="오디오 분석 + 수어 데이터를 영상 위에 실시간 레이어링" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:    #060A18;
+      --bg-card:    #0F172A;
+      --bg-glass:   rgba(15, 23, 42, 0.75);
+      --border:     rgba(255, 255, 255, 0.08);
+      --accent:     #00FFB3;
+      --accent2:    #7C3AED;
+      --accent3:    #FF6B6B;
+      --accent4:    #FBBF24;
+      --text-main:  #F1F5F9;
+      --text-muted: #94A3B8;
+      --radius-md:  10px;
+    }
+
+    html, body { height: 100%; font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg-deep); color: var(--text-main); overflow: hidden; }
+
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 55% 40% at 15% 25%, rgba(0,255,179,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 55% at 85% 75%, rgba(124,58,237,0.08) 0%, transparent 60%);
+    }
+
+    .app {
+      position: relative; z-index: 1;
+      display: grid; grid-template-rows: auto 1fr auto; height: 100vh;
+    }
+
+    /* ── 헤더 ─────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--bg-glass); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent4), var(--accent2));
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .logo-text { font-size: 1.05rem; font-weight: 700; }
+    .logo-sub  { font-size: 0.70rem; color: var(--text-muted); margin-top: 1px; }
+    .header-badges { display: flex; gap: 8px; align-items: center; }
+    .badge {
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.70rem; font-weight: 600;
+    }
+    .badge-step  { background: rgba(251,191,36,0.15); color: var(--accent4); border: 1px solid rgba(251,191,36,0.3); }
+    .badge-ws    { background: rgba(0,255,179,0.1);   color: var(--accent);  border: 1px solid rgba(0,255,179,0.25); }
+    .badge-ws.off{ background: rgba(255,107,107,0.1); color: var(--accent3); border-color: rgba(255,107,107,0.25); }
+
+    /* ── 메인 2-칼럼 ─────────────────────────────────────── */
+    main {
+      display: grid; grid-template-columns: 280px 1fr; overflow: hidden;
+    }
+
+    /* ── 좌측 제어 패널 ──────────────────────────────────── */
+    .ctrl-panel {
+      background: var(--bg-card); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 14px;
+      overflow-y: auto; padding: 16px;
+    }
+    .section {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px;
+    }
+    .section-title {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.09em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+
+    /* 버튼 */
+    .btn {
+      width: 100%; padding: 10px; border: none; border-radius: var(--radius-md);
+      font-family: inherit; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-start {
+      background: linear-gradient(135deg, var(--accent4), #F59E0B); color: #060A18;
+    }
+    .btn-start:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 0 16px rgba(251,191,36,0.35); }
+    .btn-stop {
+      background: rgba(255,107,107,0.15); color: var(--accent3);
+      border: 1px solid rgba(255,107,107,0.3);
+    }
+
+    /* 소스 탭 */
+    .source-tabs { display: flex; gap: 6px; }
+    .source-tab {
+      flex: 1; padding: 8px 4px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); font-family: inherit; font-size: 0.78rem;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .source-tab.active {
+      background: rgba(251,191,36,0.12); border-color: var(--accent4);
+      color: var(--accent4); font-weight: 700;
+    }
+
+    /* 오디오 미터 */
+    .meter-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+    .meter-label { font-size: 0.63rem; color: var(--text-muted); width: 26px; text-align: right; flex-shrink: 0; }
+    .meter-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .meter-fill { height: 100%; border-radius: 3px; transition: width 0.18s ease; }
+    .meter-fill.energy { background: linear-gradient(90deg, var(--accent), #FF6B6B); }
+    .meter-fill.bass   { background: linear-gradient(90deg, #7C3AED, #A78BFA); }
+    .meter-fill.mid    { background: linear-gradient(90deg, #00FFB3, #00CFA8); }
+    .meter-fill.high   { background: linear-gradient(90deg, #FBBF24, #F59E0B); }
+
+    .sound-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.70rem; font-weight: 700;
+      background: rgba(0,255,179,0.1); color: var(--accent);
+      border: 1px solid rgba(0,255,179,0.25); transition: all 0.3s;
+    }
+    .sound-badge.music   { background: rgba(251,191,36,0.1);  color: var(--accent4); border-color: rgba(251,191,36,0.25); }
+    .sound-badge.noise   { background: rgba(255,107,107,0.1); color: var(--accent3); border-color: rgba(255,107,107,0.25); }
+    .sound-badge.silence { background: rgba(148,163,184,0.08); color: var(--text-muted); border-color: var(--border); }
+
+    /* 연결 정보 */
+    .conn-info { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--text-muted); }
+    .conn-row  { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .conn-key  { color: var(--text-muted); }
+    .conn-val  { color: var(--accent); }
+
+    /* 안내 박스 */
+    .guide-box {
+      background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2);
+      border-radius: var(--radius-md); padding: 12px;
+      font-size: 0.76rem; color: #FCD34D; line-height: 1.7;
+    }
+    .guide-box strong { color: var(--accent4); }
+
+    /* ── 우측: 비디오 레이어 캔버스 ─────────────────────── */
+    .canvas-zone { position: relative; overflow: hidden; background: #000; }
+    #layer-canvas { display: block; width: 100%; height: 100%; }
+
+    /* 대기 오버레이 */
+    .canvas-waiting {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; background: #060A18; pointer-events: none;
+    }
+    .canvas-waiting.hidden { display: none; }
+    .wait-icon { font-size: 52px; opacity: 0.5; }
+    .wait-text { color: var(--text-muted); font-size: 0.9rem; text-align: center; }
+
+    /* ── 푸터 ─────────────────────────────────────────────── */
+    footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 24px;
+      background: var(--bg-glass); backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      font-size: 0.68rem; color: var(--text-muted);
+    }
+    .footer-left { display: flex; align-items: center; gap: 12px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.on  { background: var(--accent4); animation: blink 1.5s ease-in-out infinite; }
+    .status-dot.off { background: #374151; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .ctrl-panel { border-right: none; border-bottom: 1px solid var(--border); max-height: 260px; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+      .ctrl-panel .section { flex: 1 1 200px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── 헤더 ──────────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎬</div>
+      <div>
+        <div class="logo-text">잇다<span style="color:var(--text-muted);font-weight:300"> ITDA</span></div>
+        <div class="logo-sub">9단계 · 오디오 분석 + 영상 위 수어 실시간 레이어링</div>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-step">STEP 9</span>
+      <span class="badge badge-ws off" id="ws-badge">6단계 서버 미연결</span>
+    </div>
+  </header>
+
+  <!-- ── 메인 ──────────────────────────────────────────────── -->
+  <main>
+
+    <!-- 좌측 제어 패널 -->
+    <div class="ctrl-panel">
+
+      <!-- 오디오 소스 -->
+      <div class="section">
+        <div class="section-title">🎚 오디오 소스</div>
+        <div class="source-tabs">
+          <button class="source-tab active" id="tab-system" onclick="selectSource('system')">
+            🖥 시스템<br/><small style="font-weight:400;">유튜브·앱</small>
+          </button>
+          <button class="source-tab" id="tab-mic" onclick="selectSource('mic')">
+            🎤 마이크<br/><small style="font-weight:400;">내 목소리</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- 제어 -->
+      <div class="section">
+        <div class="section-title">▶ 제어</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <button class="btn btn-start" id="btn-start">▶ 레이어링 시작</button>
+          <button class="btn btn-stop"  id="btn-stop"  disabled>⏹ 중지</button>
+        </div>
+      </div>
+
+      <!-- 오디오 분석 -->
+      <div class="section">
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>🔊 오디오 분석</span>
+          <span class="sound-badge silence" id="sound-badge">🔇 silence</span>
+        </div>
+        <div>
+          <div class="meter-row">
+            <span class="meter-label">전체</span>
+            <div class="meter-bar"><div class="meter-fill energy" id="m-energy" style="width:0%"></div></div>
+          </div>
+          <div class="meter-row">
+            <span class="meter-label">저음</span>
+            <div class="meter-bar"><div class="meter-fill bass"   id="m-bass"   style="width:33%"></div></div>
+          </div>
+          <div class="meter-row">
+            <span class="meter-label">중음</span>
+            <div class="meter-bar"><div class="meter-fill mid"    id="m-mid"    style="width:34%"></div></div>
+          </div>
+          <div class="meter-row">
+            <span class="meter-label">고음</span>
+            <div class="meter-bar"><div class="meter-fill high"   id="m-high"   style="width:33%"></div></div>
+          </div>
+          <div style="margin-top:6px;font-size:0.68rem;color:var(--text-muted);">
+            감정 힌트: <span id="emotion-hint" style="color:var(--accent4);font-weight:700;">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 연결 정보 -->
+      <div class="section">
+        <div class="section-title">🔗 연결 정보</div>
+        <div class="conn-info">
+          <div class="conn-row"><span class="conn-key">6단계 서버</span><span class="conn-val" id="conn-url">—</span></div>
+          <div class="conn-row"><span class="conn-key">세션 ID</span>   <span class="conn-val" id="conn-sess">—</span></div>
+          <div class="conn-row"><span class="conn-key">처리 청크</span> <span class="conn-val" id="conn-chunks">0</span></div>
+          <div class="conn-row"><span class="conn-key">수어 단어</span> <span class="conn-val" id="conn-signs">0</span></div>
+        </div>
+      </div>
+
+      <!-- 안내 -->
+      <div class="guide-box">
+        <strong>사용 전 확인</strong><br/>
+        ① 6단계 서버가 <strong>포트 8000</strong>에서 실행 중이어야 합니다<br/>
+        ② "레이어링 시작" → 화면 공유 팝업에서<br/>
+        &nbsp;&nbsp;&nbsp;<strong>탭 선택 + 탭 오디오 공유 체크</strong><br/>
+        ③ 영상 위에 수어 버블이 자동으로 나타납니다
+      </div>
+
+    </div>
+
+    <!-- 우측: 비디오 레이어 캔버스 -->
+    <div class="canvas-zone">
+      <canvas id="layer-canvas"></canvas>
+      <div class="canvas-waiting" id="canvas-waiting">
+        <div class="wait-icon">🎬</div>
+        <div class="wait-text">
+          레이어링 시작 버튼을 누르면<br/>
+          영상 위에 수어 통역이 실시간으로 입혀집니다
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── 푸터 ──────────────────────────────────────────────── -->
+  <footer>
+    <div class="footer-left">
+      <div class="status-dot off" id="footer-dot"></div>
+      <span id="footer-status">대기 중 — 6단계 서버(포트 8000)가 실행 중인지 확인하세요</span>
+    </div>
+    <div>잇다(ITDA) · 9단계 · <span id="footer-time">00:00</span></div>
+  </footer>
+
+</div>
+
+<!-- ── 스크립트 ─────────────────────────────────────────────── -->
+<script src="./js/audio_capture.js"></script>
+<script src="./js/stt_client.js"></script>
+<script src="./js/audio_analyzer.js"></script>
+<script src="./js/video_layer.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  ITDA 9단계 — 메인 진입점
+//  AudioCapture(keepVideo) → VideoLayer + BrowserAudioAnalyzer
+//  STTClient → 6단계 서버에서 수어 데이터 수신
+// ═══════════════════════════════════════════════════════════════
+
+// 6단계 서버 WebSocket URL (같은 네트워크에서 서비스)
+const STEP6_WS = `ws://${location.hostname}:8000/api/ws/stt`;
+
+// ── 인스턴스 ──────────────────────────────────────────────────
+const videoLayer = new VideoLayer({ canvas: document.getElementById('layer-canvas') });
+const client     = new STTClient({ wsUrl: STEP6_WS });
+let   browserAnalyzer = null;
+let   selectedSource  = 'system';
+let   timerInterval   = null;
+let   totalChunks = 0, totalSigns = 0;
+
+const capture = new AudioCapture({
+  chunkMs:   2000,
+  keepVideo: true,           // 9단계 핵심: 비디오 트랙 유지
+  onChunk:   (blob, meta) => client.sendChunk(blob, meta),
+  onStateChange: (state) => {
+    if (state === 'capturing') {
+      document.getElementById('canvas-waiting').classList.add('hidden');
+      setStatus('🔴 레이어링 중', true);
+      videoLayer.attachStream(capture.mediaStream);
+      // 브라우저 실시간 오디오 분석 시작
+      browserAnalyzer = new BrowserAudioAnalyzer({ stream: capture.mediaStream });
+      browserAnalyzer.start();
+    }
+    if (state === 'idle') {
+      document.getElementById('canvas-waiting').classList.remove('hidden');
+      setStatus('⏹ 중지됨', false);
+      if (browserAnalyzer) { browserAnalyzer.stop(); browserAnalyzer = null; }
+    }
+    if (state === 'error') setStatus('❌ 오류 — 화면 공유 권한을 확인해 주세요', false);
+  },
+});
+
+// ── UI 요소 ───────────────────────────────────────────────────
+const btnStart = document.getElementById('btn-start');
+const btnStop  = document.getElementById('btn-stop');
+const wsBadge  = document.getElementById('ws-badge');
+
+document.getElementById('conn-url').textContent  = STEP6_WS;
+document.getElementById('conn-sess').textContent = client.sessionId;
+
+// ── 소스 선택 ─────────────────────────────────────────────────
+function selectSource(src) {
+  selectedSource = src;
+  document.getElementById('tab-system').classList.toggle('active', src === 'system');
+  document.getElementById('tab-mic').classList.toggle('active',    src === 'mic');
+}
+
+// ── 시작 ─────────────────────────────────────────────────────
+btnStart.addEventListener('click', async () => {
+  btnStart.disabled = true;
+  btnStart.innerHTML = '⏳ 연결 중...';
+  try {
+    client.connect();
+    await capture.start(selectedSource);
+    videoLayer.start();
+    btnStop.disabled  = false;
+    btnStart.innerHTML = '▶ 레이어링 시작';
+    startTimer();
+  } catch (err) {
+    btnStart.disabled = false;
+    btnStart.innerHTML = '▶ 레이어링 시작';
+    alert('시작 실패:\n' + err.message);
+  }
+});
+
+// ── 중지 ─────────────────────────────────────────────────────
+btnStop.addEventListener('click', () => {
+  capture.stop();
+  client.disconnect();
+  videoLayer.stop();
+  if (browserAnalyzer) { browserAnalyzer.stop(); browserAnalyzer = null; }
+  btnStop.disabled  = true;
+  btnStart.disabled = false;
+  stopTimer();
+  setStatus('⏹ 중지됨', false);
+});
+
+// ── WS 상태 ───────────────────────────────────────────────────
+window.addEventListener('itda:ws:open',  () => {
+  wsBadge.textContent = '6단계 서버 연결됨';
+  wsBadge.classList.remove('off');
+});
+window.addEventListener('itda:ws:close', () => {
+  wsBadge.textContent = '6단계 서버 미연결';
+  wsBadge.classList.add('off');
+});
+
+// ── STT 텍스트 (자막용) ───────────────────────────────────────
+window.addEventListener('itda:stt:text', (e) => {
+  totalChunks++;
+  document.getElementById('conn-chunks').textContent = totalChunks;
+});
+
+// ── 수어 결과 (버블용) ────────────────────────────────────────
+window.addEventListener('itda:stt:sign', (e) => {
+  totalSigns += (e.detail.sign_terms || []).length;
+  document.getElementById('conn-signs').textContent = totalSigns;
+});
+
+// ── 오디오 분석 → 미터 UI ─────────────────────────────────────
+window.addEventListener('itda:audio:analysis', (e) => {
+  const { energy, bands, sound_type, emotion_hint } = e.detail;
+  document.getElementById('m-energy').style.width = `${Math.round(energy * 100)}%`;
+  document.getElementById('m-bass').style.width   = `${Math.round((bands.bass || 0) * 100)}%`;
+  document.getElementById('m-mid').style.width    = `${Math.round((bands.mid  || 0) * 100)}%`;
+  document.getElementById('m-high').style.width   = `${Math.round((bands.high || 0) * 100)}%`;
+
+  const icons = { speech:'🗣', music:'🎵', noise:'📢', silence:'🔇' };
+  const badge = document.getElementById('sound-badge');
+  badge.textContent = `${icons[sound_type] || '🔇'} ${sound_type}`;
+  badge.className   = `sound-badge ${sound_type}`;
+  document.getElementById('emotion-hint').textContent = emotion_hint || '—';
+});
+
+// ── 타이머 ────────────────────────────────────────────────────
+function startTimer() {
+  const start = Date.now();
+  timerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - start) / 1000);
+    document.getElementById('footer-time').textContent =
+      `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('footer-time').textContent = '00:00';
+}
+
+// ── 푸터 상태 ─────────────────────────────────────────────────
+function setStatus(msg, active) {
+  document.getElementById('footer-status').textContent = msg;
+  document.getElementById('footer-dot').className = 'status-dot ' + (active ? 'on' : 'off');
+}
+</script>
+</body>
+</html>

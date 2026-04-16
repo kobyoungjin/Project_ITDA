@@ -1,0 +1,12 @@
+# 9단계 오디오 분석 서버 의존성
+# pip install -r requirements.txt
+
+# ── 오디오 분석 ───────────────────────────────
+librosa>=0.10.0       # 오디오 특징 추출 (ZCR, 스펙트럼, 에너지)
+soundfile>=0.12.0     # 오디오 파일 I/O
+numpy>=1.24.0         # 수치 연산
+
+# ── ffmpeg 필요 (librosa 내부 사용) ──────────
+# Windows: winget install ffmpeg
+# Mac:     brew install ffmpeg
+# Ubuntu:  apt install ffmpeg

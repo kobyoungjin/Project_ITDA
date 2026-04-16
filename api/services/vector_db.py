@@ -4,6 +4,9 @@ from sentence_transformers import SentenceTransformer
 import os
 import json
 
+import tempfile
+import shutil
+
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss.index")
 METADATA_PATH = os.path.join(DATA_DIR, "metadata.json")
@@ -22,7 +25,12 @@ class VectorDB:
         # 캐시 파일이 있으면 오프라인 로드 (서버 재시작 최적화)
         if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(METADATA_PATH):
             try:
-                self.index = faiss.read_index(FAISS_INDEX_PATH)
+                fd, temp_path = tempfile.mkstemp(suffix=".index")
+                os.close(fd)
+                shutil.copy2(FAISS_INDEX_PATH, temp_path)
+                self.index = faiss.read_index(temp_path)
+                os.remove(temp_path)
+                
                 with open(METADATA_PATH, "r", encoding="utf-8") as f:
                     self.metadata = json.load(f)
                 print(f"[VectorDB] 오프라인 캐시 로드 성공 ({self.index.ntotal} vectors)")
@@ -45,7 +53,16 @@ class VectorDB:
         
     def save_local(self):
         """FAISS와 메타데이터를 로컬 디스크에 저장(캐싱)"""
-        faiss.write_index(self.index, FAISS_INDEX_PATH)
+        fd, temp_path = tempfile.mkstemp(suffix=".index")
+        os.close(fd)
+        
+        try:
+            faiss.write_index(self.index, temp_path)
+            shutil.copy2(temp_path, FAISS_INDEX_PATH)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
         with open(METADATA_PATH, "w", encoding="utf-8") as f:
             json.dump(self.metadata, f, ensure_ascii=False, indent=2)
         
