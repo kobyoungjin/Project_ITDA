@@ -33,9 +33,27 @@
       background: var(--bg-deep);
       color: var(--text-main);
       height: 100vh;
+      margin: 0;
       overflow: hidden;
       display: flex;
+      justify-content: center; /* 앱 컨테이너 중앙 정렬 */
+      align-items: center;
+    }
+
+    #app-container {
+      width: 100%;
+      max-width: 450px; /* 모바일 해상도 고정 */
+      height: 100%;
+      max-height: 100vh;
+      position: relative;
+      display: flex;
       flex-direction: column;
+      background: var(--bg-deep);
+      box-shadow: 0 0 80px rgba(0,0,0,0.6);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      z-index: 10;
+      overflow: hidden;
     }
 
     /* 배경 그라디언트 */
@@ -135,42 +153,21 @@
       border: 1px solid rgba(0,242,254,.15);
     }
 
-    /* ── 감정 패널 (하단 왼쪽) ───────────────────────── */
-    #emotion-panel {
-      position: absolute;
-      bottom: 5.5rem; left: 1.2rem;
-      background: var(--bg-card);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1rem 1.2rem;
-      width: 220px;
-      display: flex; flex-direction: column; gap: 0.65rem;
-      box-shadow: var(--shadow-lg);
+    /* ── 간단한 우측 상단 상태 분석창 ───────────────────────── */
+    #mini-status {
+      position: absolute; top: 4.5rem; right: 1.2rem;
+      background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;
+      z-index: 30; box-shadow: var(--shadow-lg); font-size: 0.7rem; color: var(--text-main);
+      pointer-events: none;
     }
-    .emotion-title {
-      font-size: 0.65rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-muted); margin-bottom: 0.1rem;
+    .mini-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
     }
-    .emotion-row { display: flex; flex-direction: column; gap: 0.25rem; }
-    .emotion-label {
-      font-size: 0.72rem; color: var(--text-muted);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .emotion-label span { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; }
-    .emotion-bar-bg {
-      height: 6px; background: rgba(255,255,255,.06);
-      border-radius: 99px; overflow: hidden;
-    }
-    .emotion-bar {
-      height: 100%; border-radius: 99px; width: 0%;
-      font-size: 0.55rem; color: transparent; /* bar text via JS */
-      transition: width 0.1s ease-out;
-    }
-    #bar-angry     { background: linear-gradient(90deg, #ff4757, #ff6baf); }
-    #bar-surprised { background: linear-gradient(90deg, #ffd93d, #ff9f43); }
-    #bar-sad       { background: linear-gradient(90deg, #4a90d9, #7c3aed); }
+    .mini-label { color: var(--text-muted); font-weight: 600; }
+    .mini-val { font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan); font-weight: bold; }
+    .mini-val em { font-style: normal; }
 
     /* ── 번역 패널 (하단 중앙) ───────────────────────── */
     #translation-panel {
@@ -189,6 +186,11 @@
     .t-group { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
     .t-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
     .t-output { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+    #slm-output {
+      font-size: 0.95rem; line-height: 1.4;
+      max-height: 4.2rem; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    }
     .t-output em { color: var(--accent-cyan); font-style: normal; border-bottom: 2px solid currentColor; }
     .t-emotion-badge {
       display: inline-block;
@@ -199,6 +201,29 @@
       font-weight: 700;
       opacity: 0.9;
     }
+
+    /* ── 음성 및 텍스트 입력 패널 ────────────────────── */
+    .input-group {
+      display: flex; gap: 0.5rem; width: 100%; margin-bottom: 0.4rem;
+      padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .text-input {
+      flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.5rem 0.8rem;
+      color: var(--text-main); font-family: inherit; font-size: 0.9rem;
+    }
+    .text-input:focus { outline: none; border-color: var(--accent-cyan); }
+    .btn-action {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: none; font-size: 1rem; transition: all 0.2s;
+    }
+    .btn-mic { background: rgba(124, 58, 237, 0.2); color: #c4b5fd; border: 1px solid rgba(124, 58, 237, 0.4); }
+    .btn-mic.recording { background: rgba(255, 71, 87, 0.3); color: #ff4757; border-color: rgba(255, 71, 87, 0.6); animation: pulse 1.5s infinite; }
+    .btn-send { background: var(--accent-cyan); color: #000; border: none; font-weight: bold; }
+    .btn-send:hover, .btn-mic:hover { transform: translateY(-2px); }
+    
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); } 70% { box-shadow: 0 0 0 8px rgba(255,71,87,0); } 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0); } }
 
     /* ── 컨트롤 (하단 우측) ───────────────────────────── */
     .controls {
@@ -253,99 +278,136 @@
       opacity: 0; transition: opacity 0.5s;
     }
     #model-status.loaded { opacity: 1; }
+
+    /* ── 모바일 상속 및 미디어 쿼리 ────────────────────── */
+    @media (max-width: 768px) {
+      header { padding: 0.6rem 1rem; }
+      .logo { font-size: 1rem; gap: 0.4rem; }
+      .logo-icon { width: 26px; height: 26px; font-size: 13px; }
+      .badge-step { display: none; }
+      .badge-status { font-size: 0.6rem; padding: 0.15rem 0.5rem; }
+
+      #cam-pip {
+        top: auto; bottom: 8.5rem; right: 0.8rem;
+        width: 140px; border-radius: 12px;
+        z-index: 20;
+      }
+      .hud { top: 0.8rem; left: 0.8rem; gap: 0.2rem; }
+      .hud-item { font-size: 0.65rem; padding: 2px 8px; }
+
+      #cam-pip {
+        bottom: 7.5rem; right: 0.8rem; width: 100px;
+      }
+      #mini-status {
+        top: 3.5rem; right: 0.8rem; padding: 0.5rem;
+      }
+
+      #translation-panel {
+        bottom: 0px; left: 0px; transform: none;
+        width: 100%; max-width: none;
+        border-radius: 0; border: none; border-top: 1px solid var(--border);
+        padding: 1rem 1.2rem;
+        flex-direction: column; gap: 0.6rem;
+      }
+      .t-output { font-size: 1rem; }
+      .controls { bottom: 8.5rem; right: 0.8rem; display: none; } 
+    }
+
+    @media (max-width: 480px) {
+      #mini-status { font-size: 0.65rem; gap: 0.2rem; }
+      #cam-pip { width: 90px; bottom: 7.5rem; }
+      #translation-panel { padding: 0.8rem 1rem; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- ── 헤더 ──────────────────────────────────────────── -->
-  <header>
-    <div class="logo">
-      <div class="logo-icon">✋</div>
-      ITDA <em>SIGN</em>
-    </div>
-    <div class="header-right">
-      <span class="badge badge-step">STEP 5</span>
-      <span class="badge badge-status" id="phase-badge">표정 동기화 · 초기화 중…</span>
-    </div>
-  </header>
+  <!-- ── 앱 컨테이너 (모바일 사이즈 고정) ────────────────── -->
+  <div id="app-container">
+    
+    <!-- ── 헤더 ──────────────────────────────────────────── -->
+    <header>
+      <div class="logo">
+        <div class="logo-icon">✋</div>
+        ITDA <em>SIGN</em>
+      </div>
+      <div class="header-right">
+        <span class="badge badge-step">STEP 5</span>
+        <span class="badge badge-status" id="phase-badge">표정 동기화 · 초기화 중…</span>
+      </div>
+    </header>
 
-  <!-- ── 메인 ──────────────────────────────────────────── -->
-  <main>
-    <!-- Three.js 캔버스 -->
-    <canvas id="three-canvas"></canvas>
+    <!-- ── 메인 ──────────────────────────────────────────── -->
+    <main>
+      <!-- Three.js 캔버스 -->
+      <canvas id="three-canvas"></canvas>
 
-    <!-- 모델 로드 완료 배지 -->
-    <div id="model-status">🤖 RobotExpressive — LOADED</div>
 
-    <!-- HUD -->
-    <div class="hud">
-      <div class="hud-item" id="fps-display">FPS: --</div>
-      <div class="hud-item" id="joint-status">Joints: LOADING</div>
-    </div>
+      <!-- HUD -->
+      <div class="hud">
+        <div class="hud-item" id="fps-display">FPS: --</div>
+        <div class="hud-item" id="joint-status">Joints: LOADING</div>
+      </div>
 
-    <!-- 웹캠 PIP -->
-    <div id="cam-pip">
-      <div class="pip-label">📷 실시간 카메라</div>
-      <video id="vision-video" autoplay muted playsinline></video>
-      <canvas id="vision-canvas"></canvas>
-    </div>
+      <!-- 웹캠 PIP -->
+      <div id="cam-pip">
+        <div class="pip-label">📷 실시간 카메라</div>
+        <video id="vision-video" autoplay muted playsinline></video>
+        <canvas id="vision-canvas"></canvas>
+      </div>
 
-    <!-- 감정 패널 -->
-    <div id="emotion-panel">
-      <div class="emotion-title">🎭 감정 분석 (비수지 기호)</div>
-
-      <div class="emotion-row">
-        <div class="emotion-label">😠 분노 (Angry) <span id="pct-angry">0%</span></div>
-        <div class="emotion-bar-bg">
-          <div class="emotion-bar" id="emotion-angry" id="bar-angry"
-               style="background: linear-gradient(90deg,#ff4757,#ff6baf)"></div>
+      <!-- 간단한 우측 상단 상태 분석창 -->
+      <div id="mini-status">
+        <div class="mini-row">
+          <span class="mini-label">인식 중인 손:</span>
+          <span class="mini-val" id="mini-hand-output">0개 ✋</span>
+        </div>
+        <div class="mini-row">
+          <span class="mini-label">감지된 표정:</span>
+          <span class="mini-val" id="mini-emotion-output">중립 😐</span>
+        </div>
+        <div class="mini-row" style="flex-direction: column; align-items: flex-start; gap: 0.2rem; margin-top: 0.3rem;">
+          <span class="mini-label">🗣️ 음성/텍스트 응답</span>
+          <span class="mini-val" id="emotion-output" style="font-size:0.75rem; line-height:1.3; color:var(--text-main); font-weight:normal; max-width: 140px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-family: inherit;">
+            <em style="color:var(--text-muted); font-style:normal;">입력을 기다리고 있습니다...</em>
+          </span>
         </div>
       </div>
 
-      <div class="emotion-row">
-        <div class="emotion-label">😲 놀람 (Surprised) <span id="pct-surprised">0%</span></div>
-        <div class="emotion-bar-bg">
-          <div class="emotion-bar" id="emotion-surprised"
-               style="background: linear-gradient(90deg,#ffd93d,#ff9f43)"></div>
+      <!-- 번역 패널 (하단) -->
+      <div id="translation-panel">
+        
+        <!-- 양방향 텍스트/음성 입력 -->
+        <div class="input-group">
+          <input type="text" id="chat-input" class="text-input" placeholder="번역할 내용을 입력하세요..." />
+          <button id="btn-mic" class="btn-action btn-mic" title="음성 인식">🎤</button>
+          <button id="btn-send" class="btn-action btn-send" title="전송">➤</button>
+        </div>
+
+        <!-- RAG 수어 예측 결과 (Vision) -->
+        <div class="t-group">
+          <div class="t-label">비전(캠) 분석 → 수어 예측 (SLM-RAG)</div>
+          <div class="t-output" id="slm-output">
+            <em style="color:var(--text-muted)">수어 동작을 하면 분석 결과가 나타납니다.</em>
+          </div>
         </div>
       </div>
 
-      <div class="emotion-row">
-        <div class="emotion-label">😢 슬픔 (Sad) <span id="pct-sad">0%</span></div>
-        <div class="emotion-bar-bg">
-          <div class="emotion-bar" id="emotion-sad"
-               style="background: linear-gradient(90deg,#4a90d9,#7c3aed)"></div>
-        </div>
+      <!-- 컨트롤 버튼 -->
+      <div class="controls">
+        <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
+        <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
       </div>
-    </div>
 
-    <!-- 번역 패널 (하단) -->
-    <div id="translation-panel">
-      <div class="t-group">
-        <div class="t-label">손 동작 인식 (Hands)</div>
-        <div class="t-output" id="hand-output">손을 카메라 앞에 올려주세요 ✋</div>
+      <!-- 비전 로딩 오버레이 -->
+      <div id="vision-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">MediaPipe 모델 로딩 중...</div>
+        <div id="vision-status">초기화 준비 중</div>
       </div>
-      <div class="t-group">
-        <div class="t-label">표정 + 감정 출력</div>
-        <div class="t-output" id="emotion-output">
-          <em>대기 중...</em>
-        </div>
-      </div>
-    </div>
+    </main>
 
-    <!-- 컨트롤 버튼 -->
-    <div class="controls">
-      <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
-      <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
-    </div>
-
-    <!-- 비전 로딩 오버레이 -->
-    <div id="vision-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">MediaPipe 모델 로딩 중...</div>
-      <div id="vision-status">초기화 준비 중</div>
-    </div>
-  </main>
+  </div> <!-- end of app-container -->
 
   <!-- ── Three.js Import Map ─────────────────────────── -->
   <script type="importmap">
@@ -361,6 +423,9 @@
   <script type="module" src="./js/avatar.js"></script>
   <script type="module" src="./js/retargeting.js"></script>
   <script type="module" src="./js/vision.js"></script>
+
+  <!-- ── 텍스트/음성 양방향 번역 스크립트 ──────────────── -->
+  <script type="module" src="./js/translator.js"></script>
 
   <!-- ── UI 제어 스크립트 ────────────────────────────── -->
   <script type="module">
@@ -396,22 +461,21 @@
         { name: '슬픔 😢', value: sad,        color: '#4a90d9', label: 'Sad'       },
       ].reduce((a, b) => a.value > b.value ? a : b);
 
-      const emotionEl = document.getElementById('emotion-output');
-      if (dominant.value > 0.08) {
-        emotionEl.innerHTML = `<em style="color:${dominant.color};border-color:${dominant.color}">${dominant.name}</em>
-          <span class="t-emotion-badge" style="background:${dominant.color}22;color:${dominant.color};border:1px solid ${dominant.color}44">
-            ${(dominant.value * 100).toFixed(0)}%
-          </span>`;
-      } else {
-        emotionEl.innerHTML = '<em>중립 😐</em>';
+      const miniEmotionEl = document.getElementById('mini-emotion-output');
+      if (miniEmotionEl) {
+        miniEmotionEl.innerHTML = dominant.value > 0.08 
+            ? `<em style="color:${dominant.color}">${dominant.name}</em>`
+            : `<em>중립 😐</em>`;
       }
     });
 
     // 손 감지 수 업데이트
     window.addEventListener('itda:hands:results', (e) => {
       const count = e.detail.hands.length;
-      document.getElementById('hand-output').textContent =
-        count > 0 ? `${count}개 손 감지됨 — 수어 동작 분석 중 🤝` : '손을 카메라 앞에 올려주세요 ✋';
+      const miniHandEl = document.getElementById('mini-hand-output');
+      if (miniHandEl) {
+        miniHandEl.textContent = count > 0 ? `${count}개 🤝` : '0개 ✋';
+      }
     });
 
     // ── 백엔드 RAG + SLM 결과 수신 및 UI 렌더링 ──
@@ -420,11 +484,13 @@
       if (!result) return;
       const emotionsHtml = result.emotions ? result.emotions.map(em => `<span class="t-emotion-badge" style="background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">${em}</span>`).join(' ') : '';
       
-      const outputEl = document.getElementById('emotion-output');
-      if (result.type === 'draft') {
-        outputEl.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 예측 중: ${result.text}</span>`;
-      } else if (result.type === 'final') {
-        outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.3rem;">✨ ${result.text}</span> ${emotionsHtml}`;
+      const outputEl = document.getElementById('slm-output');
+      if (outputEl) {
+        if (result.type === 'draft') {
+          outputEl.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 예측 중: ${result.text}</span>`;
+        } else if (result.type === 'final') {
+          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${result.text}</span> ${emotionsHtml}`;
+        }
       }
     });
 

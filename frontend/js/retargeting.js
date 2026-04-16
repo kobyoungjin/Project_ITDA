@@ -86,9 +86,12 @@ function applyFaceBlendshapes(blendshapes) {
   }
 
   // 2. Lerp 적용 후 아바타에 전달 (α = 0.2 → 부드러운 전환)
-  for (const [emotion, target] of Object.entries(targetScores)) {
-    emotionState[emotion] += (target - emotionState[emotion]) * 0.2;
-    avatar.setMorphTarget(emotion, emotionState[emotion]);
+  // 단, 번역 텍스트에 의한 아바타 애니메이션이 재생 중이면 웹캠 감정 리타겟팅을 멈춥니다.
+  if (!window.translationModeActive) {
+    for (const [emotion, target] of Object.entries(targetScores)) {
+      emotionState[emotion] += (target - emotionState[emotion]) * 0.2;
+      avatar.setMorphTarget(emotion, emotionState[emotion]);
+    }
   }
 
   // 3. 감정 HUD 업데이트
@@ -98,7 +101,7 @@ function applyFaceBlendshapes(blendshapes) {
 // ── 손 관절 → 아바타 Bone 회전 적용 ───────────────────────────
 function applyHandLandmarks(hands) {
   const avatar = window.ITDAAvatar5;
-  if (!avatar) return;
+  if (!avatar || window.translationModeActive) return;
 
   for (const hand of hands) {
     const side   = hand.handedness; // 'Left' | 'Right'

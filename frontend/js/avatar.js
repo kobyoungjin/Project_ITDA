@@ -22,41 +22,57 @@ const scene    = new THREE.Scene();
 scene.background = new THREE.Color(0x050810);
 scene.fog        = new THREE.Fog(0x050810, 12, 50);
 
-// ── 카메라 ────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.45, 1.8);
-
-// ── 렌더러 ────────────────────────────────────────────────────
+// ── 렌더러 및 카메라 초기화 ─────────────────────────────────────
 const canvas   = document.querySelector('#three-canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const container = document.querySelector('#app-container');
+
+// 초기 사이즈 계산 (앱 컨테이너가 로딩 직후 크기가 0일 때 방어 로직)
+const getAppSize = () => {
+  let width = container ? container.clientWidth : window.innerWidth;
+  let height = container ? container.clientHeight : window.innerHeight;
+  if (width === 0) width = Math.min(window.innerWidth, 450);
+  if (height === 0) height = window.innerHeight;
+  return { width, height };
+};
+
+const initialSize = getAppSize();
+
+const camera = new THREE.PerspectiveCamera(42, initialSize.width / initialSize.height, 0.1, 100);
+camera.position.set(0, 1.6, 1.5); 
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(initialSize.width, initialSize.height);
 renderer.shadowMap.enabled = true;
 renderer.toneMapping       = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace  = THREE.SRGBColorSpace;
 
-// ── 컨트롤 ────────────────────────────────────────────────────
+// ── 컨트롤 (고정) ───────────────────────────────────────────
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.target.set(0, 1.45, 0);
-controls.minDistance = 1.0;
-controls.maxDistance = 8;
+controls.target.set(0, 1.6, 0); 
+// 사용자가 화면을 마우스로 조작하지 못하도록 기능 모두 비활성화
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.enableRotate = false;
 controls.update();
 
 // ── 조명 ──────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2.0);
+hemiLight.position.set(0, 5, 0);
+scene.add(hemiLight);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-dirLight.position.set(5, 10, 7.5);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+dirLight.position.set(2, 5, 5);
 dirLight.castShadow = true;
 scene.add(dirLight);
 
-const pointCyan   = new THREE.PointLight(0x00f2fe, 2.5, 12);
-pointCyan.position.set(2, 2.5, 2);
+const pointCyan   = new THREE.PointLight(0x00f2fe, 3.0, 15);
+pointCyan.position.set(2, 3, 3);
 scene.add(pointCyan);
 
-const pointPurple = new THREE.PointLight(0x7000ff, 2.5, 12);
-pointPurple.position.set(-2, 2.5, 1);
+const pointPurple = new THREE.PointLight(0x7000ff, 3.0, 15);
+pointPurple.position.set(-2, 3, 3);
 scene.add(pointPurple);
 
 // ── 바닥 그리드 ───────────────────────────────────────────────
@@ -69,61 +85,68 @@ let model       = null;
 let mixer       = null;
 let headMesh    = null;        // Morph Targets가 있는 메시
 let bones       = {};          // Bone 이름 → THREE.Bone
-let morphIndex  = {};          // 감정 이름 → morphTargetInfluences 인덱스
+let initialBoneQuats = {};     // 모델의 원본 자세 저장 (쿼터니언 기반 안정적 복구)
 
 const clock = new THREE.Clock();
 
 // ── 모델 로딩 ─────────────────────────────────────────────────
-const MODEL_URL = 'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
+const MODEL_URL = './models/female_human.glb';
 const jstEl     = document.getElementById('joint-status');
 
 new GLTFLoader().load(
   MODEL_URL,
   (gltf) => {
     model = gltf.scene;
+    // 아바타 위치 조정
+    model.scale.set(1.0, 1.0, 1.0);
+    model.position.set(0, 0, 0); 
     scene.add(model);
 
-    // AnimationMixer (기본 대기 동작)
-    mixer = new THREE.AnimationMixer(model);
-    const idleClip = gltf.animations.find(a => a.name === 'Idle');
-    if (idleClip) {
-      mixer.clipAction(idleClip).play();
-    }
+    // Bone / Morph 수집 및 초기 자세 저장
+    bones = {};
+    initialBoneQuats = {};
+    const morphMeshes = [];
 
-    // Bone / Mesh 수집
     model.traverse((child) => {
       if (child.isBone) {
         bones[child.name] = child;
+        // 원본 쿼터니언 복사 저장 (Euler보다 안정적)
+        initialBoneQuats[child.name] = child.quaternion.clone();
       }
       if (child.isMesh && child.morphTargetDictionary) {
-        const names = Object.keys(child.morphTargetDictionary);
-        if (names.includes('Angry') || names.includes('Surprised') || names.includes('Sad')) {
-          headMesh   = child;
-          morphIndex = child.morphTargetDictionary;
-          console.info('[ITDA Avatar] Head MorphTargets:', names);
-        }
+        morphMeshes.push(child);
       }
     });
 
+    headMesh = morphMeshes;
+    
     if (jstEl) jstEl.textContent = 'Joints: ACTIVE';
-    document.getElementById('model-status')?.classList.add('loaded');
+    const statusEl = document.getElementById('model-status');
+    if (statusEl) {
+      statusEl.textContent = '👩 Human (Female) — LOADED';
+      statusEl.classList.add('loaded');
+    }
     window.dispatchEvent(new CustomEvent('itda:avatar:ready'));
-    console.info('[ITDA Avatar] RobotExpressive 로드 완료');
   },
   (xhr) => {
     const pct = ((xhr.loaded / xhr.total) * 100).toFixed(0);
     if (jstEl) jstEl.textContent = `로딩 ${pct}%`;
   },
-  (err) => {
-    console.error('[ITDA Avatar] 모델 로드 실패:', err);
-  },
+  (err) => console.error('[ITDA Avatar] 로드 실패:', err),
 );
 
+// 카메라 구도 최적화 (상체와 얼굴이 잘 보이도록 조절)
+camera.position.set(0, 1.4, 2.8); 
+controls.target.set(0, 1.1, 0); 
+controls.update();
+
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const { width, height } = getAppSize();
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(width, height);
 });
+setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
 
 // ── 렌더 루프 ─────────────────────────────────────────────────
 let frameCount = 0;
@@ -143,40 +166,58 @@ const fpsEl    = document.getElementById('fps-display');
 
 // ── 공개 인터페이스 ───────────────────────────────────────────
 window.ITDAAvatar5 = {
-  /**
-   * 감정 Morph Target 설정 (Head 메시)
-   * @param {string} name  - 'Angry' | 'Surprised' | 'Sad'
-   * @param {number} value - 0.0 ~ 1.0
-   */
   setMorphTarget(name, value) {
     if (!headMesh) return;
-    const idx = morphIndex[name];
-    if (idx === undefined) return;
-    headMesh.morphTargetInfluences[idx] =
-      THREE.MathUtils.clamp(value, 0, 1);
+    const mapping = {
+      'Angry':     ['browDownLeft', 'browDownRight', 'noseSneerLeft', 'noseSneerRight'],
+      'Surprised': ['jawOpen', 'eyeWideLeft', 'eyeWideRight'],
+      'Sad':       ['mouthFrownLeft', 'mouthFrownRight', 'browInnerUp']
+    };
+    const targets = mapping[name] || [name];
+    headMesh.forEach(mesh => {
+      targets.forEach(tName => {
+        const idx = mesh.morphTargetDictionary[tName];
+        if (idx !== undefined) {
+          mesh.morphTargetInfluences[idx] = THREE.MathUtils.clamp(value, 0, 1);
+        }
+      });
+    });
   },
 
   /**
-   * Bone 회전 업데이트 (Lerp 적용)
-   * @param {string} boneName   - Three.js Bone 이름
-   * @param {{x,y,z}} rotation  - 목표 오일러 각도(rad)
-   * @param {number} alpha      - Lerp 계수 (기본 0.2)
+   * Bone 업데이트 (Euler 또는 Quaternion 지원)
+   * @param {string} boneName 
+   * @param {Object} rotation - {x,y,z} (Euler) 또는 {x,y,z,w} (Quaternion)
+   * @param {number} alpha - Lerp 강도
    */
   updateBone(boneName, rotation, alpha = 0.2) {
-    const bone = bones[boneName];
+    const bone = bones[boneName] || bones['mixamorig' + boneName]; 
     if (!bone) return;
-    bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, rotation.x, alpha);
-    bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, rotation.y, alpha);
-    bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, rotation.z, alpha);
+
+    if (rotation.w !== undefined) {
+      // Quaternion 모드 (Slerp)
+      bone.quaternion.slerp(rotation, alpha);
+    } else {
+      // Euler 모드 (Lerp)
+      bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, rotation.x, alpha);
+      bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, rotation.y, alpha);
+      bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, rotation.z, alpha);
+    }
   },
 
-  /** 아바타를 기본 자세로 리셋 */
+  /** 아바타를 모델 로드 당시의 '원본 기본 자세'로 리셋 */
   reset() {
-    for (const bone of Object.values(bones)) {
-      bone.rotation.set(0, 0, 0);
+    for (const [name, bone] of Object.entries(bones)) {
+      const initial = initialBoneQuats[name];
+      if (initial) {
+        bone.quaternion.copy(initial);
+      }
     }
-    if (headMesh) headMesh.morphTargetInfluences.fill(0);
+    if (headMesh) {
+      headMesh.forEach(mesh => mesh.morphTargetInfluences.fill(0));
+    }
   },
 
   bones,
+  initialBoneQuats,
 };

@@ -12,7 +12,7 @@ FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss.index")
 METADATA_PATH = os.path.join(DATA_DIR, "metadata.json")
 
 class VectorDB:
-    def __init__(self, model_name='jhgan/ko-sroberta-multitask'):
+    def __init__(self, model_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'):
         # 한국어 특화 임베딩 모델 (RAG 검색 품질 향상)
         self.encoder = SentenceTransformer(model_name)
         self.dimension = self.encoder.get_sentence_embedding_dimension()
