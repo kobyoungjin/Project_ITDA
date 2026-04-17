@@ -1,148 +1,128 @@
 /**
- * retargeting.js  ─  Step 5: Blendshape → 아바타 감정 + 손동작 리타겟팅
- *
- * ■ 역할
- *   1. MediaPipe 52종 faceBlendshapes → RobotExpressive Morph Targets 매핑
- *      - Angry    : browLowererLeft/Right, noseSneerLeft/Right 평균
- *      - Surprised: eyeWideLeft/Right, jawOpen 평균
- *      - Sad      : browInnerUp, mouthFrownLeft/Right 평균
- *   2. HandLandmarker 관절 → Three.js 아바타 Bone 회전 매핑
- *   3. 손동작과 표정이 같은 RAF 루프에서 처리되어 1프레임 단위 동기화 보장
- *
- * ■ 의존성
- *   - avatar.js 가 window.ITDAAvatar5 를 먼저 노출해야 함
- *   - itda:face:results / itda:hands:results 커스텀 이벤트 구독
+ * retargeting.js [Cyborg Alpha v5.1 Debug Edition]
  */
+import * as THREE from 'three';
 
-// ── Blendshape → Morph Target 가중치 맵 ─────────────────────
-const EMOTION_MAP = {
-  Angry: {
-    browLowererLeft:   0.45,
-    browLowererRight:  0.45,
-    noseSneerLeft:     0.05,
-    noseSneerRight:    0.05,
-  },
-  Surprised: {
-    eyeWideLeft:       0.40,
-    eyeWideRight:      0.40,
-    jawOpen:           0.20,
-  },
-  Sad: {
-    browInnerUp:       0.40,
-    mouthFrownLeft:    0.30,
-    mouthFrownRight:   0.30,
-  },
+console.info('%c[ITDA Retargeting] >>> retargeting.js STARTING', 'background: #FFD700; color: #000; font-weight: bold; padding: 2px 5px;');
+
+const _QUAT = new THREE.Quaternion();
+const _V1 = new THREE.Vector3();
+const _armBoneCache = { Left: null, Right: null };
+
+// 뼈 이름 후보 (확장된 하이브리드 리스트)
+const CANDIDATES = {
+  shoulder: ['Clavicle', 'Shoulder', 'Collar'],
+  upperArm: ['UpperArm', 'Arm', 'Upper_Arm'],
+  foreArm:  ['ForeArm', 'LowerArm', 'Arm_Twist', 'Forearm'],
+  hand:     ['Hand', 'Wrist'],
 };
 
-// ── 손 관절 → 아바타 Bone 매핑 ───────────────────────────────
-// MediaPipe HandLandmarker: 21 랜드마크 (0=WRIST … 20=PINKY_TIP)
-// Three.js Xbot / RobotExpressive 공통 Bone 이름 사용
-const HAND_BONE_MAP = {
-  // 오른손 (MediaPipe 's label: "Right" = 화면 왼쪽 = 실제 오른손)
-  Right: {
-    wrist:       { bonePrefix: 'RightHand',       idx: 0 },
-    thumb0:      { bonePrefix: 'RightHandThumb1', idx: 2 },
-    thumb1:      { bonePrefix: 'RightHandThumb2', idx: 3 },
-    index0:      { bonePrefix: 'RightHandIndex1', idx: 5 },
-    index1:      { bonePrefix: 'RightHandIndex2', idx: 6 },
-    middle0:     { bonePrefix: 'RightHandMiddle1',idx: 9 },
-    ring0:       { bonePrefix: 'RightHandRing1',  idx: 13 },
-    pinky0:      { bonePrefix: 'RightHandPinky1', idx: 17 },
-  },
-  Left: {
-    wrist:       { bonePrefix: 'LeftHand',        idx: 0 },
-    thumb0:      { bonePrefix: 'LeftHandThumb1',  idx: 2 },
-    thumb1:      { bonePrefix: 'LeftHandThumb2',  idx: 3 },
-    index0:      { bonePrefix: 'LeftHandIndex1',  idx: 5 },
-    index1:      { bonePrefix: 'LeftHandIndex2',  idx: 6 },
-    middle0:     { bonePrefix: 'LeftHandMiddle1', idx: 9 },
-    ring0:       { bonePrefix: 'LeftHandRing1',   idx: 13 },
-    pinky0:      { bonePrefix: 'LeftHandPinky1',  idx: 17 },
-  },
-};
+function fuzzyFind(bones, side, candidates) {
+  const names = Object.keys(bones);
+  const sideAlt = side === 'Right' ? 'R' : 'L';
+  const sideFull = side.toLowerCase();
 
-// ── 현재 감정 상태 (스무딩용) ──────────────────────────────────
-const emotionState = { Angry: 0, Surprised: 0, Sad: 0 };
+  for (const c of candidates) {
+    const variants = [
+      `${side}${c}`, `mixamorig${side}${c}`, `${side}_${c}`, 
+      `${sideAlt}_${c}`, `${c}_${sideAlt}`, `${c}.${sideAlt}`,
+      `${sideFull}_${c}`, `${c}_${sideFull}`
+    ];
+    for (const v of variants) {
+      const found = names.find(n => n.toLowerCase() === v.toLowerCase());
+      if (found) return found;
+    }
+  }
+  
+  // 지능형 포함 검색 (Metahuman/Daz3D 대응)
+  return names.find(n => {
+    const lower = n.toLowerCase();
+    return (lower.includes(sideFull) || lower.includes(`_${sideAlt.toLowerCase()}`)) 
+           && candidates.some(c => lower.includes(c.toLowerCase()));
+  });
+}
 
-// ── 주 함수: Blendshape → 아바타 Morph Target 업데이트 ────────
-function applyFaceBlendshapes(blendshapes) {
+function getBones(side, allBones) {
+  if (_armBoneCache[side]) return _armBoneCache[side];
+  
+  const res = {
+    shoulder: fuzzyFind(allBones, side, CANDIDATES.shoulder),
+    upperArm: fuzzyFind(allBones, side, CANDIDATES.upperArm),
+    foreArm:  fuzzyFind(allBones, side, CANDIDATES.foreArm),
+    hand:     fuzzyFind(allBones, side, CANDIDATES.hand),
+  };
+  
+  console.info(`[ITDA Retargeting] 🦴 ${side} Mapping:`, res);
+  _armBoneCache[side] = res;
+  return res;
+}
+
+// ── 핵심 리타겟팅 ─────────────────────────────────────────────
+function applyPose(lms) {
   const avatar = window.ITDAAvatar5;
-  if (!avatar) return;
+  if (!avatar || !lms) return;
 
-  // 1. 각 감정 점수 계산 (가중 평균)
-  const bsMap = {};
-  for (const { categoryName, score } of blendshapes) {
-    bsMap[categoryName] = score;
-  }
+  const POSE = { L_S: 11, R_S: 12, L_E: 13, R_E: 14, L_W: 15, R_W: 16 };
 
-  const targetScores = {};
-  for (const [emotion, weights] of Object.entries(EMOTION_MAP)) {
-    let total = 0, wSum = 0;
-    for (const [key, w] of Object.entries(weights)) {
-      total += (bsMap[key] ?? 0) * w;
-      wSum  += w;
+  ['Left', 'Right'].forEach(side => {
+    try {
+      const bNames = getBones(side, avatar.bones);
+      if (!bNames.upperArm) return;
+
+      // [Mirror Mode] 사용자의 Right -> 아바타의 Left, 사용자의 Left -> 아바타의 Right
+      const dataSide = side === 'Left' ? 'Right' : 'Left';
+      const s = dataSide === 'Left' ? POSE.L_S : POSE.R_S;
+      const e = dataSide === 'Left' ? POSE.L_E : POSE.R_E;
+      const w = dataSide === 'Left' ? POSE.L_W : POSE.R_W;
+
+      if (!lms[s] || !lms[e]) return;
+
+      // 벡터 변환 (MediaPipe -> THREE.Vector3)
+      // [Mirror Mode] X축 반전, [Y-Invert] 상하 반전 해결, [Depth] 거리감 조정
+      const pS = new THREE.Vector3(-lms[s].x, lms[s].y, -lms[s].z);
+      const pE = new THREE.Vector3(-lms[e].x, lms[e].y, -lms[e].z);
+      
+      const dir = new THREE.Vector3().subVectors(pE, pS).normalize();
+      const defaultDir = new THREE.Vector3(side === 'Left' ? 1 : -1, 0, 0);
+      
+      // [Cyborg Alpha] 상대 회전 계산: InitialPose * DeltaRotation
+      const deltaQuat = new THREE.Quaternion().setFromUnitVectors(defaultDir, dir);
+      const boneUpper = avatar.bones[bNames.upperArm];
+      
+      if (boneUpper && boneUpper.initialQuaternion) {
+        _QUAT.copy(boneUpper.initialQuaternion).multiply(deltaQuat);
+        avatar.updateBone(bNames.upperArm, _QUAT, 0.2);
+      } else {
+        avatar.updateBone(bNames.upperArm, deltaQuat, 0.2);
+      }
+      
+      // 전완 (팔꿈치 -> 손목)
+      if (lms[w] && bNames.foreArm) {
+        const pW = new THREE.Vector3(-lms[w].x, lms[w].y, -lms[w].z);
+        const fDir = new THREE.Vector3().subVectors(pW, pE).normalize();
+        const fDeltaQuat = new THREE.Quaternion().setFromUnitVectors(defaultDir, fDir);
+        const boneFore = avatar.bones[bNames.foreArm];
+
+        if (boneFore && boneFore.initialQuaternion) {
+          _QUAT.copy(boneFore.initialQuaternion).multiply(fDeltaQuat);
+          avatar.updateBone(bNames.foreArm, _QUAT, 0.2);
+        } else {
+          avatar.updateBone(bNames.foreArm, fDeltaQuat, 0.2);
+        }
+      }
+    } catch (err) {
+      console.error('[ITDA Retargeting] Frame Error:', err);
     }
-    targetScores[emotion] = wSum > 0 ? total / wSum : 0;
-  }
-
-  // 2. Lerp 적용 후 아바타에 전달 (α = 0.2 → 부드러운 전환)
-  // 단, 번역 텍스트에 의한 아바타 애니메이션이 재생 중이면 웹캠 감정 리타겟팅을 멈춥니다.
-  if (!window.translationModeActive) {
-    for (const [emotion, target] of Object.entries(targetScores)) {
-      emotionState[emotion] += (target - emotionState[emotion]) * 0.2;
-      avatar.setMorphTarget(emotion, emotionState[emotion]);
-    }
-  }
-
-  // 3. 감정 HUD 업데이트
-  updateEmotionHUD(emotionState);
+  });
 }
 
-// ── 손 관절 → 아바타 Bone 회전 적용 ───────────────────────────
-function applyHandLandmarks(hands) {
-  const avatar = window.ITDAAvatar5;
-  if (!avatar || window.translationModeActive) return;
+// ── 이벤트 리스너 ─────────────────────────────────────────────
+window.addEventListener('itda:pose:results', (e) => applyPose(e.detail.landmarks));
 
-  for (const hand of hands) {
-    const side   = hand.handedness; // 'Left' | 'Right'
-    const lmList = hand.landmarks;  // {x,y,z}[]
-    const boneMap = HAND_BONE_MAP[side];
-    if (!boneMap) continue;
-
-    for (const [_jointName, { bonePrefix, idx }] of Object.entries(boneMap)) {
-      if (idx >= lmList.length) continue;
-      const lm = lmList[idx];
-
-      // MediaPipe 좌표(0~1 정규화) → 관절 회전값으로 변환
-      // y는 위아래 반전, z는 깊이 보정
-      const rotX = (lm.y - 0.5) * Math.PI * 0.8;
-      const rotY = (lm.x - 0.5) * Math.PI * 0.6;
-      const rotZ = lm.z * Math.PI * 0.4;
-
-      avatar.updateBone(bonePrefix, { x: rotX, y: rotY, z: rotZ });
-    }
-  }
-}
-
-// ── HUD 업데이트 ──────────────────────────────────────────────
-function updateEmotionHUD(state) {
-  for (const [emotion, value] of Object.entries(state)) {
-    const el = document.getElementById(`emotion-${emotion.toLowerCase()}`);
-    if (el) {
-      el.style.width = `${(value * 100).toFixed(1)}%`;
-      el.textContent = `${(value * 100).toFixed(0)}%`;
-    }
-  }
-}
-
-// ── 이벤트 구독 ───────────────────────────────────────────────
-window.addEventListener('itda:face:results',  (e) => applyFaceBlendshapes(e.detail.blendshapes));
-window.addEventListener('itda:hands:results', (e) => applyHandLandmarks(e.detail.hands));
-
-// ── 전역 노출 ─────────────────────────────────────────────────
 window.ITDARetargeting5 = {
-  applyFaceBlendshapes,
-  applyHandLandmarks,
-  emotionState,
-  EMOTION_MAP,
+  clearArmBoneCache() {
+    _armBoneCache.Left = null;
+    _armBoneCache.Right = null;
+    console.log('[ITDA Retargeting] Cache Cleared.');
+  }
 };
