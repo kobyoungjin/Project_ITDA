@@ -1,27 +1,38 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Dict, Optional
 
-class Landmark(BaseModel):
-    x: float = Field(..., ge=0.0, le=1.0, description="정규화된 X 좌표 (0~1)")
-    y: float = Field(..., ge=0.0, le=1.0, description="정규화된 Y 좌표 (0~1)")
-    z: float = Field(..., description="손목 기준 상대 깊이")
+class Vector3(BaseModel):
+    x: float
+    y: float
+    z: float
 
-ESSENTIAL_INDICES = [0, 3, 4, 6, 8, 10, 12, 14, 16, 18, 20]
-
-class HandKeypoints(BaseModel):
-    handedness: str = Field(..., description="'Left' 또는 'Right'")
-    keypoints: List[Landmark] = Field(..., min_length=11, max_length=11)
-    full_landmarks: Optional[List[Landmark]] = Field(default=None)
+class HandData(BaseModel):
+    handedness: str
+    keypoints: List[Vector3]
 
 class VisionFrame(BaseModel):
-    frame_id: int = Field(...)
-    session_id: str = Field(...)
-    timestamp_ms: float = Field(...)
-    fps: float = Field(..., ge=0)
-    hands: List[HandKeypoints] = Field(..., max_length=2)
+    frame_id: int
+    session_id: str
+    timestamp_ms: float
+    fps: float
+    hands: List[HandData]
+    meta_features: Optional[Dict] = None
+    # [Cyborg Alpha] 센서 퓨전 전용 필드 추가
+    detection_data: Optional[Dict] = {
+        "visual_confidence": 0.0,
+        "audio_confidence": 0.0,
+        "detected_area_m2": 0.0
+    }
 
 class VisionAck(BaseModel):
     frame_id: int
-    status: str = Field(default="ok")
-    rag_result: Optional[dict] = Field(default=None)
-    message: Optional[str] = None
+    status: str
+    message: str
+    rag_result: Optional[Dict] = None
+    # [Cyborg Alpha] 경고 레벨 및 NMS 가이드 추가
+    alert_level: str = "Low" # Low, Medium, High
+    nms_guide: Optional[Dict] = {
+        "eyebrows": "neutral",
+        "mouth": "pa",
+        "confidence_score": 0.0
+    }

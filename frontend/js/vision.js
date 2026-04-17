@@ -124,6 +124,7 @@ let sessionId = crypto.randomUUID();
 let frameCounter = 0;
 let lastSendTime = 0;
 let currentFPS = 0;
+let prevWristY = null; // 모션 변화량 추적을 위한 이전 손목 Y좌표
 
 function connectWebSocket() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
@@ -146,7 +147,9 @@ function connectWebSocket() {
 function sendFrameWS(hands) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   const now = performance.now();
-  if (now - lastSendTime < 33) return; // 30fps throttle
+  
+  // [과제 3] 0.5초(500ms) 단위로 버퍼링/제한 (기존 33fps 무한 호출 방지)
+  if (now - lastSendTime < 500) return; 
   lastSendTime = now;
 
   const ESSENTIAL_INDICES = [0, 3, 4, 6, 8, 10, 12, 14, 16, 18, 20];
@@ -158,12 +161,33 @@ function sendFrameWS(hands) {
     return { handedness: h.handedness, keypoints: keypoints };
   });
 
+  // [과제 1] 원시 좌표(x,y,z) 대신 백엔드가 이해하기 쉬운 메타데이터 추출
+  let movement_desc = "정지 상태";
+  if (hands.length > 0) {
+    const currentWristY = hands[0].landmarks[0].y; // 0은 맨 위(이마쪽), 1은 맨 아래(가슴쪽)
+    if (prevWristY !== null) {
+      const deltaY = currentWristY - prevWristY;
+      if (deltaY > 0.05) {
+        movement_desc = "손목이 위에서 아래로 부드럽게 내려옵니다."; // 예: 감사합니다 등
+      } else if (deltaY < -0.05) {
+        movement_desc = "손목이 아래에서 위로 올라갑니다.";
+      }
+    }
+    prevWristY = currentWristY;
+  } else {
+    prevWristY = null;
+  }
+
   ws.send(JSON.stringify({
     frame_id: frameCounter++,
     session_id: sessionId,
     timestamp_ms: now,
     fps: currentFPS,
-    hands: handDataList
+    hands: handDataList,
+    meta_features: {               // 백엔드로 보낼 정제된 특징
+      movement: movement_desc,
+      hand_count: hands.length
+    }
   }));
 }
 

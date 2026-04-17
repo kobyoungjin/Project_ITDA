@@ -24,34 +24,53 @@ class SlmAgent:
             print(f"[SLM Agent] Ollama 연결 불가 (Fallback 모드 가동): {e}")
             return ""
 
-    async def predict_fast(self, raw_data: dict) -> str:
-        """Track 1: 초고속 1차 예측 (빠른 텍스트 반환)"""
-        # (원래는 raw_data의 손 좌표를 해석하여 구문 트리로 만듦)
-        # 현재 데모를 위해 지정된 프롬프트 전달
-        prompt = "손목이 이마에서 가슴으로 부드럽게 내려옵니다. 이 동작이 나타내는 수어의 의미를 1단어로 짧게 추측해줘."
+    async def predict_fast(self, raw_data: dict) -> dict:
+        """Track 1: 센서 퓨전 기반 경고 레벨 판정 및 1차 예측"""
+        meta = raw_data.get("meta_features", {})
+        det = raw_data.get("detection_data", {"visual_confidence": 0.0, "audio_confidence": 0.0, "detected_area_m2": 0.0})
         
-        result = await self._call_ollama(prompt)
-        if not result:
-            return "안녕하세요" # Fallback
-        return result
+        # [Cyborg Alpha] 센서 퓨전 가중치 적용 (시각 65%, 음향 35%)
+        vis_conf = det.get("visual_confidence", 0.0)
+        aud_conf = det.get("audio_confidence", 0.0)
+        area = det.get("detected_area_m2", 0.0)
+        
+        total_confidence = (vis_conf * 0.65) + (aud_conf * 0.35)
+        
+        # 경고 레벨 판정 (JSON 명세 기준)
+        alert_level = "Low"
+        if total_confidence > 0.95 and area > 1.0:
+            alert_level = "High"
+        elif total_confidence > 0.80 or area > 0:
+            alert_level = "Medium"
+        elif total_confidence > 0.60:
+            alert_level = "Low"
+            
+        # NMS 매핑 (confidence 기준)
+        nms_preset = {"eyebrows": "neutral", "mouth": "oo", "head": "tilt"}
+        if total_confidence >= 0.90:
+            nms_preset = {"eyebrows": "furrowed", "mouth": "cha", "head": "forward"}
+        elif total_confidence >= 0.60:
+            nms_preset = {"eyebrows": "raised", "mouth": "pa", "head": "neutral"}
+            
+        return {
+            "alert_level": alert_level,
+            "confidence_score": total_confidence,
+            "nms_guide": nms_preset,
+            "text": "위험 감지 분석 중..." 
+        }
 
-    async def predict_with_rag(self, fast_prediction: str, rag_context: dict) -> str:
-        """Track 2: RAG 컨텐츠와 1차 예측을 결합하여 따뜻한 문장 완성"""
-        emotions = ", ".join(rag_context.get('emotions', []))
-        desc = rag_context.get('warm_translation', '')
+    async def predict_with_rag(self, fast_prediction: dict, rag_context: dict) -> str:
+        """Track 2: 경고 상황에 맞춘 KSL 메시지 합성"""
+        alert_level = fast_prediction.get("alert_level", "Low")
         
-        prompt = f"""
-        당신은 따뜻하고 공감 능력이 뛰어난 수어 통역사입니다.
-        현재 분석된 수어 동작의 1차 의미는 '{fast_prediction}'입니다.
-        여기에 RAG(지식베이스) 검색 결과인 다음 감정과 상세 의미를 하나로 예쁘게 녹여서 문장을 완성해주세요:
-        - 감정: {emotions}
-        - 지식베이스 원문: {desc}
-        결과만 따뜻한 한국어로 요약 출력하세요:
-        """
+        # 경고 레벨별 기본 메시지 설정
+        ksl_messages = {
+            "Low": "주의 구역 내 수상한 움직임이 감지되었습니다.",
+            "Medium": "경고: 낙서 행위가 감지되었습니다. 즉시 중단하십시오.",
+            "High": "보호 구역 내 낙서 시도 감지. 즉시 중단하십시오. 보안팀이 출동합니다."
+        }
         
-        result = await self._call_ollama(prompt)
-        if not result:
-            return desc # Fallback
-        return result
+        base_msg = ksl_messages.get(alert_level, "관찰 중")
+        return base_msg
 
 slm_agent = SlmAgent()
