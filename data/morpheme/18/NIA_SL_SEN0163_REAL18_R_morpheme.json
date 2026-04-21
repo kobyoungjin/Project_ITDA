@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_gdchoi1173/NIA_SL_SEN0163_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0163_REAL18_R.mp4",
+        "duration": 4.084,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.397,
+            "end": 1.897,
+            "attributes": [
+                {
+                    "name": "핸드폰"
+                }
+            ]
+        },
+        {
+            "start": 1.968,
+            "end": 2.834,
+            "attributes": [
+                {
+                    "name": "번호"
+                }
+            ]
+        }
+    ]
+}

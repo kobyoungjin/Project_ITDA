@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0869/NIA_SL_SEN1731_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1731_REAL17_R.mp4",
+        "duration": 6.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.695,
+            "end": 2.663,
+            "attributes": [
+                {
+                    "name": "언덕"
+                }
+            ]
+        },
+        {
+            "start": 3.027,
+            "end": 3.661,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 3.88,
+            "end": 5.082,
+            "attributes": [
+                {
+                    "name": "여기"
+                }
+            ]
+        }
+    ]
+}

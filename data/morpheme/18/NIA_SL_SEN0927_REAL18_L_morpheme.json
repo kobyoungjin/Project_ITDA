@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0733/NIA_SL_SEN0927_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0927_REAL18_L.mp4",
+        "duration": 6.3,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.962,
+            "end": 3.878,
+            "attributes": [
+                {
+                    "name": "한국농아인협회"
+                }
+            ]
+        },
+        {
+            "start": 4.091,
+            "end": 5.336,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

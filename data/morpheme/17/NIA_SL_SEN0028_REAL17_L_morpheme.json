@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0858/NIA_SL_SEN0028_REAL17_L.mp4",
+        "name": "NIA_SL_SEN0028_REAL17_L.mp4",
+        "duration": 5.434,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.171,
+            "end": 3.976,
+            "attributes": [
+                {
+                    "name": "위험",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

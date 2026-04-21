@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_emyou1172/NIA_SL_SEN0083_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0083_REAL18_L.mp4",
+        "duration": 6.15,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.126,
+            "end": 2.633,
+            "attributes": [
+                {
+                    "name": "여기"
+                }
+            ]
+        },
+        {
+            "start": 2.99,
+            "end": 3.49,
+            "attributes": [
+                {
+                    "name": "1호"
+                }
+            ]
+        },
+        {
+            "start": 3.732,
+            "end": 4.676,
+            "attributes": [
+                {
+                    "name": "되다"
+                }
+            ]
+        }
+    ]
+}

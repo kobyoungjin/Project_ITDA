@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0868/NIA_SL_SEN0525_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0525_REAL17_U.mp4",
+        "duration": 5.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.744,
+            "end": 2.058,
+            "attributes": [
+                {
+                    "name": "학교"
+                }
+            ]
+        },
+        {
+            "start": 2.171,
+            "end": 2.721,
+            "attributes": [
+                {
+                    "name": "문"
+                }
+            ]
+        },
+        {
+            "start": 2.963,
+            "end": 3.921,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

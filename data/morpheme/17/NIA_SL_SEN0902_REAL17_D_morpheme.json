@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0496/NIA_SL_SEN0902_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0902_REAL17_D.mp4",
+        "duration": 5.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.31,
+            "end": 3.078,
+            "attributes": [
+                {
+                    "name": "춥다"
+                }
+            ]
+        },
+        {
+            "start": 3.142,
+            "end": 4.159,
+            "attributes": [
+                {
+                    "name": "켜다"
+                }
+            ]
+        }
+    ]
+}

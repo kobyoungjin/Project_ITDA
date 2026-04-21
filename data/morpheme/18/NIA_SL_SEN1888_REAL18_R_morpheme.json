@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0729/NIA_SL_SEN1888_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1888_REAL18_R.mp4",
+        "duration": 4.5,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.022,
+            "end": 1.887,
+            "attributes": [
+                {
+                    "name": "지갑"
+                }
+            ]
+        },
+        {
+            "start": 2.096,
+            "end": 2.546,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        },
+        {
+            "start": 2.709,
+            "end": 3.438,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        }
+    ]
+}

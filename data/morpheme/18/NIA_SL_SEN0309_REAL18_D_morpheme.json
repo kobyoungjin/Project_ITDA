@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1173/NIA_SL_SEN0309_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0309_REAL18_D.mp4",
+        "duration": 8.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.146,
+            "end": 2.574,
+            "attributes": [
+                {
+                    "name": "서울"
+                }
+            ]
+        },
+        {
+            "start": 2.661,
+            "end": 3.558,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 3.651,
+            "end": 5.167,
+            "attributes": [
+                {
+                    "name": "정기권"
+                }
+            ]
+        },
+        {
+            "start": 5.254,
+            "end": 5.754,
+            "attributes": [
+                {
+                    "name": "사다"
+                }
+            ]
+        },
+        {
+            "start": 5.831,
+            "end": 6.759,
+            "attributes": [
+                {
+                    "name": "원하다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_gdchoi1173/NIA_SL_SEN0167_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0167_REAL18_L.mp4",
+        "duration": 4.85,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.412,
+            "end": 2.019,
+            "attributes": [
+                {
+                    "name": "버스"
+                }
+            ]
+        },
+        {
+            "start": 2.104,
+            "end": 3.253,
+            "attributes": [
+                {
+                    "name": "번호"
+                }
+            ]
+        }
+    ]
+}

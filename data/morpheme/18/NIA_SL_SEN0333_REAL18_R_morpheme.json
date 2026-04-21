@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1176/NIA_SL_SEN0333_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0333_REAL18_R.mp4",
+        "duration": 6.884,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.13,
+            "end": 4.499,
+            "attributes": [
+                {
+                    "name": "첫차"
+                }
+            ]
+        },
+        {
+            "start": 4.635,
+            "end": 5.484,
+            "attributes": [
+                {
+                    "name": "시간"
+                }
+            ]
+        }
+    ]
+}

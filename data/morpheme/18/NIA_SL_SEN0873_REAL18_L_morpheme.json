@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0728/NIA_SL_SEN0873_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0873_REAL18_L.mp4",
+        "duration": 8.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 3.894,
+            "end": 6.588,
+            "attributes": [
+                {
+                    "name": "서울농아인협회",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

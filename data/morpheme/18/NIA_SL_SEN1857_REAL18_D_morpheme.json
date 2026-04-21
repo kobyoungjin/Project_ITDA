@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0726/NIA_SL_SEN1857_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1857_REAL18_D.mp4",
+        "duration": 4.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.386,
+            "end": 2.194,
+            "attributes": [
+                {
+                    "name": "우산"
+                }
+            ]
+        },
+        {
+            "start": 2.421,
+            "end": 3.1,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

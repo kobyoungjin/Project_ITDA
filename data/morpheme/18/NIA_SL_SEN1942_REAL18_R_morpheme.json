@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0735/NIA_SL_SEN1942_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1942_REAL18_R.mp4",
+        "duration": 3.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.614,
+            "end": 2.701,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        }
+    ]
+}

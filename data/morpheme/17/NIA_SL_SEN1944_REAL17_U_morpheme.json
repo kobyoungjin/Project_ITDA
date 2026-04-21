@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0870/NIA_SL_SEN1944_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1944_REAL17_U.mp4",
+        "duration": 4.667,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.786,
+            "end": 2.286,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.599,
+            "end": 3.457,
+            "attributes": [
+                {
+                    "name": "가능"
+                }
+            ]
+        }
+    ]
+}

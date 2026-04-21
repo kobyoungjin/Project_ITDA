@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_sjim1175/NIA_SL_SEN0534_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0534_REAL18_U.mp4",
+        "duration": 4.784,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.634,
+            "end": 2.312,
+            "attributes": [
+                {
+                    "name": "영수증"
+                }
+            ]
+        },
+        {
+            "start": 2.661,
+            "end": 3.161,
+            "attributes": [
+                {
+                    "name": "주세요"
+                }
+            ]
+        }
+    ]
+}

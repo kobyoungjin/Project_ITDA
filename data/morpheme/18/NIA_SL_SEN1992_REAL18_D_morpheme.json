@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0740/NIA_SL_SEN1992_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1992_REAL18_D.mp4",
+        "duration": 4.234,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 0.769,
+            "end": 1.405,
+            "attributes": [
+                {
+                    "name": "노트북"
+                }
+            ]
+        },
+        {
+            "start": 1.551,
+            "end": 2.008,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        },
+        {
+            "start": 2.28,
+            "end": 2.873,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

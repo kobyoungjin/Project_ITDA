@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1175/NIA_SL_SEN0044_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0044_REAL18_F.mp4",
+        "duration": 7.05,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.729,
+            "end": 2.294,
+            "attributes": [
+                {
+                    "name": "밤"
+                }
+            ]
+        },
+        {
+            "start": 2.598,
+            "end": 3.098,
+            "attributes": [
+                {
+                    "name": "12시"
+                }
+            ]
+        },
+        {
+            "start": 3.421,
+            "end": 3.921,
+            "attributes": [
+                {
+                    "name": "후"
+                }
+            ]
+        },
+        {
+            "start": 4.074,
+            "end": 4.515,
+            "attributes": [
+                {
+                    "name": "돈"
+                }
+            ]
+        },
+        {
+            "start": 4.682,
+            "end": 5.477,
+            "attributes": [
+                {
+                    "name": "추가"
+                }
+            ]
+        }
+    ]
+}

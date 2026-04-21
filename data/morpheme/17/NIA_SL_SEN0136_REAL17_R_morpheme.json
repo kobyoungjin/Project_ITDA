@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0869/NIA_SL_SEN0136_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0136_REAL17_R.mp4",
+        "duration": 5.734,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.293,
+            "end": 3.01,
+            "attributes": [
+                {
+                    "name": "짐"
+                }
+            ]
+        },
+        {
+            "start": 3.148,
+            "end": 4.058,
+            "attributes": [
+                {
+                    "name": "있다"
+                }
+            ]
+        }
+    ]
+}

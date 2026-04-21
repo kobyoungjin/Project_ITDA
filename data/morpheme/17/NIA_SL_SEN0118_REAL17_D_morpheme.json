@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0867/NIA_SL_SEN0118_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0118_REAL17_D.mp4",
+        "duration": 6.367,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.877,
+            "end": 2.796,
+            "attributes": [
+                {
+                    "name": "신분당"
+                }
+            ]
+        },
+        {
+            "start": 3.063,
+            "end": 3.522,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.563,
+            "end": 4.498,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

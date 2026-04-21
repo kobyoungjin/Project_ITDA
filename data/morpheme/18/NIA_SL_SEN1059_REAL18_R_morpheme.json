@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0726/NIA_SL_SEN1059_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1059_REAL18_R.mp4",
+        "duration": 6.034,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.258,
+            "end": 3.497,
+            "attributes": [
+                {
+                    "name": "자판기"
+                }
+            ]
+        },
+        {
+            "start": 3.615,
+            "end": 4.561,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0736/NIA_SL_SEN1956_REAL18_U.mp4",
+        "name": "NIA_SL_SEN1956_REAL18_U.mp4",
+        "duration": 4.6,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.768,
+            "end": 2.268,
+            "attributes": [
+                {
+                    "name": "시계"
+                }
+            ]
+        },
+        {
+            "start": 2.439,
+            "end": 3.319,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

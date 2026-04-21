@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0736/NIA_SL_SEN1960_REAL18_U.mp4",
+        "name": "NIA_SL_SEN1960_REAL18_U.mp4",
+        "duration": 4.267,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.118,
+            "end": 1.539,
+            "attributes": [
+                {
+                    "name": "시계"
+                }
+            ]
+        },
+        {
+            "start": 1.701,
+            "end": 2.201,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        },
+        {
+            "start": 2.586,
+            "end": 3.265,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

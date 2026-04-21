@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0856/NIA_SL_SEN0405_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0405_REAL17_D.mp4",
+        "duration": 5.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.876,
+            "end": 2.168,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        },
+        {
+            "start": 2.296,
+            "end": 2.853,
+            "attributes": [
+                {
+                    "name": "빨리"
+                }
+            ]
+        },
+        {
+            "start": 3.032,
+            "end": 4.198,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        }
+    ]
+}

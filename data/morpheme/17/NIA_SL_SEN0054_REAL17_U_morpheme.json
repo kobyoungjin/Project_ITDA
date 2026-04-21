@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0861/NIA_SL_SEN0054_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0054_REAL17_U.mp4",
+        "duration": 5.834,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.691,
+            "end": 2.191,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.36,
+            "end": 2.86,
+            "attributes": [
+                {
+                    "name": "1회"
+                }
+            ]
+        },
+        {
+            "start": 2.95,
+            "end": 4.15,
+            "attributes": [
+                {
+                    "name": "되다"
+                }
+            ]
+        }
+    ]
+}

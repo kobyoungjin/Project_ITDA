@@ -17,6 +17,7 @@ import {
   FilesetResolver,
   FaceLandmarker,
   HandLandmarker,
+  PoseLandmarker,
   DrawingUtils,
 } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/vision_bundle.mjs';
 
@@ -37,6 +38,7 @@ const CONFIG = {
 // ── 내부 상태 ─────────────────────────────────────────────────
 let faceLandmarker   = null;
 let handLandmarker   = null;
+let poseLandmarker   = null;
 let videoStream      = null;
 let animationId      = null;
 let lastFrameTime    = 0;
@@ -88,6 +90,20 @@ async function init() {
       minTrackingConfidence:      CONFIG.HAND_TRACKING_CONFIDENCE,
     });
 
+    // ③ PoseLandmarker (팔·어깨·몸통 33개 관절)
+    poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        delegate: 'GPU',
+      },
+      runningMode:  'VIDEO',
+      numPoses:     1,
+      minPoseDetectionConfidence: 0.5,
+      minPosePresenceConfidence:  0.5,
+      minTrackingConfidence:      0.5,
+      outputSegmentationMasks:    false,
+    });
+
     setStatus('카메라 연결 중…');
     await startCamera();
     
@@ -95,7 +111,7 @@ async function init() {
     drawingUtils = new DrawingUtils(canvasCtx);
     
     setStatus('✅ 실행 중');
-    connectWebSocket(); // 백엔드 RAG 엔진 연동 개시
+    // connectWebSocket(); // [비활성화] 사용자 요청에 따라 백엔드 비전 소켓 연결 시도 원천 차단
     window.dispatchEvent(new CustomEvent('itda:vision:ready'));
 
   } catch (err) {
@@ -126,10 +142,15 @@ let lastSendTime = 0;
 let currentFPS = 0;
 let prevWristY = null; // 모션 변화량 추적을 위한 이전 손목 Y좌표
 
+let wsRetryCount = 0;
+
 function connectWebSocket() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
   ws = new WebSocket(WS_URL);
-  ws.onopen = () => console.info("[ITDA WebSocket] 백엔드 RAG 연동 완료");
+  ws.onopen = () => {
+    console.info("[ITDA WebSocket] 백엔드 RAG 연동 완료");
+    wsRetryCount = 0;
+  };
   ws.onmessage = (evt) => {
     try {
       const ack = JSON.parse(evt.data);
@@ -139,8 +160,14 @@ function connectWebSocket() {
     } catch(e) {}
   };
   ws.onclose = () => {
-    console.warn("WS 재연결 시도 중...");
-    setTimeout(connectWebSocket, 2000);
+    if (wsRetryCount < 3) {
+      console.warn(`[ITDA] 백엔드 연결 실패. 재연결 시도 중... (${wsRetryCount + 1}/3)`);
+      wsRetryCount++;
+      setTimeout(connectWebSocket, 2000);
+    } else if (wsRetryCount === 3) {
+      console.info("💡 [ITDA] 백엔드(8000) 서버 오프라인으로 확인됨. 단독 모드로 전환합니다.");
+      wsRetryCount++;
+    }
   };
 }
 
@@ -201,7 +228,13 @@ async function processFrame(timestamp) {
 
   lastFrameTime = timestamp;
 
-  // ① 얼굴 감지 (FaceLandmarker)
+  // ① 포즈 감지 (PoseLandmarker) — 팔·어깨·몸통
+  const poseResult = poseLandmarker.detectForVideo(videoEl, timestamp);
+  window.dispatchEvent(new CustomEvent('itda:pose:results', {
+    detail: { landmarks: poseResult.landmarks?.[0] ?? null },
+  }));
+
+  // ② 얼굴 감지 (FaceLandmarker)
   const faceResult = faceLandmarker.detectForVideo(videoEl, timestamp);
   if (faceResult.faceBlendshapes && faceResult.faceBlendshapes.length > 0) {
     const raw = faceResult.faceBlendshapes[0].categories;
@@ -216,7 +249,7 @@ async function processFrame(timestamp) {
   const handResult = handLandmarker.detectForVideo(videoEl, timestamp);
   
   // ── 시각화 (Drawing) ──
-  drawResults(faceResult, handResult);
+  drawResults(faceResult, handResult, poseResult);
 
   if (handResult.landmarks && handResult.landmarks.length > 0) {
     const hands = handResult.landmarks.map((lm, i) => ({
@@ -239,7 +272,7 @@ async function processFrame(timestamp) {
 /**
  * 전용 캔버스에 랜드마크 그리기
  */
-function drawResults(faceResult, handResult) {
+function drawResults(faceResult, handResult, poseResult) {
   if (!canvasCtx || !drawingUtils) return;
 
   // 1. 캔버스 크기 동기화
@@ -285,6 +318,45 @@ function drawResults(faceResult, handResult) {
       });
     }
   }
+  // 4. 포즈 관절 점 (어깨=빨강, 팔꿈치=초록, 손목=파랑)
+  if (poseResult?.landmarks?.[0]) {
+    const lms = poseResult.landmarks[0];
+    const JOINTS = [
+      { idx: 11, color: '#FF6B6B', label: '어깨L' },
+      { idx: 12, color: '#4488FF', label: '어깨R' },
+      { idx: 13, color: '#FF9933', label: '팔꿈치L' },
+      { idx: 14, color: '#44CCFF', label: '팔꿈치R' },
+      { idx: 15, color: '#FFCC00', label: '손목L' },
+      { idx: 16, color: '#44FFCC', label: '손목R' },
+    ];
+    const BONES = [[11,13],[13,15],[12,14],[14,16]];
+
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+    for (const [a, b] of BONES) {
+      const la = lms[a], lb = lms[b];
+      if (!la || !lb || (la.visibility ?? 0) < 0.3 || (lb.visibility ?? 0) < 0.3) continue;
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(la.x * canvasEl.width, la.y * canvasEl.height);
+      canvasCtx.lineTo(lb.x * canvasEl.width, lb.y * canvasEl.height);
+      canvasCtx.stroke();
+    }
+
+    for (const { idx, color, label } of JOINTS) {
+      const lm = lms[idx];
+      if (!lm || (lm.visibility ?? 0) < 0.3) continue;
+      const x = lm.x * canvasEl.width;
+      const y = lm.y * canvasEl.height;
+      canvasCtx.beginPath();
+      canvasCtx.arc(x, y, 7, 0, Math.PI * 2);
+      canvasCtx.fillStyle = color;
+      canvasCtx.fill();
+      canvasCtx.fillStyle = '#ffffff';
+      canvasCtx.font = 'bold 11px monospace';
+      canvasCtx.fillText(label, x + 10, y + 4);
+    }
+  }
+
   canvasCtx.restore();
 }
 

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0513/NIA_SL_SEN0874_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0874_REAL17_F.mp4",
+        "duration": 5.967,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.988,
+            "end": 3.423,
+            "attributes": [
+                {
+                    "name": "서울농아인협회"
+                }
+            ]
+        },
+        {
+            "start": 3.77,
+            "end": 4.767,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

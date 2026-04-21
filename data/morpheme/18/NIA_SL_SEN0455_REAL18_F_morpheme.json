@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_rhkim1174/NIA_SL_SEN0455_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0455_REAL18_F.mp4",
+        "duration": 5.017,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.072,
+            "end": 2.386,
+            "attributes": [
+                {
+                    "name": "화장실"
+                }
+            ]
+        },
+        {
+            "start": 2.635,
+            "end": 3.364,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

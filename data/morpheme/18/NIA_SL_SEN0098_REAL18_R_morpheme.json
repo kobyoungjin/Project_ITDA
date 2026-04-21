@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_emyou1173/NIA_SL_SEN0098_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0098_REAL18_R.mp4",
+        "duration": 5.55,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.574,
+            "end": 2.016,
+            "attributes": [
+                {
+                    "name": "지하철오다"
+                }
+            ]
+        },
+        {
+            "start": 2.194,
+            "end": 3.102,
+            "attributes": [
+                {
+                    "name": "아직"
+                }
+            ]
+        }
+    ]
+}

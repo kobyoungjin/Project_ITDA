@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0737/NIA_SL_SEN0965_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0965_REAL18_R.mp4",
+        "duration": 6.867,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.398,
+            "end": 4.651,
+            "attributes": [
+                {
+                    "name": "천안아산역"
+                }
+            ]
+        },
+        {
+            "start": 4.801,
+            "end": 5.943,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

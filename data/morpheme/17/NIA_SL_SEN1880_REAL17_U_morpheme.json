@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0863/NIA_SL_SEN1880_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1880_REAL17_U.mp4",
+        "duration": 5.034,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.037,
+            "end": 1.537,
+            "attributes": [
+                {
+                    "name": "아이"
+                }
+            ]
+        },
+        {
+            "start": 1.775,
+            "end": 2.275,
+            "attributes": [
+                {
+                    "name": "없다"
+                }
+            ]
+        },
+        {
+            "start": 2.579,
+            "end": 3.437,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0860/NIA_SL_SEN0247_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0247_REAL17_U.mp4",
+        "duration": 6.367,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.655,
+            "end": 3.222,
+            "attributes": [
+                {
+                    "name": "9호"
+                }
+            ]
+        },
+        {
+            "start": 3.284,
+            "end": 4.429,
+            "attributes": [
+                {
+                    "name": "곳곳"
+                }
+            ]
+        }
+    ]
+}

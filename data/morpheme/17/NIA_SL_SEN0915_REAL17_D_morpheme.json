@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0497/NIA_SL_SEN0915_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0915_REAL17_D.mp4",
+        "duration": 5.634,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.803,
+            "end": 3.149,
+            "attributes": [
+                {
+                    "name": "난방"
+                }
+            ]
+        },
+        {
+            "start": 3.252,
+            "end": 4.346,
+            "attributes": [
+                {
+                    "name": "켜다"
+                }
+            ]
+        }
+    ]
+}

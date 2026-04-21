@@ -1,0 +1,64 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0872/NIA_SL_SEN1767_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1767_REAL17_F.mp4",
+        "duration": 8,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.802,
+            "end": 2.503,
+            "attributes": [
+                {
+                    "name": "편지"
+                }
+            ]
+        },
+        {
+            "start": 2.723,
+            "end": 3.073,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 3.222,
+            "end": 3.463,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.736,
+            "end": 4.47,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.745,
+            "end": 5.27,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 5.504,
+            "end": 6.781,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

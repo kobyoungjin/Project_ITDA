@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0740/NIA_SL_SEN1994_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1994_REAL18_R.mp4",
+        "duration": 4.067,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.47,
+            "end": 2.077,
+            "attributes": [
+                {
+                    "name": "보청기"
+                }
+            ]
+        },
+        {
+            "start": 2.318,
+            "end": 3.019,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        }
+    ]
+}

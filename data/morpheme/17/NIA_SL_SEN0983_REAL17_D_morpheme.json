@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0504/NIA_SL_SEN0983_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0983_REAL17_D.mp4",
+        "duration": 3.8,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.226,
+            "end": 2.887,
+            "attributes": [
+                {
+                    "name": "청음회관",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1175/NIA_SL_SEN0257_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0257_REAL18_L.mp4",
+        "duration": 4.717,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.646,
+            "end": 2.146,
+            "attributes": [
+                {
+                    "name": "대략"
+                }
+            ]
+        },
+        {
+            "start": 2.259,
+            "end": 3.323,
+            "attributes": [
+                {
+                    "name": "40분"
+                }
+            ]
+        }
+    ]
+}

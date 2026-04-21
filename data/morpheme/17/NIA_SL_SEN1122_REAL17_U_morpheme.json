@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_yhjeon0498/NIA_SL_SEN1122_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1122_REAL17_U.mp4",
+        "duration": 6.434,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.426,
+            "end": 3.172,
+            "attributes": [
+                {
+                    "name": "물품보관"
+                }
+            ]
+        },
+        {
+            "start": 3.341,
+            "end": 3.999,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 4.141,
+            "end": 5.271,
+            "attributes": [
+                {
+                    "name": "불가능"
+                }
+            ]
+        }
+    ]
+}

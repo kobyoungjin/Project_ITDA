@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0734/NIA_SL_SEN0933_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0933_REAL18_R.mp4",
+        "duration": 5.034,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.487,
+            "end": 3.184,
+            "attributes": [
+                {
+                    "name": "서울농아인협회"
+                }
+            ]
+        },
+        {
+            "start": 3.295,
+            "end": 4.356,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0737/NIA_SL_SEN1966_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1966_REAL18_D.mp4",
+        "duration": 5.234,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.661,
+            "end": 2.197,
+            "attributes": [
+                {
+                    "name": "반지"
+                }
+            ]
+        },
+        {
+            "start": 2.36,
+            "end": 2.975,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.312,
+            "end": 3.984,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

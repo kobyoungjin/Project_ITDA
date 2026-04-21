@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1173/NIA_SL_SEN0236_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0236_REAL18_D.mp4",
+        "duration": 5.65,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.725,
+            "end": 2.829,
+            "attributes": [
+                {
+                    "name": "지름길"
+                }
+            ]
+        },
+        {
+            "start": 3.031,
+            "end": 4.183,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

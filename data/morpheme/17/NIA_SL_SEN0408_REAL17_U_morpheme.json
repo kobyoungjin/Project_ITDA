@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0856/NIA_SL_SEN0408_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0408_REAL17_U.mp4",
+        "duration": 6.134,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.918,
+            "end": 3.242,
+            "attributes": [
+                {
+                    "name": "역무원"
+                }
+            ]
+        },
+        {
+            "start": 3.31,
+            "end": 3.674,
+            "attributes": [
+                {
+                    "name": "부르다"
+                }
+            ]
+        },
+        {
+            "start": 3.852,
+            "end": 4.839,
+            "attributes": [
+                {
+                    "name": "나"
+                }
+            ]
+        }
+    ]
+}

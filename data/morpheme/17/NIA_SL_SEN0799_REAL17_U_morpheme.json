@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0505/NIA_SL_SEN0799_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0799_REAL17_U.mp4",
+        "duration": 5.434,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.021,
+            "end": 2.31,
+            "attributes": [
+                {
+                    "name": "지금"
+                }
+            ]
+        },
+        {
+            "start": 2.659,
+            "end": 3.159,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        },
+        {
+            "start": 3.516,
+            "end": 4.1,
+            "attributes": [
+                {
+                    "name": "맞다"
+                }
+            ]
+        }
+    ]
+}

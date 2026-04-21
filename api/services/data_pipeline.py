@@ -1,3 +1,6 @@
+import os
+import json
+import glob
 import requests
 import faiss
 from typing import List, Dict
@@ -43,6 +46,47 @@ class DataPipeline:
                 continue
                 
         return parsed_data
+
+    def _import_aihub_json(self) -> List[Dict]:
+        """
+        AI Hub (유저 로컬 data/morpheme) JSON 데이터를 수집하여 통합 데이터 형식으로 반환합니다.
+        """
+        aihub_data = []
+        if not os.path.exists(settings.AI_HUB_DATA_PATH):
+            print(f"[DataPipeline] 경고: AI Hub 데이터 경로를 찾을 수 없습니다. ({settings.AI_HUB_DATA_PATH})")
+            return aihub_data
+
+        json_files = glob.glob(os.path.join(settings.AI_HUB_DATA_PATH, "**", "*.json"), recursive=True)
+        print(f"[DataPipeline] AI Hub 데이터 {len(json_files)}개의 JSON 파일을 발견했습니다. 파싱을 시작합니다.")
+
+        for json_path in json_files:
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    content = json.load(f)
+                
+                meta = content.get("metaData", {})
+                video_url = meta.get("url", "")
+                
+                # data 배열 내부의 attributes 안의 name 추출해 문장 조립
+                data_list = content.get("data", [])
+                words = []
+                for item in data_list:
+                    attrs = item.get("attributes", [])
+                    if attrs and len(attrs) > 0:
+                        words.append(attrs[0].get("name", ""))
+                        
+                if words:
+                    sentence = " ".join(words)
+                    aihub_data.append({
+                        "title": sentence,
+                        "content": f"AI Hub 수어 영상. 키워드: {sentence}",
+                        "emotions": ["일상", "정보전달"],
+                        "video_url": video_url
+                    })
+            except Exception as e:
+                print(f"[DataPipeline] AI Hub JSON 파싱 에러 ({json_path}): {e}")
+                
+        return aihub_data
 
     def fetch_sign_language_data(self) -> List[Dict]:
         """문화데이터광장 API 데이터 수집 및 안전한 파싱 로직 적용"""
@@ -128,6 +172,10 @@ class DataPipeline:
                 {"title": "오다", "content": "손을 자신 쪽으로 당기며 소중한 누군가와의 만남과 환영의 마음을 표현합니다.", "emotions": ["환영", "만남", "기쁨"]},
                 {"title": "이름이 뭐예요", "content": "한 손으로 다른 손의 손바닥을 두드리며 질문의 억양으로 고개를 약간 내밉니다. 처음 만나는 사람에게 상냥하게 이름을 묻는 표현입니다.", "emotions": ["호기심", "친근함", "설렘"]},
             ]
+            
+        # AI Hub 데이터셋 병합
+        aihub_parsed = self._import_aihub_json()
+        raw_data.extend(aihub_parsed)
             
         # _parse_public_data 함수를 통해 프론트엔드가 요구하는 정제된 규격(JSON)으로 변환
         return self._parse_public_data(raw_data)

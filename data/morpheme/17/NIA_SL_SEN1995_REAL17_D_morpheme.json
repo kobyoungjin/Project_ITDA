@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0875/NIA_SL_SEN1995_REAL17_D.mp4",
+        "name": "NIA_SL_SEN1995_REAL17_D.mp4",
+        "duration": 5.134,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.279,
+            "end": 1.871,
+            "attributes": [
+                {
+                    "name": "보청기"
+                }
+            ]
+        },
+        {
+            "start": 2.087,
+            "end": 2.551,
+            "attributes": [
+                {
+                    "name": "없다"
+                }
+            ]
+        },
+        {
+            "start": 2.788,
+            "end": 3.546,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        }
+    ]
+}

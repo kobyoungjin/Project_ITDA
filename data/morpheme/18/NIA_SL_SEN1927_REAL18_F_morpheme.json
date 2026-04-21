@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0733/NIA_SL_SEN1927_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1927_REAL18_F.mp4",
+        "duration": 3.267,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.057,
+            "end": 2.065,
+            "attributes": [
+                {
+                    "name": "돈",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

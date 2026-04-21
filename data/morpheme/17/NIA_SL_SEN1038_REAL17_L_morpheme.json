@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0509/NIA_SL_SEN1038_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1038_REAL17_L.mp4",
+        "duration": 4.967,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 0.986,
+            "end": 2.337,
+            "attributes": [
+                {
+                    "name": "회의실"
+                }
+            ]
+        },
+        {
+            "start": 2.402,
+            "end": 2.841,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        },
+        {
+            "start": 2.868,
+            "end": 3.959,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

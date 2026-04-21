@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_yhjeon1171/NIA_SL_SEN0632_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0632_REAL18_D.mp4",
+        "duration": 4.517,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.58,
+            "end": 2.08,
+            "attributes": [
+                {
+                    "name": "명동"
+                }
+            ]
+        },
+        {
+            "start": 2.251,
+            "end": 3.066,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

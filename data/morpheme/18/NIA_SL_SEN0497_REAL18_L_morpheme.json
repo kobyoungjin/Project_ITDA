@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_sjim1171/NIA_SL_SEN0497_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0497_REAL18_L.mp4",
+        "duration": 7.25,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.755,
+            "end": 2.505,
+            "attributes": [
+                {
+                    "name": "뒤"
+                }
+            ]
+        },
+        {
+            "start": 2.658,
+            "end": 3.399,
+            "attributes": [
+                {
+                    "name": "트렁크열다"
+                }
+            ]
+        }
+    ]
+}

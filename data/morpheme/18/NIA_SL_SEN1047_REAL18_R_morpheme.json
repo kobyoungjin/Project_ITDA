@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0725/NIA_SL_SEN1047_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1047_REAL18_R.mp4",
+        "duration": 4.5,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.794,
+            "end": 2.483,
+            "attributes": [
+                {
+                    "name": "계단"
+                }
+            ]
+        },
+        {
+            "start": 2.566,
+            "end": 3.37,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_mrkim1172/NIA_SL_SEN0369_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0369_REAL18_F.mp4",
+        "duration": 3.884,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.282,
+            "end": 1.776,
+            "attributes": [
+                {
+                    "name": "1호"
+                }
+            ]
+        },
+        {
+            "start": 1.938,
+            "end": 2.667,
+            "attributes": [
+                {
+                    "name": "갈아타다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_sjim1175/NIA_SL_SEN0536_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0536_REAL18_R.mp4",
+        "duration": 5.417,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.786,
+            "end": 2.286,
+            "attributes": [
+                {
+                    "name": "유리"
+                }
+            ]
+        },
+        {
+            "start": 2.518,
+            "end": 3.178,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

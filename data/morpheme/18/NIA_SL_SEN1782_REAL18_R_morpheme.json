@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_swlee0739/NIA_SL_SEN1782_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1782_REAL18_R.mp4",
+        "duration": 4.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 0.862,
+            "end": 1.591,
+            "attributes": [
+                {
+                    "name": "가방"
+                }
+            ]
+        },
+        {
+            "start": 1.689,
+            "end": 2.274,
+            "attributes": [
+                {
+                    "name": "사라지다"
+                }
+            ]
+        },
+        {
+            "start": 2.361,
+            "end": 3.327,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

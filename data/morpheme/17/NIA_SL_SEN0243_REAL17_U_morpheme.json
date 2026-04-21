@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0860/NIA_SL_SEN0243_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0243_REAL17_U.mp4",
+        "duration": 7.934,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 3.026,
+            "end": 3.526,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 3.629,
+            "end": 4.129,
+            "attributes": [
+                {
+                    "name": "계단"
+                }
+            ]
+        },
+        {
+            "start": 4.397,
+            "end": 4.897,
+            "attributes": [
+                {
+                    "name": "12"
+                }
+            ]
+        },
+        {
+            "start": 5.086,
+            "end": 5.826,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

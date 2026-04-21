@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1174/NIA_SL_SEN0313_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0313_REAL18_L.mp4",
+        "duration": 5.317,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.61,
+            "end": 2.265,
+            "attributes": [
+                {
+                    "name": "은행"
+                }
+            ]
+        },
+        {
+            "start": 2.363,
+            "end": 2.935,
+            "attributes": [
+                {
+                    "name": "번호"
+                }
+            ]
+        },
+        {
+            "start": 3.043,
+            "end": 4.007,
+            "attributes": [
+                {
+                    "name": "받다"
+                }
+            ]
+        }
+    ]
+}

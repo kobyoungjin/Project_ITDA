@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_gdchoi1174/NIA_SL_SEN0178_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0178_REAL18_U.mp4",
+        "duration": 4.55,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.434,
+            "end": 2.136,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 2.233,
+            "end": 3.332,
+            "attributes": [
+                {
+                    "name": "바꾸다"
+                }
+            ]
+        }
+    ]
+}
