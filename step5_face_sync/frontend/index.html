@@ -15,19 +15,19 @@
       --alpha-ceramic:   #D7D1C7;
       --alpha-rosegold:  #F3A289;
       --alpha-sapphire:  #00BFFF;
-      --alpha-bg-deep:   #ffffff;
-      --alpha-alert-low: #0080ff;
-      --alpha-alert-med: #cc8400;
-      --alpha-alert-high: #cc1c1c;
+      --alpha-bg-deep:   #050810;
+      --alpha-alert-low: #00BFFF;
+      --alpha-alert-med: #FFA500;
+      --alpha-alert-high: #FF2200;
       
-      --bg-glass:   rgba(255, 255, 255, 0.7);
-      --border:     rgba(0, 0, 0, 0.1);
+      --bg-glass:   rgba(15, 23, 42, 0.7);
+      --border:     rgba(255, 255, 255, 0.1);
     }
 
     body {
       font-family: 'Inter', 'Noto Sans KR', sans-serif;
       background: var(--alpha-bg-deep);
-      color: #111111;
+      color: #fff;
       margin: 0; overflow: hidden;
     }
 
@@ -104,17 +104,6 @@
 
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    /* ── Rig Status 위젯 ── */
-    #rig-status-panel {
-      bottom: 20px; right: 20px;
-      width: 140px; font-size: 0.65rem;
-      font-family: 'JetBrains Mono', monospace;
-      z-index: 150;
-    }
-    .rig-item { display: flex; justify-content: space-between; margin-top: 4px; }
-    .rig-ok { color: var(--alpha-sapphire); font-weight: bold; }
-    .rig-missing { color: var(--alpha-alert-high); text-decoration: line-through; opacity: 0.6; }
-
   </style>
 </head>
 <body>
@@ -174,14 +163,6 @@
       <div id="warning-strip">
         <span id="warning-text">Monitoring Zone Alpha-17...</span>
       </div>
-
-      <!-- Rig Status Widget -->
-      <div id="rig-status-panel" class="panel">
-        <div class="status-badge" style="background:#444; color:#fff;">RIG_REPORT</div>
-        <div id="rig-items-container">
-          <div class="rig-item">Scanning skeleton...</div>
-        </div>
-      </div>
     </div>
 
     <!-- 컨트롤 버튼 -->
@@ -214,10 +195,10 @@
     }
   </script>
 
-  <!-- ── 모듈 로딩 (캐시 무효화 적용) ── -->
-  <script type="module" src="./js/avatar.js?v=2.5.1"></script>
-  <script type="module" src="./js/retargeting.js?v=2.5.1"></script>
-  <script type="module" src="./js/vision.js?v=2.5.1"></script>
+  <!-- ── 모듈 로딩 ── -->
+  <script type="module" src="./js/avatar.js"></script>
+  <script type="module" src="./js/retargeting.js"></script>
+  <script type="module" src="./js/vision.js"></script>
 
   <script type="module">
     // [Cyborg Alpha] 전역 상태 제어
