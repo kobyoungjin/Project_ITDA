@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(curl -sI -w \"HTTP %{http_code}\\\\n\" \"https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0871/NIA_SL_SEN0354_REAL17_F.mp4\")"
+    ]
+  }
+}

@@ -15,56 +15,39 @@ const btnMic = document.getElementById('btn-mic');
 const btnSend = document.getElementById('btn-send');
 const emotionOutput = document.getElementById('emotion-output');
 
-// Web Speech API
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let isRecording = false;
+// [③ STT] stt-adapter.js 가 window.ITDAStt 를 노출.
+// Web Speech API 미지원 브라우저에서도 Whisper WS 폴백으로 동일 UX 유지.
+btnMic.addEventListener('click', () => {
+  if (!window.ITDAStt) {
+    console.warn('[STT] 어댑터 미로드');
+    return;
+  }
+  chatInput.value = '';
+  window.ITDAStt.toggle();
+});
 
-if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
-  recognition.lang = 'ko-KR'; // 한국어
-  recognition.continuous = false;
-  recognition.interimResults = false;
-
-  recognition.onstart = () => {
-    isRecording = true;
+// 어댑터 상태 → UI 반영
+window.addEventListener('itda:stt:state', (e) => {
+  const state = e.detail;
+  if (state === 'listening') {
     btnMic.classList.add('recording');
     chatInput.placeholder = '말씀해 주세요...';
-  };
-
-  recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    chatInput.value = transcript;
-    sendMessage(transcript);
-  };
-
-  recognition.onerror = (event) => {
-    console.error('[STT] Speech recognition error:', event.error);
-    isRecording = false;
-    btnMic.classList.remove('recording');
-    chatInput.placeholder = '번역할 내용을 입력하세요...';
-    emotionOutput.innerHTML = `<span style="color:#ff4757">음성 인식 오류: ${event.error}</span>`;
-  };
-
-  recognition.onend = () => {
-    isRecording = false;
-    btnMic.classList.remove('recording');
-    chatInput.placeholder = '번역할 내용을 입력하세요...';
-  };
-} else {
-  console.warn('[STT] Web Speech API is not supported in this browser.');
-  btnMic.style.display = 'none'; // 미지원 브라우저는 버튼 숨김
-}
-
-// Event Listeners
-btnMic.addEventListener('click', () => {
-  if (!recognition) return;
-  if (isRecording) {
-    recognition.stop();
   } else {
-    chatInput.value = '';
-    recognition.start();
+    btnMic.classList.remove('recording');
+    chatInput.placeholder = '번역할 내용을 입력하세요...';
+    if (state === 'error') {
+      emotionOutput.innerHTML = `<span style="color:#ff4757">음성 인식 오류</span>`;
+    }
   }
+});
+
+// Web Speech / Whisper 어느 쪽이든 결과는 동일 경로로 처리
+window.addEventListener('itda:stt:transcript', (e) => {
+  const { text, source } = e.detail || {};
+  if (!text) return;
+  chatInput.value = text;
+  console.info(`[STT] (${source}) "${text}"`);
+  sendMessage(text);
 });
 
 btnSend.addEventListener('click', () => {
@@ -122,7 +105,7 @@ async function sendMessage(text) {
   } catch (err) {
     console.error("[Search Error]", err);
     // [단독 모드 변환] 
-    let fallbackKeyword = Object.keys(MOTION_PROFILES).find(k => text.includes(k) || (k === '고맙습니다' && text.includes('감사')));
+    let fallbackKeyword = getAllKeywords().find(k => text.includes(k) || (k === '고맙습니다' && text.includes('감사')));
     
     if (fallbackKeyword) {
       emotionOutput.innerHTML = `<span style="color:#00F2FE; font-weight:800;">[로컬 매칭] : ${fallbackKeyword}</span>`;
@@ -135,23 +118,73 @@ async function sendMessage(text) {
   }
 }
 
-// --- 전문 수어 리깅 및 프리셋 ---
-const RIG_PRESETS = {
-  FIST: {
-    Thumb1: {x:0.3, y:0, z:0}, Index1: {x:1.5, y:0, z:0}, Middle1: {x:1.5, y:0, z:0}, Ring1: {x:1.5, y:0, z:0}, Pinky1: {x:1.5, y:0, z:0},
-    Index2: {x:1.2, y:0, z:0}, Middle2: {x:1.2, y:0, z:0}, Ring2: {x:1.2, y:0, z:0}, Pinky2: {x:1.2, y:0, z:0}
-  },
-  PALM: {
-    Thumb1: {x:0, y:0, z:0}, Index1: {x:0, y:0, z:0}, Middle1: {x:0, y:0, z:0}, Ring1: {x:0, y:0, z:0}, Pinky1: {x:0, y:0, z:0}
-  },
-  POINT: {
-    Index1: {x:0, y:0, z:0}, Index2: {x:0, y:0, z:0},
-    Middle1: {x:1.5, y:0, z:0}, Ring1: {x:1.5, y:0, z:0}, Pinky1: {x:1.5, y:0, z:0}
+// --- 전문 수어 리깅 프리셋 (KSL 6대 수형 × 3 마디 정밀 매핑) ---
+// 각 손가락마다 3마디(1=MCP/근위, 2=PIP/중위, 3=DIP/원위) 회전값을 지정.
+// Pitch(x) = 굴곡 정도 (0=곧게, π/2≈1.57 = 90도 꺾임)
+// 백엔드 handshape_analyzer 가 분류하는 FIST/PALM/POINT/V/L/OK 코드와 1:1 매핑됨.
+const FULL_CURL = 1.5;   // 거의 90도 굴곡
+const HALF_CURL = 0.8;   // 약 45도 굴곡
+
+// 5개 손가락 × 3 마디 모두 곧게 편 상태 (기본값 템플릿)
+const _straightFinger = () => ({
+  '1': {x:0, y:0, z:0}, '2': {x:0, y:0, z:0}, '3': {x:0, y:0, z:0},
+});
+// 5개 손가락 × 3 마디 모두 꽉 접은 상태
+const _curledFinger = () => ({
+  '1': {x:FULL_CURL, y:0, z:0}, '2': {x:FULL_CURL, y:0, z:0}, '3': {x:HALF_CURL, y:0, z:0},
+});
+
+function _buildHandPreset(fingerStates) {
+  // fingerStates: {Thumb: 'straight'|'curled', Index: ..., ...}
+  const out = {};
+  for (const [name, state] of Object.entries(fingerStates)) {
+    const pose = state === 'curled' ? _curledFinger() : _straightFinger();
+    out[`${name}1`] = pose['1'];
+    out[`${name}2`] = pose['2'];
+    out[`${name}3`] = pose['3'];
   }
+  return out;
+}
+
+const RIG_PRESETS = {
+  // 주먹: 모든 손가락 접음
+  FIST: _buildHandPreset({
+    Thumb:'curled', Index:'curled', Middle:'curled', Ring:'curled', Pinky:'curled'
+  }),
+  // 평손: 모든 손가락 곧게
+  PALM: _buildHandPreset({
+    Thumb:'straight', Index:'straight', Middle:'straight', Ring:'straight', Pinky:'straight'
+  }),
+  // 포인팅: 검지만 곧게, 나머지 접음
+  POINT: _buildHandPreset({
+    Thumb:'curled', Index:'straight', Middle:'curled', Ring:'curled', Pinky:'curled'
+  }),
+  // V: 검지+중지 곧게, 약지+소지 접음
+  V: _buildHandPreset({
+    Thumb:'curled', Index:'straight', Middle:'straight', Ring:'curled', Pinky:'curled'
+  }),
+  // L: 엄지+검지 곧게 (직각), 나머지 접음
+  L: _buildHandPreset({
+    Thumb:'straight', Index:'straight', Middle:'curled', Ring:'curled', Pinky:'curled'
+  }),
+  // OK: 엄지+검지 끝이 맞닿음(약간 굽음) + 나머지 곧게
+  OK: (() => {
+    const p = _buildHandPreset({
+      Thumb:'straight', Index:'straight', Middle:'straight', Ring:'straight', Pinky:'straight'
+    });
+    // 엄지·검지 1-2-3 마디에 살짝 굴곡을 줘 고리 모양 형성
+    p.Thumb1 = {x:HALF_CURL*0.6, y:0.4, z:0};
+    p.Thumb2 = {x:HALF_CURL*0.6, y:0, z:0};
+    p.Index1 = {x:HALF_CURL, y:0.1, z:0};
+    p.Index2 = {x:HALF_CURL, y:0, z:0};
+    p.Index3 = {x:HALF_CURL*0.5, y:0, z:0};
+    return p;
+  })(),
 };
 
 /**
- * 특정 마디 그룹(예: 오른손)에 프리셋 적용 보조 함수
+ * 특정 손(Left/Right)에 수형 프리셋을 본 이름으로 풀어서 적용.
+ * 예: FIST 프리셋 → RightHandIndex1/2/3, RightHandMiddle1/2/3, ...
  */
 function applyHandPreset(bonesObj, side, presetName) {
   const preset = RIG_PRESETS[presetName];
@@ -161,9 +194,30 @@ function applyHandPreset(bonesObj, side, presetName) {
   }
 }
 
-// --- 전문 수어 동작 프로필 (KSL Motion Profiles) ---
-// 정밀 리깅을 위해 Spine, Neck, Finger 관절을 대폭 보강
-const MOTION_PROFILES = {
+// [P0] 백엔드 Handshape 분석 결과를 아바타에 실시간 적용 (follow-along / 교육 모드)
+// ws_vision 가 송신하는 itda:hands:analysis 이벤트를 구독.
+window.addEventListener('itda:hands:analysis', (e) => {
+  const avatar = window.ITDAAvatar5;
+  if (!avatar || window.translationModeActive) return; // 번역 재생 중에는 간섭 안 함
+  const analyses = e.detail || [];
+  const bones = {};
+  for (const a of analyses) {
+    if (!a || !a.handshape || a.handshape === 'UNKNOWN') continue;
+    // MediaPipe handedness 는 카메라 시점이라 좌우 반전됨 → 아바타 기준 반대쪽에 적용
+    const side = a.handedness === 'Right' ? 'Left' : 'Right';
+    applyHandPreset(bones, side, a.handshape);
+  }
+  for (const [bName, rot] of Object.entries(bones)) {
+    avatar.updateBone(bName, rot, 0.25);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// [Tier 1] MOTION_PROFILES_V1 — 레거시(2단계 · 간이 prop 방식)
+// ══════════════════════════════════════════════════════════════
+// 4/21 이전 작성. Arm / ForeArm / Spine / Neck 정도만 지정.
+// V2 가 없는 단어의 폴백으로 유지. 신규 작성 금지.
+const MOTION_PROFILES_V1 = {
   "안녕하세요": [
     { duration: 600,  bones: { Spine: {x:0.2, y:0, z:0}, RightArm: {x:-1.0, y:0, z:0}, RightForeArm: {x:1.2, y:0.4, z:0} }, morphs: { Surprised: 0.5 } },
     { duration: 1000, bones: { Spine: {x:0, y:0, z:0}, RightArm: {x:-0.5, y:0, z:0}, RightForeArm: {x:0.2, y:0, z:0} }, morphs: { Surprised: 0 } }
@@ -216,6 +270,227 @@ const MOTION_PROFILES = {
   ]
 };
 
+// ══════════════════════════════════════════════════════════════
+// [Tier 1] MOTION_PROFILES_V2 — 해부학적 정밀 프로필 (2026-04-22)
+// ══════════════════════════════════════════════════════════════
+// 규약:
+//   각 step = { duration, easing, bones, handshape_R?, handshape_L?, morphs? }
+//   bones  : Shoulder / Arm / ForeArm / Hand / Spine / Neck 를 모두 포함
+//   handshape_R/L : "PALM"|"FIST"|"POINT"|"V"|"L"|"OK" → RIG_PRESETS 로 자동 확장되어
+//                   손가락 5개 × 3마디 = 15개 본이 모두 셋팅됨
+//   easing : "linear"|"easeIn"|"easeOut"|"easeInOut"
+//
+// 완성도 기준: shoulder + arm + forearm + hand + 5finger×3joint + spine/neck 모두 지정
+const MOTION_PROFILES_V2 = {
+  "안녕하세요": {
+    description: "오른손 PALM 을 얼굴 옆에서 가볍게 흔들고 가슴 앞으로 내리며 인사",
+    // V2.4: Arm.x 축소(-0.5→-0.3), Arm.y 제거(Euler 복합회전 방지), Step 4 하강 명확
+    steps: [
+      // 1) 준비: 오른팔 약간만 올리고 팔꿈치 굽혀 손이 얼굴 옆 높이
+      {
+        duration: 500, easing: "easeOut",
+        bones: {
+          Spine:         {x: 0.05, y: 0, z: 0},
+          Neck:          {x: 0.05, y: 0, z: 0},
+          RightArm:      {x: -0.3, y: 0, z: -0.2},   // 살짝 올리고(-17°) 살짝 앞(-11°)
+          RightForeArm:  {x: -1.0, y: 0, z: 0},      // 팔꿈치 57° 굽힘
+          RightHand:     {x: 0, y: 0.2, z: 0},       // 손목만 살짝 팔목 틀어 손바닥 앞쪽
+        },
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.3, eyeWideLeft: 0.1, eyeWideRight: 0.1 }
+      },
+      // 2) 손 바깥 흔듦
+      {
+        duration: 350, easing: "easeInOut",
+        bones: {
+          RightArm:      {x: -0.3, y: 0, z: -0.2},
+          RightForeArm:  {x: -1.0, y: 0.25, z: 0},
+          RightHand:     {x: 0, y: 0.2, z: 0.1},
+        },
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.5 }
+      },
+      // 3) 손 안쪽 흔듦
+      {
+        duration: 350, easing: "easeInOut",
+        bones: {
+          RightArm:      {x: -0.3, y: 0, z: -0.2},
+          RightForeArm:  {x: -1.0, y: -0.2, z: 0},
+          RightHand:     {x: 0, y: 0.1, z: -0.1},
+        },
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.6 }
+      },
+      // 4) 팔 내림 + 목례 (하강 명확히)
+      {
+        duration: 600, easing: "easeIn",
+        bones: {
+          Spine:         {x: 0.1, y: 0, z: 0},
+          Neck:          {x: 0.15, y: 0, z: 0},
+          RightArm:      {x: 0.1, y: 0, z: -0.3},    // 양수 x = T-pose 아래로 내림
+          RightForeArm:  {x: -0.6, y: 0, z: 0},      // 굽힘 완화
+          RightHand:     {x: 0, y: 0, z: 0},
+        },
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.4 }
+      }
+    ]
+  },
+
+  "고맙습니다": {
+    description: "양손 PALM 을 가슴 앞에서 모으고 고개 숙여 감사 표현",
+    // V2.4: Arm.x 양수로 T-pose 아래로 내려서 가슴 높이 확보, Arm.z 앞쪽으로
+    steps: [
+      // 1) 준비: 양팔을 T-pose 아래로 살짝 내리며 앞쪽으로 모음 (LeftArm.z 는 미러링으로 양수)
+      {
+        duration: 500, easing: "easeOut",
+        bones: {
+          Spine:         {x: 0.05, y: 0, z: 0},
+          Neck:          {x: 0.05, y: 0, z: 0},
+          LeftArm:       {x: 0.2, y: 0, z:  0.7},     // Left: z 양수 = 앞
+          RightArm:      {x: 0.2, y: 0, z: -0.7},     // Right: z 음수 = 앞 (미러)
+          LeftForeArm:   {x: -1.2, y: -0.4, z: 0},
+          RightForeArm:  {x: -1.2, y:  0.4, z: 0},
+          LeftHand:      {x: 0, y: 0, z: 0},
+          RightHand:     {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.35 }
+      },
+      // 2) Peak: 오른손이 왼손등 터치 + 고개 숙임
+      {
+        duration: 500, easing: "easeInOut",
+        bones: {
+          Spine:         {x: 0.15, y: 0, z: 0},
+          Neck:          {x: 0.2, y: 0, z: 0},
+          LeftArm:       {x: 0.2, y: 0, z:  0.7},
+          RightArm:      {x: 0.2, y: 0, z: -0.75},
+          LeftForeArm:   {x: -1.2, y: -0.4, z: 0},
+          RightForeArm:  {x: -1.3, y:  0.55, z: 0},
+          LeftHand:      {x: 0.1, y: 0, z: 0},
+          RightHand:     {x: 0.15, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.55, eyeWideLeft: 0.2, eyeWideRight: 0.2 }
+      },
+      // 3) 복귀 전 단계
+      {
+        duration: 600, easing: "easeIn",
+        bones: {
+          Spine:         {x: 0.05, y: 0, z: 0},
+          Neck:          {x: 0.05, y: 0, z: 0},
+          LeftArm:       {x: 0.1, y: 0, z:  0.3},
+          RightArm:      {x: 0.1, y: 0, z: -0.3},
+          LeftForeArm:   {x: -0.4, y: -0.15, z: 0},
+          RightForeArm:  {x: -0.4, y:  0.15, z: 0},
+          LeftHand:      {x: 0, y: 0, z: 0},
+          RightHand:     {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.3 }
+      }
+    ]
+  },
+
+  "사랑합니다": {
+    description: "양손 PALM 을 가슴 앞에서 교차하여 포개며 사랑 표현",
+    // V2.4: 가슴 높이 확보 위해 Arm.x 양수, ForeArm.y 크게 교차
+    steps: [
+      // 1) 준비: 양팔을 T-pose 아래 가슴 높이로 내리고 앞으로 (LeftArm.z 미러)
+      {
+        duration: 500, easing: "easeOut",
+        bones: {
+          Spine:         {x: 0.05, y: 0, z: 0},
+          Neck:          {x: 0, y: 0, z: 0},
+          LeftArm:       {x: 0.25, y: 0, z:  0.8},    // Left: z 양수 = 앞
+          RightArm:      {x: 0.25, y: 0, z: -0.8},    // Right: z 음수 = 앞
+          LeftForeArm:   {x: -1.3, y: -0.3, z: 0},
+          RightForeArm:  {x: -1.3, y:  0.3, z: 0},
+          LeftHand:      {x: 0, y: 0, z: 0},
+          RightHand:     {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.4, eyeWideLeft: 0.2, eyeWideRight: 0.2 }
+      },
+      // 2) Peak: 양손 가슴 중앙에서 교차
+      {
+        duration: 650, easing: "easeInOut",
+        bones: {
+          Spine:         {x: 0.07, y: 0, z: 0},
+          Neck:          {x: 0.03, y: 0, z: 0},
+          LeftArm:       {x: 0.25, y: 0, z:  0.85},
+          RightArm:      {x: 0.25, y: 0, z: -0.85},
+          LeftForeArm:   {x: -1.5, y: -0.75, z: 0},
+          RightForeArm:  {x: -1.5, y:  0.75, z: 0},
+          LeftHand:      {x: 0.1, y: 0, z: 0},
+          RightHand:     {x: 0.1, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.75, eyeWideLeft: 0.35, eyeWideRight: 0.35 }
+      },
+      // 3) 복귀 전 단계
+      {
+        duration: 600, easing: "easeIn",
+        bones: {
+          Spine:         {x: 0, y: 0, z: 0},
+          Neck:          {x: 0, y: 0, z: 0},
+          LeftArm:       {x: 0.1, y: 0, z:  0.3},
+          RightArm:      {x: 0.1, y: 0, z: -0.3},
+          LeftForeArm:   {x: -0.4, y: -0.15, z: 0},
+          RightForeArm:  {x: -0.4, y:  0.15, z: 0},
+          LeftHand:      {x: 0, y: 0, z: 0},
+          RightHand:     {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.4 }
+      }
+    ]
+  },
+};
+
+// ── 프로필 셀렉터: V2 우선, 없으면 V1 폴백 ──────────────────
+// window.ITDAMotion.version = 'v2'|'v1' 로 강제 지정 가능 (A/B 비교용)
+window.ITDAMotion = window.ITDAMotion || { version: 'v2' };
+
+function getProfile(keyword) {
+  const v = window.ITDAMotion.version;
+  if (v !== 'v1' && MOTION_PROFILES_V2[keyword]) {
+    return { source: 'v2', steps: MOTION_PROFILES_V2[keyword].steps };
+  }
+  const legacy = MOTION_PROFILES_V1[keyword];
+  if (legacy) return { source: 'v1', steps: legacy };
+  return null;
+}
+
+function getAllKeywords() {
+  // V2 키 + V1 키 (중복 제거), GENERIC/default 는 외부 검색에서 제외
+  const excluded = new Set(["GENERIC_EXPLANATION", "default"]);
+  const set = new Set([...Object.keys(MOTION_PROFILES_V2), ...Object.keys(MOTION_PROFILES_V1)]);
+  return [...set].filter(k => !excluded.has(k));
+}
+
+// ── Easing 함수 테이블 ──────────────────────────────────────
+const EASING_FNS = {
+  linear:    t => t,
+  easeIn:    t => t * t,
+  easeOut:   t => t * (2 - t),
+  easeInOut: t => t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t,
+};
+
+// ── Step 전처리: handshape_R/L 문자열을 15개 손가락 본으로 펼치기 ──
+function _expandStep(stepData) {
+  const bones = { ...(stepData.bones || {}) };
+  if (stepData.handshape_R) applyHandPreset(bones, 'Right', stepData.handshape_R);
+  if (stepData.handshape_L) applyHandPreset(bones, 'Left',  stepData.handshape_L);
+  return { ...stepData, bones };
+}
+
 // [감정명 -> 아바타 모프] 매핑 헬퍼
 const EMOTION_MORPH_MAP = {
   "기쁨": { mouthSmile: 0.5, eyeWideLeft: 0.1 },
@@ -233,15 +508,27 @@ async function animateAvatar(emotions, keyword) {
   const avatar = window.ITDAAvatar5;
   if (!avatar) return;
 
+  // [Debug] Idle 애니메이션이 팔 본을 덮어쓰는 것을 방지하기 위해 번역 재생 직전 정지
+  avatar.stopIdle?.();
+
   window.translationModeActive = true;
   if (translationTimeout) clearTimeout(translationTimeout);
 
-  // 1. 단어 기반 프로필 찾기 (Fuzzy Match 포함)
-  let profile = MOTION_PROFILES[keyword];
-  if (!profile) {
-    const foundKey = Object.keys(MOTION_PROFILES).find(k => keyword.includes(k));
-    profile = foundKey ? MOTION_PROFILES[foundKey] : MOTION_PROFILES["GENERIC_EXPLANATION"];
+  // 1. 단어 기반 프로필 찾기 — V2(해부학) 우선, V1(레거시) 폴백, Fuzzy Match 포함
+  let resolved = getProfile(keyword);
+  let resolvedKey = keyword;
+  if (!resolved) {
+    const foundKey = getAllKeywords().find(k => keyword.includes(k));
+    resolved = foundKey ? getProfile(foundKey) : null;
+    if (foundKey) resolvedKey = foundKey;
   }
+  if (!resolved) {
+    // 둘 다 없으면 GENERIC_EXPLANATION (V1 전용)
+    resolved = { source: 'v1', steps: MOTION_PROFILES_V1["GENERIC_EXPLANATION"] };
+    resolvedKey = "GENERIC_EXPLANATION";
+  }
+  const profile = resolved.steps;
+  console.log(`[Motion] "${keyword}" → "${resolvedKey}" (source=${resolved.source})`);
 
   // 2. 감정 데이터 기반 페이셜 선처리
   if (emotions && emotions.length > 0) {
@@ -257,28 +544,32 @@ async function animateAvatar(emotions, keyword) {
 
   console.log(`[Motion] ${keyword} (Dynamically Resolved) 재생 시작`);
 
-  /** 
-   * 단계별 동작 실행 (Quaternion Slerp 지원)
+  /**
+   * 단계별 동작 실행 (Quaternion Slerp + handshape_R/L 자동 확장 + easing 함수)
    */
-  const playStep = async (stepData) => {
+  const playStep = async (rawStep) => {
+    // V2: handshape 문자열 → 15개 손가락 본으로 확장 (V1 은 변화 없음)
+    const stepData = _expandStep(rawStep);
     const duration = stepData.duration || 500;
+    const easeFn = EASING_FNS[stepData.easing] || EASING_FNS.easeOut;
     const startTime = performance.now();
-    
+
     // 시작 및 타겟 쿼터니언 프리컴퓨팅
     const startQuats = {};
     const targetQuats = {};
-    
+
     if (stepData.bones) {
       for (const [bName, euler] of Object.entries(stepData.bones)) {
-        const bone = avatar.bones[bName] 
-               || avatar.bones['mixamorig:' + bName] 
+        const bone = avatar.bones[bName]
+               || avatar.bones['mixamorig:' + bName]
                || avatar.bones['mixamorig' + bName];
         if (bone) {
           startQuats[bName] = bone.quaternion.clone();
-          // Euler -> Quaternion 변환
-          const dummy = new THREE.Object3D();
-          dummy.rotation.set(euler.x, euler.y, euler.z);
-          targetQuats[bName] = dummy.quaternion.clone();
+          // [V2.5 Fix] Euler order를 ZYX 로 명시: Z(forward)를 먼저 적용하고
+          // 그 결과 방향에서 X(up/down)를 적용해야 x 성분이 손실되지 않음.
+          // 기본 XYZ 순서에선 X 먼저 적용되어 local Z가 기울어지면서 x 효과 희석됨.
+          const eulerObj = new THREE.Euler(euler.x, euler.y || 0, euler.z || 0, 'ZYX');
+          targetQuats[bName] = new THREE.Quaternion().setFromEuler(eulerObj);
         }
       }
     }
@@ -287,19 +578,19 @@ async function animateAvatar(emotions, keyword) {
       function update(now) {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1.0);
-        const ease = progress * (2 - progress);
+        const ease = easeFn(progress);
 
         if (stepData.bones) {
           for (const bName in targetQuats) {
-            const bone = avatar.bones[bName] 
-                   || avatar.bones['mixamorig:' + bName] 
+            const bone = avatar.bones[bName]
+                   || avatar.bones['mixamorig:' + bName]
                    || avatar.bones['mixamorig' + bName];
             if (bone) {
               bone.quaternion.copy(startQuats[bName]).slerp(targetQuats[bName], ease);
             }
           }
         }
-        
+
         if (stepData.morphs) {
           for (const [mName, val] of Object.entries(stepData.morphs)) {
             avatar.setMorphTarget(mName, val * ease);
@@ -348,12 +639,97 @@ async function animateAvatar(emotions, keyword) {
     }
     // 종료 후 찌그러짐 방지를 위한 부드러운 복귀
     await returnToInitial();
-    
+
     window.translationModeActive = false;
     console.log(`[Motion] ${keyword} 완료 및 복구 성공`);
+    // [Tier1] 마지막 재생 단어를 UI 쪽으로 통지 → A/B 토글 시 즉시 재생 가능
+    window.dispatchEvent(new CustomEvent('itda:motion:played', {
+      detail: { keyword: resolvedKey, source: resolved.source, emotions }
+    }));
   } catch (err) {
     console.error('[Motion] Error:', err);
     avatar.reset();
     window.translationModeActive = false;
   }
 }
+
+// ── [Tier1] 외부에서 호출 가능한 리플레이 API (V2↔V1 비교용) ──
+window.ITDATranslator = {
+  replay(keyword) {
+    if (!keyword) return;
+    animateAvatar([], keyword);
+  },
+  getVersion() { return window.ITDAMotion?.version || 'v2'; },
+  getV2Words() { return Object.keys(MOTION_PROFILES_V2); },
+};
+
+// ══════════════════════════════════════════════════════════════
+// [DEBUG] Rig 축 Convention 실측 도구 — console 에서 호출
+// ══════════════════════════════════════════════════════════════
+// 목적: 수화 모션이 계속 틀리는 이유를 좌표계 오해로 가정하고,
+//       본 하나만 한 축으로 회전시켜 시각적 결과를 관찰해 convention 확정.
+//
+// 사용 예:
+//   ITDADebug.listBones('arm')           // 팔 관련 본 이름 나열
+//   ITDADebug.rotate('RightArm','x',-0.5) // 단일 본·단일 축 회전
+//   ITDADebug.reset()                      // 모든 본 복구
+//   ITDADebug.stopIdle()                   // Idle 클립 정지 (간섭 제거)
+window.ITDADebug = {
+  listBones(filter = '') {
+    const avatar = window.ITDAAvatar5;
+    if (!avatar) return '[Debug] 아바타 미로드';
+    const all = Object.keys(avatar.bones);
+    const re = filter ? new RegExp(filter, 'i') : null;
+    const hit = re ? all.filter(n => re.test(n)) : all;
+    console.table(hit);
+    return hit;
+  },
+  rotate(boneName, axis, value) {
+    const avatar = window.ITDAAvatar5;
+    if (!avatar) return '[Debug] 아바타 미로드';
+    const bone = avatar.bones[boneName]
+            || avatar.bones['mixamorig:' + boneName]
+            || avatar.bones['mixamorig' + boneName];
+    if (!bone) {
+      console.warn(`[Debug] 본 찾기 실패: ${boneName}`);
+      return null;
+    }
+    const rot = { x: 0, y: 0, z: 0 };
+    rot[axis] = value;
+    // [V2.5] 엔진과 동일한 ZYX 순서로 적용
+    bone.rotation.set(rot.x, rot.y, rot.z, 'ZYX');
+    console.info(`[Debug] ${bone.name}.${axis} = ${value} (order=ZYX) 적용`);
+    return bone.name;
+  },
+  // [V2.5] 다축 조합 테스트용
+  rotateAll(boneName, x = 0, y = 0, z = 0) {
+    const avatar = window.ITDAAvatar5;
+    if (!avatar) return;
+    const bone = avatar.bones[boneName]
+            || avatar.bones['mixamorig:' + boneName];
+    if (!bone) return console.warn(`[Debug] 본 없음: ${boneName}`);
+    bone.rotation.set(x, y, z, 'ZYX');
+    console.info(`[Debug] ${bone.name} = (${x},${y},${z}) ZYX 적용`);
+  },
+  reset() {
+    const avatar = window.ITDAAvatar5;
+    if (!avatar) return;
+    avatar.reset();
+    console.info('[Debug] 모든 본 초기 상태 복구');
+  },
+  stopIdle() {
+    // avatar.js 가 export 하지 않은 mixer 에 접근하기 위한 해킹
+    // Three.js scene 에서 찾아서 모든 action 정지
+    const avatar = window.ITDAAvatar5;
+    if (!avatar || !avatar.bones) return '[Debug] 아바타 미로드';
+    const firstBone = Object.values(avatar.bones)[0];
+    // root 쪽으로 올라가 model 찾기
+    let node = firstBone;
+    while (node.parent) node = node.parent;
+    // Three.js scene 찾기 - userData 에 mixer 없으므로 mixer 직접 접근 어려움
+    // 대신 traverse 로 animationClips 확인
+    console.info('[Debug] Idle mixer 는 translator.js 에서 직접 정지 필요. stopAnim() 사용 권장.');
+  },
+};
+
+console.info('[Debug] ITDADebug 준비됨. 콘솔에서 ITDADebug.listBones("arm") 또는 ITDADebug.rotate("RightArm","z",-0.5) 시도.');

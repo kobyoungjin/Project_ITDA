@@ -3,8 +3,10 @@ import json
 import logging
 import time
 
-from api.core.websockets_schema import VisionFrame, VisionAck
+from api.core.websockets_schema import VisionFrame, VisionAck, HandAnalysis, PoseAnalysis
 from api.services.rag_engine import rag_engine
+from api.services.handshape_analyzer import analyze_hand, describe_for_slm
+from api.services.pose_analyzer import analyze_pose
 
 logger = logging.getLogger("itda.vision.router")
 router = APIRouter()
@@ -64,38 +66,92 @@ async def _handle(session_id: str, raw: dict):
             await manager.send_ack(session_id, ack)
             return
 
+        # ──────── [P0] Handshape 분류 (21 keypoint 기반) ────────
+        # 각 손을 독립적으로 분석해 KSL 수형(FIST/PALM/POINT/V/L/OK)으로 분류,
+        # SLM 프롬프트에 주입 가능한 자연어 요약도 함께 준비.
+        hand_analyses: list[HandAnalysis] = []
+        for h in raw.get("hands", []):
+            result = analyze_hand(h)
+            if result:
+                hand_analyses.append(HandAnalysis(**result))
+
+        handshape_summary = describe_for_slm([a.model_dump() for a in hand_analyses])
+
+        # ──────── [P0] Pose 분석 (어깨/팔꿈치/손목) ────────
+        pose_analysis_obj: PoseAnalysis | None = None
+        pose_summary = "상체 감지 안됨"
+        pose_raw = raw.get("pose")
+        if pose_raw:
+            pose_res = analyze_pose(pose_raw)
+            if pose_res:
+                pose_analysis_obj = PoseAnalysis(**pose_res)
+                pose_summary = pose_res["summary"]
+
+        # meta_features 에 통합 주입 — SLM 프롬프트가 이 값들을 소비
+        meta = dict(raw.get("meta_features") or {})
+        meta["handshapes"] = [a.handshape for a in hand_analyses]
+        meta["handshape_summary"] = handshape_summary
+        meta["pose_summary"] = pose_summary
+        if pose_analysis_obj:
+            meta["wrist_regions"] = [pose_analysis_obj.wrist_region_R, pose_analysis_obj.wrist_region_L]
+            meta["elbow_bends"] = [pose_analysis_obj.elbow_bend_R, pose_analysis_obj.elbow_bend_L]
+        raw["meta_features"] = meta
+
         # ──────── [3단계: 하이브리드 번역 파이프라인] ────────
 
         # Track 1: 기기 내 SLM (Ollama) 초고속 1차 예측 진행 (Latency Hiding)
         from api.services.slm_agent import slm_agent
         fast_pred = await slm_agent.predict_fast(raw)
-        
-        # 1차 예측 결과(Draft) 중간 송출 -> 프론트 UI 즉시 표시
+
+        # [P2] 모션 phase 기반 게이팅:
+        #   moving / settling → Draft 만 송출하고 RAG+Track3 생략 (서버 부하 및 UI 깜빡임 방지)
+        #   stable / idle    → 풀 파이프라인 실행 (수어 한 단어 완성 시점)
+        motion_phase = meta.get("motion_phase", "stable")
+        run_full_pipeline = motion_phase in ("stable", "idle")
+
+        # Draft 중간 송출은 공통
         await manager.send_ack(
             session_id,
-            VisionAck(frame_id=frame.frame_id, status="processing", rag_result={"type": "draft", "text": fast_pred}, message="1차 예측 완료"),
+            VisionAck(
+                frame_id=frame.frame_id,
+                status="processing",
+                rag_result={"type": "draft", "text": fast_pred, "motion_phase": motion_phase},
+                message=f"1차 예측 완료 ({motion_phase})",
+                hand_analyses=hand_analyses or None,
+                pose_analysis=pose_analysis_obj,
+            ),
         )
 
-        # Track 2: 1단계 RAG 데이터베이스 스캔
-        # [과제 2 수정] 하드코딩 제거: Track 1의 1차 예측값(fast_pred)을 그대로 RAG 쿼리로 적용
+        if not run_full_pipeline:
+            # 손이 움직이는 동안에는 Draft만 보내고 종료
+            return
+
+        # Track 2: 1단계 RAG 데이터베이스 스캔 (모션 완료 시에만)
         search_keyword = fast_pred if fast_pred else "정지 상태"
         rag_data = rag_engine.retrieve_with_emotion(search_keyword)
-        
+
         # Track 3: 1차 예측 + RAG 문맥 합성을 통한 최종 온기 보정
         final_text = await slm_agent.predict_with_rag(fast_pred, rag_data)
-        
+
         rag_result = {
             "type": "final",
             "text": final_text,
             "emotions": rag_data.get('emotions', []),
-            "video_url": rag_data.get('video_url', '')
+            "video_url": rag_data.get('video_url', ''),
+            "motion_phase": motion_phase,
         }
 
         ms = (time.perf_counter() - recv_t) * 1000
-        # 최종 보정 응답 송출 -> 프론트 UI 텍스트 완성
         await manager.send_ack(
             session_id,
-            VisionAck(frame_id=frame.frame_id, status="ok", rag_result=rag_result, message=f"최종 RAG 융합 ({ms:.1f}ms)"),
+            VisionAck(
+                frame_id=frame.frame_id,
+                status="ok",
+                rag_result=rag_result,
+                message=f"최종 RAG 융합 ({ms:.1f}ms)",
+                hand_analyses=hand_analyses or None,
+                pose_analysis=pose_analysis_obj,
+            ),
         )
     finally:
         # 정상/에러 관계없이 작업이 끝나면 Lock 해제

@@ -4,6 +4,7 @@ import uvicorn
 from api.core.config import settings
 from api.routers import sign_language
 from api.routers import ws_vision
+from api.routers import stt as stt_adapter
 from api.services.data_pipeline import data_pipeline
 
 app = FastAPI(
@@ -33,6 +34,14 @@ app.include_router(
     ws_vision.router,
     prefix="/api",
     tags=["Vision WebSocket"]
+)
+
+# [P3] 6단계 통합: STT 라우터 (step6_stt 어댑터)
+# stt_adapter.router 는 로드 성공 시 step6_stt.stt_router(자체 prefix="/api") 이고,
+# 실패 시 /status/stt 만 노출하는 fallback 라우터 → prefix 추가 지정 불필요
+app.include_router(
+    stt_adapter.router,
+    tags=["STT (6단계)"]
 )
 
 @app.on_event("startup")

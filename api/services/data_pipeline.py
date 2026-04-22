@@ -47,46 +47,92 @@ class DataPipeline:
                 
         return parsed_data
 
+    # [P3] 키워드 기반 감정 추론 휴리스틱
+    # - AI Hub 데이터는 감정 라벨이 없어 모든 항목이 ["일상","정보전달"] 로 찍히는 문제를 완화.
+    # - 키워드에 특정 토큰이 포함되면 해당 감정을 부여. 어디에도 매칭 안 되면 일반 태그 유지.
+    _EMOTION_HINTS = {
+        "인사":    ["안녕", "반갑", "잘가", "잘 자", "만나", "또 만"],
+        "감사":    ["고마", "고맙", "감사"],
+        "사과":    ["미안", "죄송"],
+        "사랑":    ["사랑", "좋아", "애정"],
+        "기쁨":    ["행복", "기쁘", "즐겁", "신남", "좋다"],
+        "슬픔":    ["슬프", "눈물", "우울", "힘들"],
+        "격려":    ["힘내", "파이팅", "응원", "할 수"],
+        "경고":    ["조심", "위험", "불이", "경찰", "도와"],
+        "의료":    ["병원", "아파", "약", "의사", "머리", "배가"],
+        "일상":    ["밥", "물", "화장실", "집", "학교"],
+        "가족":    ["엄마", "아빠", "가족", "친구", "형제", "자매"],
+        "질문":    ["어디", "언제", "무엇", "왜", "뭐예요"],
+    }
+
+    @classmethod
+    def _infer_emotions(cls, keyword: str) -> List[str]:
+        hits: List[str] = []
+        for emotion, tokens in cls._EMOTION_HINTS.items():
+            if any(tok in keyword for tok in tokens):
+                hits.append(emotion)
+        return hits or ["일상", "정보전달"]
+
     def _import_aihub_json(self) -> List[Dict]:
         """
-        AI Hub (유저 로컬 data/morpheme) JSON 데이터를 수집하여 통합 데이터 형식으로 반환합니다.
+        AI Hub (유저 로컬 data/morpheme) JSON 데이터 수집.
+
+        [P3] 개선 사항:
+          1. 모든 attributes.name 을 수집(이전: [0]만 사용)
+          2. 키워드(sentence) 기준 dedupe — 동일 문장 중복 제거
+          3. 키워드 기반 감정 태그 자동 추론
+          4. 파싱/중복/최종 통계를 로그로 노출
         """
-        aihub_data = []
         if not os.path.exists(settings.AI_HUB_DATA_PATH):
             print(f"[DataPipeline] 경고: AI Hub 데이터 경로를 찾을 수 없습니다. ({settings.AI_HUB_DATA_PATH})")
-            return aihub_data
+            return []
 
         json_files = glob.glob(os.path.join(settings.AI_HUB_DATA_PATH, "**", "*.json"), recursive=True)
-        print(f"[DataPipeline] AI Hub 데이터 {len(json_files)}개의 JSON 파일을 발견했습니다. 파싱을 시작합니다.")
+        total_files = len(json_files)
+        print(f"[DataPipeline] AI Hub JSON {total_files}개 발견 → 파싱 및 dedupe 시작")
+
+        seen: Dict[str, Dict] = {}   # keyword → 대표 레코드 (첫 등장)
+        parse_errors = 0
 
         for json_path in json_files:
             try:
                 with open(json_path, 'r', encoding='utf-8') as f:
                     content = json.load(f)
-                
+
                 meta = content.get("metaData", {})
                 video_url = meta.get("url", "")
-                
-                # data 배열 내부의 attributes 안의 name 추출해 문장 조립
-                data_list = content.get("data", [])
-                words = []
-                for item in data_list:
-                    attrs = item.get("attributes", [])
-                    if attrs and len(attrs) > 0:
-                        words.append(attrs[0].get("name", ""))
-                        
-                if words:
-                    sentence = " ".join(words)
-                    aihub_data.append({
-                        "title": sentence,
-                        "content": f"AI Hub 수어 영상. 키워드: {sentence}",
-                        "emotions": ["일상", "정보전달"],
-                        "video_url": video_url
-                    })
+
+                # 모든 attributes 의 name 을 순서대로 수집
+                words: List[str] = []
+                for item in content.get("data", []):
+                    for attr in item.get("attributes", []):
+                        name = (attr.get("name") or "").strip()
+                        if name:
+                            words.append(name)
+
+                if not words:
+                    continue
+
+                sentence = " ".join(words).strip()
+                if sentence in seen:
+                    continue   # dedupe: 동일 키워드 스킵
+
+                seen[sentence] = {
+                    "title": sentence,
+                    "content": f"AI Hub 수어 영상. 키워드: {sentence}",
+                    "emotions": self._infer_emotions(sentence),
+                    "video_url": video_url,
+                }
             except Exception as e:
-                print(f"[DataPipeline] AI Hub JSON 파싱 에러 ({json_path}): {e}")
-                
-        return aihub_data
+                parse_errors += 1
+                if parse_errors <= 3:
+                    print(f"[DataPipeline] AI Hub JSON 파싱 에러 ({json_path}): {e}")
+
+        unique_count = len(seen)
+        dedup_ratio = (1 - unique_count / total_files) * 100 if total_files else 0
+        print(f"[DataPipeline] AI Hub 결과: 파일 {total_files} → 고유 키워드 {unique_count} "
+              f"(중복률 {dedup_ratio:.1f}%, 오류 {parse_errors}건)")
+        return list(seen.values())
 
     def fetch_sign_language_data(self) -> List[Dict]:
         """문화데이터광장 API 데이터 수집 및 안전한 파싱 로직 적용"""
