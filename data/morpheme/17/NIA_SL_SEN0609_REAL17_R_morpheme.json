@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0856/NIA_SL_SEN0609_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0609_REAL17_R.mp4",
+        "duration": 5.6,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.172,
+            "end": 2.865,
+            "attributes": [
+                {
+                    "name": "서울역"
+                }
+            ]
+        },
+        {
+            "start": 3.858,
+            "end": 4.473,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        },
+        {
+            "start": 3.212,
+            "end": 3.454,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

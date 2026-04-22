@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0738/NIA_SL_SEN1974_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1974_REAL18_R.mp4",
+        "duration": 5.3,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.254,
+            "end": 1.883,
+            "attributes": [
+                {
+                    "name": "노트북"
+                }
+            ]
+        },
+        {
+            "start": 2.084,
+            "end": 2.699,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.024,
+            "end": 3.746,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

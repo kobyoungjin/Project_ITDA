@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0859/NIA_SL_SEN0238_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0238_REAL17_F.mp4",
+        "duration": 10.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.97,
+            "end": 4.377,
+            "attributes": [
+                {
+                    "name": "서울역"
+                }
+            ]
+        },
+        {
+            "start": 4.445,
+            "end": 5.074,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        },
+        {
+            "start": 5.145,
+            "end": 6.212,
+            "attributes": [
+                {
+                    "name": "목적"
+                }
+            ]
+        },
+        {
+            "start": 6.274,
+            "end": 7.022,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 7.099,
+            "end": 8.3,
+            "attributes": [
+                {
+                    "name": "번호"
+                }
+            ]
+        }
+    ]
+}

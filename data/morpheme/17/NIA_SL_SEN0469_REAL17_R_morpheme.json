@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0862/NIA_SL_SEN0469_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0469_REAL17_R.mp4",
+        "duration": 7.467,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.577,
+            "end": 3.457,
+            "attributes": [
+                {
+                    "name": "물품보관"
+                }
+            ]
+        },
+        {
+            "start": 3.751,
+            "end": 4.394,
+            "attributes": [
+                {
+                    "name": "문안열리다"
+                }
+            ]
+        },
+        {
+            "start": 4.515,
+            "end": 5.015,
+            "attributes": [
+                {
+                    "name": "잘"
+                }
+            ]
+        },
+        {
+            "start": 5.071,
+            "end": 5.951,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        }
+    ]
+}

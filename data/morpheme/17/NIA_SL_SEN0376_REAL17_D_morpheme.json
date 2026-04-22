@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0873/NIA_SL_SEN0376_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0376_REAL17_D.mp4",
+        "duration": 5.267,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.88,
+            "end": 2.38,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 2.442,
+            "end": 3.04,
+            "attributes": [
+                {
+                    "name": "1시간"
+                }
+            ]
+        },
+        {
+            "start": 3.091,
+            "end": 4.076,
+            "attributes": [
+                {
+                    "name": "전"
+                }
+            ]
+        }
+    ]
+}

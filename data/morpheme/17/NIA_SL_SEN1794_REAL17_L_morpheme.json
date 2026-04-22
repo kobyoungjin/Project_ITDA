@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0875/NIA_SL_SEN1794_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1794_REAL17_L.mp4",
+        "duration": 5.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.699,
+            "end": 2.375,
+            "attributes": [
+                {
+                    "name": "열쇠"
+                }
+            ]
+        },
+        {
+            "start": 2.581,
+            "end": 2.931,
+            "attributes": [
+                {
+                    "name": "없다"
+                }
+            ]
+        },
+        {
+            "start": 3.247,
+            "end": 4.257,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        }
+    ]
+}

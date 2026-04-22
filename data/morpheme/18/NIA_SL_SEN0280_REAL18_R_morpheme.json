@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1177/NIA_SL_SEN0280_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0280_REAL18_R.mp4",
+        "duration": 6.417,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.662,
+            "end": 3.064,
+            "attributes": [
+                {
+                    "name": "표지판"
+                }
+            ]
+        },
+        {
+            "start": 3.177,
+            "end": 3.725,
+            "attributes": [
+                {
+                    "name": "보다"
+                }
+            ]
+        },
+        {
+            "start": 3.847,
+            "end": 5.048,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        }
+    ]
+}

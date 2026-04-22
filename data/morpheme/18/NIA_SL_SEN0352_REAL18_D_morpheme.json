@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_mrkim1171/NIA_SL_SEN0352_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0352_REAL18_D.mp4",
+        "duration": 4.917,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.419,
+            "end": 1.919,
+            "attributes": [
+                {
+                    "name": "시간"
+                }
+            ]
+        },
+        {
+            "start": 2.029,
+            "end": 2.695,
+            "attributes": [
+                {
+                    "name": "지연되다"
+                }
+            ]
+        },
+        {
+            "start": 2.835,
+            "end": 3.696,
+            "attributes": [
+                {
+                    "name": "몇분"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_emyou1176/NIA_SL_SEN0126_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0126_REAL18_U.mp4",
+        "duration": 3.884,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.874,
+            "end": 2.754,
+            "attributes": [
+                {
+                    "name": "도착",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

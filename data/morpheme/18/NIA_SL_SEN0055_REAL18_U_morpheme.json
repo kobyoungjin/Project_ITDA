@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1176/NIA_SL_SEN0055_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0055_REAL18_U.mp4",
+        "duration": 5.85,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.925,
+            "end": 2.425,
+            "attributes": [
+                {
+                    "name": "지금"
+                }
+            ]
+        },
+        {
+            "start": 2.681,
+            "end": 3.181,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 3.354,
+            "end": 4.452,
+            "attributes": [
+                {
+                    "name": "충전"
+                }
+            ]
+        }
+    ]
+}

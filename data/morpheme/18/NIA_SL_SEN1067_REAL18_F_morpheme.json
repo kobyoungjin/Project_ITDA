@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0727/NIA_SL_SEN1067_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1067_REAL18_F.mp4",
+        "duration": 7.5,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.618,
+            "end": 4.144,
+            "attributes": [
+                {
+                    "name": "공기청정기"
+                }
+            ]
+        },
+        {
+            "start": 4.243,
+            "end": 4.72,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 4.836,
+            "end": 5.308,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        },
+        {
+            "start": 5.447,
+            "end": 5.89,
+            "attributes": [
+                {
+                    "name": "죽다"
+                }
+            ]
+        }
+    ]
+}

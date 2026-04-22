@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_rhkim1173/NIA_SL_SEN0442_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0442_REAL18_D.mp4",
+        "duration": 7.517,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.414,
+            "end": 2.978,
+            "attributes": [
+                {
+                    "name": "신호등"
+                }
+            ]
+        },
+        {
+            "start": 3.321,
+            "end": 3.821,
+            "attributes": [
+                {
+                    "name": "전"
+                }
+            ]
+        },
+        {
+            "start": 4.092,
+            "end": 4.728,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 5.117,
+            "end": 5.917,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

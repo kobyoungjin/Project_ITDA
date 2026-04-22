@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0508/NIA_SL_SEN1028_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1028_REAL17_F.mp4",
+        "duration": 4.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.542,
+            "end": 2.142,
+            "attributes": [
+                {
+                    "name": "의자"
+                }
+            ]
+        },
+        {
+            "start": 2.188,
+            "end": 2.611,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        },
+        {
+            "start": 2.672,
+            "end": 3.502,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

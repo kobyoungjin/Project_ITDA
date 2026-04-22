@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0721/NIA_SL_SEN1003_REAL18_L.mp4",
+        "name": "NIA_SL_SEN1003_REAL18_L.mp4",
+        "duration": 5.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.263,
+            "end": 2.952,
+            "attributes": [
+                {
+                    "name": "약"
+                }
+            ]
+        },
+        {
+            "start": 3.148,
+            "end": 4.06,
+            "attributes": [
+                {
+                    "name": "곳곳"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0869/NIA_SL_SEN1933_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1933_REAL17_F.mp4",
+        "duration": 3.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.529,
+            "end": 2.545,
+            "attributes": [
+                {
+                    "name": "돈"
+                }
+            ]
+        }
+    ]
+}

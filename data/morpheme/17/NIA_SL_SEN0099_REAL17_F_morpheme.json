@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0865/NIA_SL_SEN0099_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0099_REAL17_F.mp4",
+        "duration": 4.967,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.171,
+            "end": 3.275,
+            "attributes": [
+                {
+                    "name": "4사람"
+                }
+            ]
+        }
+    ]
+}

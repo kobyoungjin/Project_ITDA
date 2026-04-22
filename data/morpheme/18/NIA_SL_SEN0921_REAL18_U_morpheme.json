@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0733/NIA_SL_SEN0921_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0921_REAL18_U.mp4",
+        "duration": 4.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.959,
+            "end": 3.347,
+            "attributes": [
+                {
+                    "name": "난방",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

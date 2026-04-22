@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0858/NIA_SL_SEN0024_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0024_REAL17_D.mp4",
+        "duration": 5.4,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.168,
+            "end": 2.668,
+            "attributes": [
+                {
+                    "name": "그남자"
+                }
+            ]
+        },
+        {
+            "start": 2.717,
+            "end": 3.724,
+            "attributes": [
+                {
+                    "name": "맞다"
+                }
+            ]
+        }
+    ]
+}

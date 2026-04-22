@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0874/NIA_SL_SEN0582_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0582_REAL17_R.mp4",
+        "duration": 6.267,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.004,
+            "end": 3.283,
+            "attributes": [
+                {
+                    "name": "응급실"
+                }
+            ]
+        },
+        {
+            "start": 3.422,
+            "end": 4.392,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

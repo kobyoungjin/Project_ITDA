@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0859/NIA_SL_SEN0232_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0232_REAL17_D.mp4",
+        "duration": 7.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.471,
+            "end": 3.373,
+            "attributes": [
+                {
+                    "name": "신호등"
+                }
+            ]
+        },
+        {
+            "start": 3.461,
+            "end": 4.931,
+            "attributes": [
+                {
+                    "name": "횡단보도"
+                }
+            ]
+        },
+        {
+            "start": 5.018,
+            "end": 6.116,
+            "attributes": [
+                {
+                    "name": "여기"
+                }
+            ]
+        }
+    ]
+}

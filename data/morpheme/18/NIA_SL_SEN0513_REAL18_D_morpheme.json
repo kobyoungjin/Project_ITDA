@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_sjim1173/NIA_SL_SEN0513_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0513_REAL18_D.mp4",
+        "duration": 4.984,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.602,
+            "end": 2.102,
+            "attributes": [
+                {
+                    "name": "춥다"
+                }
+            ]
+        },
+        {
+            "start": 2.255,
+            "end": 3.504,
+            "attributes": [
+                {
+                    "name": "끄다"
+                }
+            ]
+        }
+    ]
+}

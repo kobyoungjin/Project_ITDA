@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_sjim1175/NIA_SL_SEN0532_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0532_REAL18_U.mp4",
+        "duration": 4.85,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.976,
+            "end": 2.476,
+            "attributes": [
+                {
+                    "name": "영수증"
+                }
+            ]
+        },
+        {
+            "start": 2.673,
+            "end": 3.53,
+            "attributes": [
+                {
+                    "name": "받다"
+                }
+            ]
+        }
+    ]
+}

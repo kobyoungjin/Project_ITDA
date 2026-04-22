@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0505/NIA_SL_SEN0996_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0996_REAL17_D.mp4",
+        "duration": 5.5,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.588,
+            "end": 2.733,
+            "attributes": [
+                {
+                    "name": "엘리베이터"
+                }
+            ]
+        },
+        {
+            "start": 2.862,
+            "end": 3.293,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.325,
+            "end": 4.333,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

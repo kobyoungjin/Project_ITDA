@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1176/NIA_SL_SEN0053_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0053_REAL18_R.mp4",
+        "duration": 5.517,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.926,
+            "end": 2.426,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.668,
+            "end": 3.753,
+            "attributes": [
+                {
+                    "name": "1회"
+                }
+            ]
+        }
+    ]
+}

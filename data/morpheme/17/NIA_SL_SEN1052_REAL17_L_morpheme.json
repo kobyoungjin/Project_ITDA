@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0511/NIA_SL_SEN1052_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1052_REAL17_L.mp4",
+        "duration": 4.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.73,
+            "end": 2.514,
+            "attributes": [
+                {
+                    "name": "계단"
+                }
+            ]
+        },
+        {
+            "start": 2.606,
+            "end": 3.95,
+            "attributes": [
+                {
+                    "name": "뼈곳"
+                }
+            ]
+        }
+    ]
+}

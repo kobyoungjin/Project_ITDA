@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0857/NIA_SL_SEN0214_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0214_REAL17_R.mp4",
+        "duration": 7.267,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.225,
+            "end": 3.076,
+            "attributes": [
+                {
+                    "name": "어린이집"
+                }
+            ]
+        },
+        {
+            "start": 3.163,
+            "end": 3.833,
+            "attributes": [
+                {
+                    "name": "보다"
+                }
+            ]
+        },
+        {
+            "start": 3.921,
+            "end": 5.334,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

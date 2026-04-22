@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1174/NIA_SL_SEN0312_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0312_REAL18_R.mp4",
+        "duration": 4.884,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.682,
+            "end": 2.182,
+            "attributes": [
+                {
+                    "name": "미리"
+                }
+            ]
+        },
+        {
+            "start": 2.275,
+            "end": 3.337,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        }
+    ]
+}

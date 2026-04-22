@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0508/NIA_SL_SEN0827_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0827_REAL17_F.mp4",
+        "duration": 5.3,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.897,
+            "end": 2.764,
+            "attributes": [
+                {
+                    "name": "건너다"
+                }
+            ]
+        },
+        {
+            "start": 2.961,
+            "end": 3.92,
+            "attributes": [
+                {
+                    "name": "차두다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_emyou1176/NIA_SL_SEN0124_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0124_REAL18_L.mp4",
+        "duration": 6.85,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.525,
+            "end": 1.824,
+            "attributes": [
+                {
+                    "name": "9호"
+                }
+            ]
+        },
+        {
+            "start": 2.081,
+            "end": 2.423,
+            "attributes": [
+                {
+                    "name": "갈아타다"
+                }
+            ]
+        },
+        {
+            "start": 2.58,
+            "end": 2.958,
+            "attributes": [
+                {
+                    "name": "목적"
+                }
+            ]
+        },
+        {
+            "start": 3.215,
+            "end": 4.13,
+            "attributes": [
+                {
+                    "name": "곳곳"
+                }
+            ]
+        }
+    ]
+}

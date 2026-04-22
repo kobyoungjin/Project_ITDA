@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_emyou1173/NIA_SL_SEN0094_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0094_REAL18_U.mp4",
+        "duration": 6.85,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.01,
+            "end": 2.381,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 2.68,
+            "end": 3.23,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.544,
+            "end": 5.061,
+            "attributes": [
+                {
+                    "name": "국립박물관"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0856/NIA_SL_SEN0204_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0204_REAL17_D.mp4",
+        "duration": 6.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.408,
+            "end": 2.908,
+            "attributes": [
+                {
+                    "name": "경찰"
+                }
+            ]
+        },
+        {
+            "start": 3.026,
+            "end": 4.088,
+            "attributes": [
+                {
+                    "name": "부르다"
+                }
+            ]
+        }
+    ]
+}

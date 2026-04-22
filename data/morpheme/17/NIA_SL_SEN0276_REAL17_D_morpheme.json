@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0863/NIA_SL_SEN0276_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0276_REAL17_D.mp4",
+        "duration": 5.8,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.423,
+            "end": 3.033,
+            "attributes": [
+                {
+                    "name": "병원"
+                }
+            ]
+        },
+        {
+            "start": 3.145,
+            "end": 3.975,
+            "attributes": [
+                {
+                    "name": "주차"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0872/NIA_SL_SEN0164_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0164_REAL17_D.mp4",
+        "duration": 6.5,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.26,
+            "end": 2.889,
+            "attributes": [
+                {
+                    "name": "핸드폰"
+                }
+            ]
+        },
+        {
+            "start": 2.954,
+            "end": 3.454,
+            "attributes": [
+                {
+                    "name": "번호"
+                }
+            ]
+        },
+        {
+            "start": 3.6,
+            "end": 4.849,
+            "attributes": [
+                {
+                    "name": "필요"
+                }
+            ]
+        }
+    ]
+}

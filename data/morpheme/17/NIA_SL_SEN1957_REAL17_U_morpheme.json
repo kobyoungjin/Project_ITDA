@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0871/NIA_SL_SEN1957_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1957_REAL17_U.mp4",
+        "duration": 4.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.193,
+            "end": 1.572,
+            "attributes": [
+                {
+                    "name": "시계"
+                }
+            ]
+        },
+        {
+            "start": 1.817,
+            "end": 2.245,
+            "attributes": [
+                {
+                    "name": "없다"
+                }
+            ]
+        },
+        {
+            "start": 2.604,
+            "end": 3.476,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

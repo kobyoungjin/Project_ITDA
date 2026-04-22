@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0864/NIA_SL_SEN0288_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0288_REAL17_D.mp4",
+        "duration": 5.267,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.009,
+            "end": 2.463,
+            "attributes": [
+                {
+                    "name": "어지럽다"
+                }
+            ]
+        },
+        {
+            "start": 2.575,
+            "end": 3.864,
+            "attributes": [
+                {
+                    "name": "쓰러지다"
+                }
+            ]
+        }
+    ]
+}

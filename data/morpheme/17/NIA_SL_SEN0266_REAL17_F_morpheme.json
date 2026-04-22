@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0862/NIA_SL_SEN0266_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0266_REAL17_F.mp4",
+        "duration": 8,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.133,
+            "end": 4.123,
+            "attributes": [
+                {
+                    "name": "용산역"
+                }
+            ]
+        },
+        {
+            "start": 4.244,
+            "end": 4.902,
+            "attributes": [
+                {
+                    "name": "접근"
+                }
+            ]
+        },
+        {
+            "start": 4.996,
+            "end": 6.223,
+            "attributes": [
+                {
+                    "name": "주차"
+                }
+            ]
+        }
+    ]
+}

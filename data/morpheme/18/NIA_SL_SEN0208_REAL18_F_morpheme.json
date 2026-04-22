@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_gdchoi1177/NIA_SL_SEN0208_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0208_REAL18_F.mp4",
+        "duration": 5.517,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.613,
+            "end": 3.222,
+            "attributes": [
+                {
+                    "name": "잠실대교"
+                }
+            ]
+        },
+        {
+            "start": 3.294,
+            "end": 4.273,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

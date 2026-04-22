@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_sjim1172/NIA_SL_SEN0509_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0509_REAL18_L.mp4",
+        "duration": 5.084,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.118,
+            "end": 2.558,
+            "attributes": [
+                {
+                    "name": "차"
+                }
+            ]
+        },
+        {
+            "start": 2.842,
+            "end": 3.566,
+            "attributes": [
+                {
+                    "name": "올리다"
+                }
+            ]
+        }
+    ]
+}

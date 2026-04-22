@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0872/NIA_SL_SEN0168_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0168_REAL17_U.mp4",
+        "duration": 5.934,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.984,
+            "end": 2.484,
+            "attributes": [
+                {
+                    "name": "버스"
+                }
+            ]
+        },
+        {
+            "start": 2.598,
+            "end": 3.041,
+            "attributes": [
+                {
+                    "name": "타다"
+                }
+            ]
+        },
+        {
+            "start": 3.146,
+            "end": 4.017,
+            "attributes": [
+                {
+                    "name": "곳곳"
+                }
+            ]
+        }
+    ]
+}

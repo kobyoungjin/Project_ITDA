@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0724/NIA_SL_SEN1031_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1031_REAL18_F.mp4",
+        "duration": 5.734,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.05,
+            "end": 3.524,
+            "attributes": [
+                {
+                    "name": "회의실"
+                }
+            ]
+        },
+        {
+            "start": 3.611,
+            "end": 4.403,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

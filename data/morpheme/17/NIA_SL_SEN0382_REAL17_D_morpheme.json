@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0874/NIA_SL_SEN0382_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0382_REAL17_D.mp4",
+        "duration": 6.067,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.879,
+            "end": 2.581,
+            "attributes": [
+                {
+                    "name": "트렁크열다"
+                }
+            ]
+        },
+        {
+            "start": 2.764,
+            "end": 3.359,
+            "attributes": [
+                {
+                    "name": "물건"
+                }
+            ]
+        },
+        {
+            "start": 3.485,
+            "end": 4.341,
+            "attributes": [
+                {
+                    "name": "나르다"
+                }
+            ]
+        }
+    ]
+}
