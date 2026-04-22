@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_rhkim0740/NIA_SL_SEN1391_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1391_REAL18_R.mp4",
+        "duration": 5.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.983,
+            "end": 2.426,
+            "attributes": [
+                {
+                    "name": "여의도"
+                }
+            ]
+        },
+        {
+            "start": 2.639,
+            "end": 3.318,
+            "attributes": [
+                {
+                    "name": "길"
+                }
+            ]
+        },
+        {
+            "start": 3.504,
+            "end": 4.183,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1176/NIA_SL_SEN0267_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0267_REAL18_U.mp4",
+        "duration": 6.15,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.015,
+            "end": 3.232,
+            "attributes": [
+                {
+                    "name": "용산역"
+                }
+            ]
+        },
+        {
+            "start": 3.345,
+            "end": 3.901,
+            "attributes": [
+                {
+                    "name": "주차"
+                }
+            ]
+        },
+        {
+            "start": 3.982,
+            "end": 4.837,
+            "attributes": [
+                {
+                    "name": "되다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1173/NIA_SL_SEN0301_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0301_REAL18_L.mp4",
+        "duration": 7.117,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.519,
+            "end": 1.859,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 1.977,
+            "end": 2.575,
+            "attributes": [
+                {
+                    "name": "쓰러지다"
+                }
+            ]
+        },
+        {
+            "start": 2.683,
+            "end": 3.936,
+            "attributes": [
+                {
+                    "name": "119"
+                }
+            ]
+        },
+        {
+            "start": 4.013,
+            "end": 4.626,
+            "attributes": [
+                {
+                    "name": "전화걸다"
+                }
+            ]
+        },
+        {
+            "start": 4.714,
+            "end": 5.987,
+            "attributes": [
+                {
+                    "name": "가능"
+                }
+            ]
+        }
+    ]
+}

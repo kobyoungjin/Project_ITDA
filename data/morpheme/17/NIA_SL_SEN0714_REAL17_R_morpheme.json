@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0497/NIA_SL_SEN0714_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0714_REAL17_R.mp4",
+        "duration": 4.667,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.094,
+            "end": 1.594,
+            "attributes": [
+                {
+                    "name": "아파트"
+                }
+            ]
+        },
+        {
+            "start": 1.749,
+            "end": 2.249,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 2.437,
+            "end": 3.232,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

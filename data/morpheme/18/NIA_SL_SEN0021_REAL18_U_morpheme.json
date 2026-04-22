@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1173/NIA_SL_SEN0021_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0021_REAL18_U.mp4",
+        "duration": 4.984,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.966,
+            "end": 2.784,
+            "attributes": [
+                {
+                    "name": "당신"
+                }
+            ]
+        }
+    ]
+}

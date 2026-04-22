@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0729/NIA_SL_SEN1086_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1086_REAL18_F.mp4",
+        "duration": 7.667,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 3.02,
+            "end": 3.795,
+            "attributes": [
+                {
+                    "name": "단말기터치"
+                }
+            ]
+        },
+        {
+            "start": 3.951,
+            "end": 4.571,
+            "attributes": [
+                {
+                    "name": "고장"
+                }
+            ]
+        },
+        {
+            "start": 4.711,
+            "end": 5.417,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 5.549,
+            "end": 6.433,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        }
+    ]
+}

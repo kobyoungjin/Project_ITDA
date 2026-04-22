@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0732/NIA_SL_SEN1113_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1113_REAL18_F.mp4",
+        "duration": 8.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 3.106,
+            "end": 4.505,
+            "attributes": [
+                {
+                    "name": "엘리베이터"
+                }
+            ]
+        },
+        {
+            "start": 4.575,
+            "end": 5.258,
+            "attributes": [
+                {
+                    "name": "불량"
+                }
+            ]
+        },
+        {
+            "start": 5.41,
+            "end": 6.162,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 6.271,
+            "end": 7.585,
+            "attributes": [
+                {
+                    "name": "불가능"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1176/NIA_SL_SEN0268_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0268_REAL18_D.mp4",
+        "duration": 4.917,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.798,
+            "end": 2.749,
+            "attributes": [
+                {
+                    "name": "어린이집"
+                }
+            ]
+        },
+        {
+            "start": 2.886,
+            "end": 3.66,
+            "attributes": [
+                {
+                    "name": "주차"
+                }
+            ]
+        }
+    ]
+}

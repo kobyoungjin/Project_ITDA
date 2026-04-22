@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0740/NIA_SL_SEN0993_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0993_REAL18_U.mp4",
+        "duration": 5.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.017,
+            "end": 2.517,
+            "attributes": [
+                {
+                    "name": "청음회관"
+                }
+            ]
+        },
+        {
+            "start": 2.656,
+            "end": 3.488,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        },
+        {
+            "start": 3.621,
+            "end": 4.482,
+            "attributes": [
+                {
+                    "name": "오케이"
+                }
+            ]
+        }
+    ]
+}

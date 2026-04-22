@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0875/NIA_SL_SEN0394_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0394_REAL17_U.mp4",
+        "duration": 6.6,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.864,
+            "end": 3.312,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 3.4,
+            "end": 5.218,
+            "attributes": [
+                {
+                    "name": "알려받다"
+                }
+            ]
+        }
+    ]
+}

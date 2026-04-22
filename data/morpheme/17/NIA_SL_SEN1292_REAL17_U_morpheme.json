@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_yhjeon0515/NIA_SL_SEN1292_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1292_REAL17_U.mp4",
+        "duration": 6.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.553,
+            "end": 2.339,
+            "attributes": [
+                {
+                    "name": "이마트"
+                }
+            ]
+        },
+        {
+            "start": 2.516,
+            "end": 2.845,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.012,
+            "end": 3.318,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 3.479,
+            "end": 4.48,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.84,
+            "end": 5.798,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

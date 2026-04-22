@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_sjim0872/NIA_SL_SEN1565_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1565_REAL17_L.mp4",
+        "duration": 6.134,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.995,
+            "end": 3.194,
+            "attributes": [
+                {
+                    "name": "보건소"
+                }
+            ]
+        },
+        {
+            "start": 3.401,
+            "end": 3.685,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.823,
+            "end": 4.668,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        }
+    ]
+}

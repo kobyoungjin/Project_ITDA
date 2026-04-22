@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0501/NIA_SL_SEN0754_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0754_REAL17_F.mp4",
+        "duration": 6.067,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.067,
+            "end": 2.422,
+            "attributes": [
+                {
+                    "name": "버스"
+                }
+            ]
+        },
+        {
+            "start": 2.593,
+            "end": 2.94,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.255,
+            "end": 3.755,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        },
+        {
+            "start": 4.164,
+            "end": 4.725,
+            "attributes": [
+                {
+                    "name": "맞다"
+                }
+            ]
+        }
+    ]
+}

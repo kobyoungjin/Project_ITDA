@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0856/NIA_SL_SEN0201_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0201_REAL17_U.mp4",
+        "duration": 6.867,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.139,
+            "end": 3.764,
+            "attributes": [
+                {
+                    "name": "역무원"
+                }
+            ]
+        },
+        {
+            "start": 3.89,
+            "end": 5,
+            "attributes": [
+                {
+                    "name": "부르다"
+                }
+            ]
+        }
+    ]
+}

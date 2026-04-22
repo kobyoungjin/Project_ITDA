@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0734/NIA_SL_SEN1136_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1136_REAL18_F.mp4",
+        "duration": 6.4,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.079,
+            "end": 3.146,
+            "attributes": [
+                {
+                    "name": "자판기"
+                }
+            ]
+        },
+        {
+            "start": 3.286,
+            "end": 3.889,
+            "attributes": [
+                {
+                    "name": "잘"
+                }
+            ]
+        },
+        {
+            "start": 3.982,
+            "end": 4.356,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        },
+        {
+            "start": 4.426,
+            "end": 5.373,
+            "attributes": [
+                {
+                    "name": "죽다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_hwlee0733/NIA_SL_SEN0721_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0721_REAL18_R.mp4",
+        "duration": 7.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.606,
+            "end": 3.331,
+            "attributes": [
+                {
+                    "name": "나사렛"
+                }
+            ]
+        },
+        {
+            "start": 3.606,
+            "end": 4.211,
+            "attributes": [
+                {
+                    "name": "전"
+                }
+            ]
+        },
+        {
+            "start": 4.372,
+            "end": 5.637,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

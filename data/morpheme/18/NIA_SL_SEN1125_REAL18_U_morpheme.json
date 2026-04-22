@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0733/NIA_SL_SEN1125_REAL18_U.mp4",
+        "name": "NIA_SL_SEN1125_REAL18_U.mp4",
+        "duration": 6.1,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.311,
+            "end": 3.779,
+            "attributes": [
+                {
+                    "name": "물품보관"
+                }
+            ]
+        },
+        {
+            "start": 3.911,
+            "end": 4.267,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        },
+        {
+            "start": 4.349,
+            "end": 5.198,
+            "attributes": [
+                {
+                    "name": "죽다"
+                }
+            ]
+        }
+    ]
+}

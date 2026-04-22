@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0503/NIA_SL_SEN0777_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0777_REAL17_D.mp4",
+        "duration": 6.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.775,
+            "end": 3.654,
+            "attributes": [
+                {
+                    "name": "시청"
+                }
+            ]
+        },
+        {
+            "start": 4.011,
+            "end": 4.511,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        },
+        {
+            "start": 4.683,
+            "end": 5.402,
+            "attributes": [
+                {
+                    "name": "오케이"
+                }
+            ]
+        }
+    ]
+}

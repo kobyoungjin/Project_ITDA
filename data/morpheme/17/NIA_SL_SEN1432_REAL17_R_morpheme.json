@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_sjim0859/NIA_SL_SEN1432_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1432_REAL17_R.mp4",
+        "duration": 7.067,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.789,
+            "end": 2.723,
+            "attributes": [
+                {
+                    "name": "이화여대"
+                }
+            ]
+        },
+        {
+            "start": 2.887,
+            "end": 3.387,
+            "attributes": [
+                {
+                    "name": "길"
+                }
+            ]
+        },
+        {
+            "start": 3.502,
+            "end": 4.141,
+            "attributes": [
+                {
+                    "name": "목적"
+                }
+            ]
+        },
+        {
+            "start": 4.452,
+            "end": 4.846,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 5.133,
+            "end": 5.633,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        }
+    ]
+}

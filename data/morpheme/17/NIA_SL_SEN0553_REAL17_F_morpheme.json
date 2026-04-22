@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0871/NIA_SL_SEN0553_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0553_REAL17_F.mp4",
+        "duration": 6.1,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.336,
+            "end": 3.323,
+            "attributes": [
+                {
+                    "name": "좌회전"
+                }
+            ]
+        },
+        {
+            "start": 3.451,
+            "end": 4.696,
+            "attributes": [
+                {
+                    "name": "맞다"
+                }
+            ]
+        }
+    ]
+}

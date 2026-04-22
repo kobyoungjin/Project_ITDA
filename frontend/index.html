@@ -138,6 +138,33 @@
       z-index: 5;
     }
 
+    /* ── 수어 참조 영상 (AI Hub) PIP ─────────────────── */
+    #ref-pip {
+      position: absolute;
+      top: 18rem; right: 1.2rem;
+      width: 240px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid var(--accent-purple);
+      box-shadow: var(--shadow-lg);
+      background: #000;
+      display: none; /* 필요할 때만 노출 */
+      z-index: 15;
+    }
+    #ref-pip video { width: 100%; display: block; aspect-ratio: 16/9; object-fit: contain; }
+    .ref-label {
+      position: absolute; top: 0.5rem; left: 0.5rem;
+      background: var(--accent-purple);
+      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; color: #fff;
+      z-index: 5;
+    }
+    #btn-close-ref {
+        position: absolute; top: 0.4rem; right: 0.4rem;
+        background: rgba(0,0,0,0.5); border: none; color: white; cursor: pointer;
+        width: 20px; height: 20px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center;
+        z-index: 6;
+    }
+
     /* ── HUD 왼쪽 상단 ────────────────────────────────── */
     .hud {
       position: absolute; top: 1.2rem; left: 1.2rem;
@@ -155,7 +182,7 @@
 
     /* ── 간단한 우측 상단 상태 분석창 ───────────────────────── */
     #mini-status {
-      position: absolute; top: 4.5rem; right: 1.2rem;
+      position: absolute; top: 4.5rem; left: 1.2rem;
       background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px);
       border: 1px solid var(--border); border-radius: 10px;
       padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;
@@ -356,6 +383,13 @@
         <canvas id="vision-canvas"></canvas>
       </div>
 
+      <!-- AI Hub 참조 영상 PIP -->
+      <div id="ref-pip">
+        <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
+        <button id="btn-close-ref">✕</button>
+        <video id="ref-video" controls muted></video>
+      </div>
+
       <!-- 간단한 우측 상단 상태 분석창 -->
       <div id="mini-status">
         <div class="mini-row">
@@ -516,6 +550,14 @@
     document.getElementById('btn-cam').addEventListener('click', () => {
       // OrbitControls target 초기화는 avatar.js 내부이므로 페이지 재로드로 대체
       window.location.reload();
+    });
+
+    // 참조 영상 닫기
+    document.getElementById('btn-close-ref').addEventListener('click', () => {
+      document.getElementById('ref-pip').style.display = 'none';
+      const v = document.getElementById('ref-video');
+      v.pause();
+      v.src = "";
     });
 
     // 자동 시작

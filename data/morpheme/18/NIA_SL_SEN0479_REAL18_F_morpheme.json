@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_rhkim1176/NIA_SL_SEN0479_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0479_REAL18_F.mp4",
+        "duration": 5.117,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.885,
+            "end": 2.256,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.427,
+            "end": 3.421,
+            "attributes": [
+                {
+                    "name": "교환하다"
+                }
+            ]
+        }
+    ]
+}

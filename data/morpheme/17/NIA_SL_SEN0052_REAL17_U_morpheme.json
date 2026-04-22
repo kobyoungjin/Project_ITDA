@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0861/NIA_SL_SEN0052_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0052_REAL17_U.mp4",
+        "duration": 6.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.224,
+            "end": 3.315,
+            "attributes": [
+                {
+                    "name": "어린이교통카드"
+                }
+            ]
+        },
+        {
+            "start": 3.46,
+            "end": 4.411,
+            "attributes": [
+                {
+                    "name": "되다"
+                }
+            ]
+        }
+    ]
+}

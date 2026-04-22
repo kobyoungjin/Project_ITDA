@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_hwlee0737/NIA_SL_SEN0770_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0770_REAL18_D.mp4",
+        "duration": 6.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 3.521,
+            "end": 4.883,
+            "attributes": [
+                {
+                    "name": "시청"
+                }
+            ]
+        }
+    ]
+}

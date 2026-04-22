@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0514/NIA_SL_SEN1081_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1081_REAL17_R.mp4",
+        "duration": 7.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.845,
+            "end": 3.867,
+            "attributes": [
+                {
+                    "name": "단말기터치"
+                }
+            ]
+        },
+        {
+            "start": 3.928,
+            "end": 4.888,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 4.954,
+            "end": 5.745,
+            "attributes": [
+                {
+                    "name": "불가능"
+                }
+            ]
+        },
+        {
+            "start": 5.778,
+            "end": 6.984,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        }
+    ]
+}

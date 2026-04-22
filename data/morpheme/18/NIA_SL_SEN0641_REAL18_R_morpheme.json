@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_yhjeon1172/NIA_SL_SEN0641_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0641_REAL18_R.mp4",
+        "duration": 5.484,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.51,
+            "end": 2.089,
+            "attributes": [
+                {
+                    "name": "손바닥찍다"
+                }
+            ]
+        },
+        {
+            "start": 2.347,
+            "end": 2.919,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        },
+        {
+            "start": 3.069,
+            "end": 3.899,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

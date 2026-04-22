@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_rhkim1175/NIA_SL_SEN0461_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0461_REAL18_U.mp4",
+        "duration": 6.017,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.155,
+            "end": 3.4,
+            "attributes": [
+                {
+                    "name": "물품보관"
+                }
+            ]
+        },
+        {
+            "start": 3.678,
+            "end": 4.421,
+            "attributes": [
+                {
+                    "name": "고장"
+                }
+            ]
+        }
+    ]
+}

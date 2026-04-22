@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0731/NIA_SL_SEN0908_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0908_REAL18_F.mp4",
+        "duration": 5.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.329,
+            "end": 3.539,
+            "attributes": [
+                {
+                    "name": "에어컨"
+                }
+            ]
+        },
+        {
+            "start": 3.644,
+            "end": 4.597,
+            "attributes": [
+                {
+                    "name": "켜다"
+                }
+            ]
+        }
+    ]
+}

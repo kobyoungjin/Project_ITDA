@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0861/NIA_SL_SEN0258_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0258_REAL17_F.mp4",
+        "duration": 6.834,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 3.008,
+            "end": 3.482,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 3.57,
+            "end": 4.87,
+            "attributes": [
+                {
+                    "name": "40분"
+                }
+            ]
+        }
+    ]
+}

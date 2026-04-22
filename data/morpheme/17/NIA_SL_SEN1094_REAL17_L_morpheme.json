@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0515/NIA_SL_SEN1094_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1094_REAL17_L.mp4",
+        "duration": 5.734,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.437,
+            "end": 2.436,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.468,
+            "end": 3.382,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 3.441,
+            "end": 3.941,
+            "attributes": [
+                {
+                    "name": "잘"
+                }
+            ]
+        },
+        {
+            "start": 3.975,
+            "end": 5.073,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        }
+    ]
+}

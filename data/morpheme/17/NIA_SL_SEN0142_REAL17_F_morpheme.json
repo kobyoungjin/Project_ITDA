@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0870/NIA_SL_SEN0142_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0142_REAL17_F.mp4",
+        "duration": 5.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.386,
+            "end": 1.838,
+            "attributes": [
+                {
+                    "name": "택시"
+                }
+            ]
+        },
+        {
+            "start": 1.951,
+            "end": 2.427,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 2.516,
+            "end": 3.346,
+            "attributes": [
+                {
+                    "name": "가깝다"
+                }
+            ]
+        }
+    ]
+}

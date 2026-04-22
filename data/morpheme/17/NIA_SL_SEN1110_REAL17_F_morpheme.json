@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_yhjeon0496/NIA_SL_SEN1110_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1110_REAL17_F.mp4",
+        "duration": 7.667,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.303,
+            "end": 3.705,
+            "attributes": [
+                {
+                    "name": "난방"
+                }
+            ]
+        },
+        {
+            "start": 3.969,
+            "end": 4.577,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        },
+        {
+            "start": 4.839,
+            "end": 5.425,
+            "attributes": [
+                {
+                    "name": "사용"
+                }
+            ]
+        },
+        {
+            "start": 5.653,
+            "end": 6.583,
+            "attributes": [
+                {
+                    "name": "불가능"
+                }
+            ]
+        }
+    ]
+}

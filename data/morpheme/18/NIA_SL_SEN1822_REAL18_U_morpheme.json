@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0723/NIA_SL_SEN1822_REAL18_U.mp4",
+        "name": "NIA_SL_SEN1822_REAL18_U.mp4",
+        "duration": 5.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.873,
+            "end": 2.344,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.512,
+            "end": 2.969,
+            "attributes": [
+                {
+                    "name": "사라지다"
+                }
+            ]
+        },
+        {
+            "start": 3.178,
+            "end": 4.007,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

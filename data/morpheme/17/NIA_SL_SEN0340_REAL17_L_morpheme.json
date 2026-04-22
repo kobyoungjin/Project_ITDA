@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0869/NIA_SL_SEN0340_REAL17_L.mp4",
+        "name": "NIA_SL_SEN0340_REAL17_L.mp4",
+        "duration": 5.834,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.622,
+            "end": 4.257,
+            "attributes": [
+                {
+                    "name": "어떻게",
+                    "attribute": [
+                        "1형태소 의문사 있는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

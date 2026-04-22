@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0738/NIA_SL_SEN0973_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0973_REAL18_R.mp4",
+        "duration": 5.867,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.566,
+            "end": 3.914,
+            "attributes": [
+                {
+                    "name": "난방"
+                }
+            ]
+        },
+        {
+            "start": 4.013,
+            "end": 4.874,
+            "attributes": [
+                {
+                    "name": "끄다"
+                }
+            ]
+        }
+    ]
+}

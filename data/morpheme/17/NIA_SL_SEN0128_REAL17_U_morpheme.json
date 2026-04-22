@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0868/NIA_SL_SEN0128_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0128_REAL17_U.mp4",
+        "duration": 5.934,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.678,
+            "end": 3.13,
+            "attributes": [
+                {
+                    "name": "시간"
+                }
+            ]
+        },
+        {
+            "start": 3.227,
+            "end": 4.355,
+            "attributes": [
+                {
+                    "name": "지연되다"
+                }
+            ]
+        }
+    ]
+}

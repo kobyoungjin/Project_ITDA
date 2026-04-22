@@ -1,0 +1,64 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0870/NIA_SL_SEN1747_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1747_REAL17_R.mp4",
+        "duration": 8.367,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.627,
+            "end": 2.353,
+            "attributes": [
+                {
+                    "name": "은행"
+                }
+            ]
+        },
+        {
+            "start": 2.498,
+            "end": 2.881,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 3.088,
+            "end": 3.68,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 4.045,
+            "end": 4.545,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.821,
+            "end": 5.497,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 5.74,
+            "end": 6.925,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

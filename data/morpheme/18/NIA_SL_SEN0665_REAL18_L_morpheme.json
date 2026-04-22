@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_yhjeon1174/NIA_SL_SEN0665_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0665_REAL18_L.mp4",
+        "duration": 5.984,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.593,
+            "end": 2.609,
+            "attributes": [
+                {
+                    "name": "지름길"
+                }
+            ]
+        },
+        {
+            "start": 2.81,
+            "end": 3.36,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 3.512,
+            "end": 4.241,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

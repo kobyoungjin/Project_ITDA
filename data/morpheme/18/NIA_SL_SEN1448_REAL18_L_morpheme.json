@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_sjim0725/NIA_SL_SEN1448_REAL18_L.mp4",
+        "name": "NIA_SL_SEN1448_REAL18_L.mp4",
+        "duration": 6.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.409,
+            "end": 2.909,
+            "attributes": [
+                {
+                    "name": "종로"
+                }
+            ]
+        },
+        {
+            "start": 3.142,
+            "end": 3.547,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.702,
+            "end": 4.202,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        },
+        {
+            "start": 4.667,
+            "end": 4.994,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        },
+        {
+            "start": 5.184,
+            "end": 5.859,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0502/NIA_SL_SEN0962_REAL17_L.mp4",
+        "name": "NIA_SL_SEN0962_REAL17_L.mp4",
+        "duration": 5.4,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.741,
+            "end": 2.514,
+            "attributes": [
+                {
+                    "name": "청음회관"
+                }
+            ]
+        },
+        {
+            "start": 2.572,
+            "end": 4.215,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

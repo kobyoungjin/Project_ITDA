@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0725/NIA_SL_SEN0848_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0848_REAL18_L.mp4",
+        "duration": 6,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.27,
+            "end": 3.085,
+            "attributes": [
+                {
+                    "name": "나사렛"
+                }
+            ]
+        },
+        {
+            "start": 3.267,
+            "end": 4.18,
+            "attributes": [
+                {
+                    "name": "오케이"
+                }
+            ]
+        }
+    ]
+}

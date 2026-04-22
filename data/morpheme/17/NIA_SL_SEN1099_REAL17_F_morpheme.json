@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0515/NIA_SL_SEN1099_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1099_REAL17_F.mp4",
+        "duration": 5.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.442,
+            "end": 2.832,
+            "attributes": [
+                {
+                    "name": "에어컨"
+                }
+            ]
+        },
+        {
+            "start": 2.867,
+            "end": 3.513,
+            "attributes": [
+                {
+                    "name": "불량"
+                }
+            ]
+        },
+        {
+            "start": 3.55,
+            "end": 4.771,
+            "attributes": [
+                {
+                    "name": "안되다"
+                }
+            ]
+        }
+    ]
+}

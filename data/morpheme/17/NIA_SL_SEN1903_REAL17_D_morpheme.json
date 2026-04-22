@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0866/NIA_SL_SEN1903_REAL17_D.mp4",
+        "name": "NIA_SL_SEN1903_REAL17_D.mp4",
+        "duration": 4.7,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.65,
+            "end": 2.071,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.372,
+            "end": 3.288,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

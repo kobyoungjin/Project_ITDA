@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1174/NIA_SL_SEN0034_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0034_REAL18_D.mp4",
+        "duration": 5.317,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.106,
+            "end": 3.477,
+            "attributes": [
+                {
+                    "name": "오천원",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

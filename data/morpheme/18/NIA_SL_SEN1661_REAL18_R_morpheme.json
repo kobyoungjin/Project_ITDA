@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_swlee0727/NIA_SL_SEN1661_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1661_REAL18_R.mp4",
+        "duration": 6.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.233,
+            "end": 3.668,
+            "attributes": [
+                {
+                    "name": "샛길"
+                }
+            ]
+        },
+        {
+            "start": 3.779,
+            "end": 4.519,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.616,
+            "end": 5.544,
+            "attributes": [
+                {
+                    "name": "여기"
+                }
+            ]
+        }
+    ]
+}

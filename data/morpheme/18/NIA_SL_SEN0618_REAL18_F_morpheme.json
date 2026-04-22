@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_swlee1176/NIA_SL_SEN0618_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0618_REAL18_F.mp4",
+        "duration": 6.617,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.769,
+            "end": 3.191,
+            "attributes": [
+                {
+                    "name": "고속터미널"
+                }
+            ]
+        },
+        {
+            "start": 3.41,
+            "end": 3.846,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        },
+        {
+            "start": 4.124,
+            "end": 4.934,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

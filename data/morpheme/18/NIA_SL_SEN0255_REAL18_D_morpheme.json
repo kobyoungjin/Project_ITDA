@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1175/NIA_SL_SEN0255_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0255_REAL18_D.mp4",
+        "duration": 5.05,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.705,
+            "end": 2.414,
+            "attributes": [
+                {
+                    "name": "50분"
+                }
+            ]
+        },
+        {
+            "start": 2.512,
+            "end": 3.535,
+            "attributes": [
+                {
+                    "name": "정도"
+                }
+            ]
+        }
+    ]
+}

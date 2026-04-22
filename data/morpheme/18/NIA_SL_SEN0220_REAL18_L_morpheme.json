@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_hwlee1171/NIA_SL_SEN0220_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0220_REAL18_L.mp4",
+        "duration": 5.984,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.842,
+            "end": 3.051,
+            "attributes": [
+                {
+                    "name": "사거리"
+                }
+            ]
+        },
+        {
+            "start": 3.108,
+            "end": 4.502,
+            "attributes": [
+                {
+                    "name": "우회전"
+                }
+            ]
+        }
+    ]
+}

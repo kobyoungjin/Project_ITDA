@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_rhkim0735/NIA_SL_SEN1344_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1344_REAL18_D.mp4",
+        "duration": 7.134,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.928,
+            "end": 2.929,
+            "attributes": [
+                {
+                    "name": "서울대학교"
+                }
+            ]
+        },
+        {
+            "start": 3.22,
+            "end": 3.72,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.941,
+            "end": 4.304,
+            "attributes": [
+                {
+                    "name": "목적"
+                }
+            ]
+        },
+        {
+            "start": 4.497,
+            "end": 5.14,
+            "attributes": [
+                {
+                    "name": "길"
+                }
+            ]
+        },
+        {
+            "start": 5.339,
+            "end": 6.118,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

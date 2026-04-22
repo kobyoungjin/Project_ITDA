@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0866/NIA_SL_SEN0304_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0304_REAL17_D.mp4",
+        "duration": 5.1,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.152,
+            "end": 3.288,
+            "attributes": [
+                {
+                    "name": "차따라가다",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

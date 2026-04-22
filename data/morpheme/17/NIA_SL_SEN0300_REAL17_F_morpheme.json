@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0865/NIA_SL_SEN0300_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0300_REAL17_F.mp4",
+        "duration": 5.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.939,
+            "end": 2.439,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 2.533,
+            "end": 3.641,
+            "attributes": [
+                {
+                    "name": "쓰러지다"
+                }
+            ]
+        }
+    ]
+}

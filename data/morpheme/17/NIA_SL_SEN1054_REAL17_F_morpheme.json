@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0511/NIA_SL_SEN1054_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1054_REAL17_F.mp4",
+        "duration": 6.034,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.916,
+            "end": 3.367,
+            "attributes": [
+                {
+                    "name": "물품보관"
+                }
+            ]
+        },
+        {
+            "start": 3.403,
+            "end": 3.903,
+            "attributes": [
+                {
+                    "name": "고장"
+                }
+            ]
+        },
+        {
+            "start": 3.948,
+            "end": 5.184,
+            "attributes": [
+                {
+                    "name": "죽다"
+                }
+            ]
+        }
+    ]
+}

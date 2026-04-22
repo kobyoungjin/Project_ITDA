@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_swlee0724/NIA_SL_SEN1638_REAL18_R.mp4",
+        "name": "NIA_SL_SEN1638_REAL18_R.mp4",
+        "duration": 7.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.929,
+            "end": 2.738,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 2.793,
+            "end": 3.379,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.46,
+            "end": 4.32,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.417,
+            "end": 5.166,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 5.228,
+            "end": 6.294,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

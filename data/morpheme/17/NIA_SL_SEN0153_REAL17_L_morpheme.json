@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0871/NIA_SL_SEN0153_REAL17_L.mp4",
+        "name": "NIA_SL_SEN0153_REAL17_L.mp4",
+        "duration": 5.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.565,
+            "end": 2.065,
+            "attributes": [
+                {
+                    "name": "뒤"
+                }
+            ]
+        },
+        {
+            "start": 2.203,
+            "end": 3.218,
+            "attributes": [
+                {
+                    "name": "트렁크닫다"
+                }
+            ]
+        }
+    ]
+}

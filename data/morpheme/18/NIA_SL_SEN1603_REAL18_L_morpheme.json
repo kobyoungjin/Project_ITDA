@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_swlee0721/NIA_SL_SEN1603_REAL18_L.mp4",
+        "name": "NIA_SL_SEN1603_REAL18_L.mp4",
+        "duration": 7.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.619,
+            "end": 2.56,
+            "attributes": [
+                {
+                    "name": "편지"
+                }
+            ]
+        },
+        {
+            "start": 2.65,
+            "end": 3.158,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 3.242,
+            "end": 3.784,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.868,
+            "end": 4.809,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.876,
+            "end": 6.326,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_swlee1173/NIA_SL_SEN0585_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0585_REAL18_D.mp4",
+        "duration": 6.317,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.83,
+            "end": 3.133,
+            "attributes": [
+                {
+                    "name": "응급실"
+                }
+            ]
+        },
+        {
+            "start": 3.341,
+            "end": 4.405,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

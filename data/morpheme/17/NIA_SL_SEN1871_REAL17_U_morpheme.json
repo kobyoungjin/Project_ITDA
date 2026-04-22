@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0863/NIA_SL_SEN1871_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1871_REAL17_U.mp4",
+        "duration": 4.7,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.329,
+            "end": 1.979,
+            "attributes": [
+                {
+                    "name": "가방"
+                }
+            ]
+        },
+        {
+            "start": 2.272,
+            "end": 3.13,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

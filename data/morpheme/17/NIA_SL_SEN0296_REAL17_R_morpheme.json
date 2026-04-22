@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0865/NIA_SL_SEN0296_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0296_REAL17_R.mp4",
+        "duration": 8.367,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.387,
+            "end": 2.996,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 3.066,
+            "end": 3.767,
+            "attributes": [
+                {
+                    "name": "문"
+                }
+            ]
+        },
+        {
+            "start": 3.832,
+            "end": 4.521,
+            "attributes": [
+                {
+                    "name": "틈"
+                }
+            ]
+        },
+        {
+            "start": 4.597,
+            "end": 5.418,
+            "attributes": [
+                {
+                    "name": "이어폰"
+                }
+            ]
+        },
+        {
+            "start": 5.494,
+            "end": 6.773,
+            "attributes": [
+                {
+                    "name": "떨어지다"
+                }
+            ]
+        }
+    ]
+}

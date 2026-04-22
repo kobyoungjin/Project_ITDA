@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0730/NIA_SL_SEN1895_REAL18_F.mp4",
+        "name": "NIA_SL_SEN1895_REAL18_F.mp4",
+        "duration": 4.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.529,
+            "end": 2.029,
+            "attributes": [
+                {
+                    "name": "핸드폰"
+                }
+            ]
+        },
+        {
+            "start": 2.295,
+            "end": 3.06,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

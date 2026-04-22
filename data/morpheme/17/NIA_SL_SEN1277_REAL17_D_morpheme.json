@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_yhjeon0513/NIA_SL_SEN1277_REAL17_D.mp4",
+        "name": "NIA_SL_SEN1277_REAL17_D.mp4",
+        "duration": 6.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 0.899,
+            "end": 1.901,
+            "attributes": [
+                {
+                    "name": "백화점"
+                }
+            ]
+        },
+        {
+            "start": 2.042,
+            "end": 2.499,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 2.609,
+            "end": 3.166,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 3.323,
+            "end": 3.887,
+            "attributes": [
+                {
+                    "name": "보다"
+                }
+            ]
+        },
+        {
+            "start": 4.291,
+            "end": 5.063,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

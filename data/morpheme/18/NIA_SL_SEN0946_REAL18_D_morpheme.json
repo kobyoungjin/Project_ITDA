@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0735/NIA_SL_SEN0946_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0946_REAL18_D.mp4",
+        "duration": 5.334,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.406,
+            "end": 2.998,
+            "attributes": [
+                {
+                    "name": "서대문농아인복지관"
+                }
+            ]
+        },
+        {
+            "start": 3.131,
+            "end": 4.273,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

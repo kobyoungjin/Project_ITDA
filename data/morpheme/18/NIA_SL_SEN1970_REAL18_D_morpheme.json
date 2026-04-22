@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0737/NIA_SL_SEN1970_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1970_REAL18_D.mp4",
+        "duration": 3.867,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.185,
+            "end": 1.928,
+            "attributes": [
+                {
+                    "name": "노트북"
+                }
+            ]
+        },
+        {
+            "start": 2.079,
+            "end": 2.873,
+            "attributes": [
+                {
+                    "name": "잃어버리다"
+                }
+            ]
+        }
+    ]
+}

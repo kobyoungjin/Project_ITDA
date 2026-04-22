@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0865/NIA_SL_SEN1700_REAL17_F.mp4",
+        "name": "NIA_SL_SEN1700_REAL17_F.mp4",
+        "duration": 6.367,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.695,
+            "end": 2.763,
+            "attributes": [
+                {
+                    "name": "사거리"
+                }
+            ]
+        },
+        {
+            "start": 3.08,
+            "end": 3.58,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 3.854,
+            "end": 5.039,
+            "attributes": [
+                {
+                    "name": "여기"
+                }
+            ]
+        }
+    ]
+}

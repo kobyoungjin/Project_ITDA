@@ -1,0 +1,73 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_mrkim0737/NIA_SL_SEN1169_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1169_REAL18_D.mp4",
+        "duration": 8.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.015,
+            "end": 2.675,
+            "attributes": [
+                {
+                    "name": "공항"
+                }
+            ]
+        },
+        {
+            "start": 2.78,
+            "end": 3.337,
+            "attributes": [
+                {
+                    "name": "버스"
+                }
+            ]
+        },
+        {
+            "start": 3.466,
+            "end": 4.006,
+            "attributes": [
+                {
+                    "name": "전"
+                }
+            ]
+        },
+        {
+            "start": 4.133,
+            "end": 4.679,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 4.818,
+            "end": 5.467,
+            "attributes": [
+                {
+                    "name": "보다"
+                }
+            ]
+        },
+        {
+            "start": 5.583,
+            "end": 6.392,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 6.742,
+            "end": 7.242,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

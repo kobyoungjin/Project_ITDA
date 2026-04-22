@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1177/NIA_SL_SEN0342_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0342_REAL18_R.mp4",
+        "duration": 5.084,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.758,
+            "end": 2.335,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 2.423,
+            "end": 3.851,
+            "attributes": [
+                {
+                    "name": "몇호"
+                }
+            ]
+        }
+    ]
+}

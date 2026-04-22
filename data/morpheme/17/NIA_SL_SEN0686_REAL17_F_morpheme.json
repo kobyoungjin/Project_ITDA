@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0864/NIA_SL_SEN0686_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0686_REAL17_F.mp4",
+        "duration": 5.667,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.669,
+            "end": 2.649,
+            "attributes": [
+                {
+                    "name": "샛길"
+                }
+            ]
+        },
+        {
+            "start": 2.79,
+            "end": 3.634,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        }
+    ]
+}

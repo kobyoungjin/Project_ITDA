@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_yhjeon0499/NIA_SL_SEN1138_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1138_REAL17_R.mp4",
+        "duration": 4.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.187,
+            "end": 2.83,
+            "attributes": [
+                {
+                    "name": "단말기터치"
+                }
+            ]
+        },
+        {
+            "start": 3.045,
+            "end": 4.053,
+            "attributes": [
+                {
+                    "name": "고장"
+                }
+            ]
+        }
+    ]
+}

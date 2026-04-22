@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_swlee1177/NIA_SL_SEN0621_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0621_REAL18_L.mp4",
+        "duration": 5.35,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.15,
+            "end": 2.032,
+            "attributes": [
+                {
+                    "name": "지름길"
+                }
+            ]
+        },
+        {
+            "start": 2.344,
+            "end": 2.9,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        },
+        {
+            "start": 3.129,
+            "end": 3.629,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

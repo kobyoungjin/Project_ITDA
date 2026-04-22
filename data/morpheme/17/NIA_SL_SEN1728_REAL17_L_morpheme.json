@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0868/NIA_SL_SEN1728_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1728_REAL17_L.mp4",
+        "duration": 8.1,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.393,
+            "end": 2.645,
+            "attributes": [
+                {
+                    "name": "보건소"
+                }
+            ]
+        },
+        {
+            "start": 2.805,
+            "end": 3.096,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.419,
+            "end": 3.969,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.161,
+            "end": 4.878,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 5.094,
+            "end": 6.48,
+            "attributes": [
+                {
+                    "name": "차내리다"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_rhkim1177/NIA_SL_SEN0482_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0482_REAL18_R.mp4",
+        "duration": 5.784,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.748,
+            "end": 1.983,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.204,
+            "end": 2.482,
+            "attributes": [
+                {
+                    "name": "또"
+                }
+            ]
+        },
+        {
+            "start": 2.688,
+            "end": 3.045,
+            "attributes": [
+                {
+                    "name": "다르다"
+                }
+            ]
+        },
+        {
+            "start": 3.259,
+            "end": 4.074,
+            "attributes": [
+                {
+                    "name": "없다"
+                }
+            ]
+        }
+    ]
+}

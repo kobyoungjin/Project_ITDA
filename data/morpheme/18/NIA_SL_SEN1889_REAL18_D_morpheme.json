@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0729/NIA_SL_SEN1889_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1889_REAL18_D.mp4",
+        "duration": 5.2,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.57,
+            "end": 2.013,
+            "attributes": [
+                {
+                    "name": "안경"
+                }
+            ]
+        },
+        {
+            "start": 2.14,
+            "end": 2.855,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.14,
+            "end": 3.962,
+            "attributes": [
+                {
+                    "name": "실종"
+                }
+            ]
+        }
+    ]
+}

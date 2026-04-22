@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0874/NIA_SL_SEN1387_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1387_REAL17_U.mp4",
+        "duration": 5.7,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.585,
+            "end": 2.006,
+            "attributes": [
+                {
+                    "name": "여의도"
+                }
+            ]
+        },
+        {
+            "start": 2.242,
+            "end": 2.513,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        },
+        {
+            "start": 2.79,
+            "end": 3.118,
+            "attributes": [
+                {
+                    "name": "원하다"
+                }
+            ]
+        },
+        {
+            "start": 3.404,
+            "end": 4.398,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        }
+    ]
+}

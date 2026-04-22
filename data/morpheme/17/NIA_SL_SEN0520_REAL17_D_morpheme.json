@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0867/NIA_SL_SEN0520_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0520_REAL17_D.mp4",
+        "duration": 5.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.765,
+            "end": 2.179,
+            "attributes": [
+                {
+                    "name": "학교"
+                }
+            ]
+        },
+        {
+            "start": 2.314,
+            "end": 2.993,
+            "attributes": [
+                {
+                    "name": "안"
+                }
+            ]
+        },
+        {
+            "start": 3.106,
+            "end": 3.861,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0870/NIA_SL_SEN1949_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1949_REAL17_R.mp4",
+        "duration": 5.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.784,
+            "end": 3.165,
+            "attributes": [
+                {
+                    "name": "영수증"
+                }
+            ]
+        },
+        {
+            "start": 3.39,
+            "end": 4.341,
+            "attributes": [
+                {
+                    "name": "필요"
+                }
+            ]
+        }
+    ]
+}

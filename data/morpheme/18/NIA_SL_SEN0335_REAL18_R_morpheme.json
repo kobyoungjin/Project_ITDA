@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_moyu1176/NIA_SL_SEN0335_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0335_REAL18_R.mp4",
+        "duration": 6.484,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.808,
+            "end": 2.375,
+            "attributes": [
+                {
+                    "name": "분당"
+                }
+            ]
+        },
+        {
+            "start": 2.442,
+            "end": 4.102,
+            "attributes": [
+                {
+                    "name": "첫차"
+                }
+            ]
+        },
+        {
+            "start": 4.312,
+            "end": 5.112,
+            "attributes": [
+                {
+                    "name": "시간"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0738/NIA_SL_SEN1980_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1980_REAL18_D.mp4",
+        "duration": 4.567,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.493,
+            "end": 1.957,
+            "attributes": [
+                {
+                    "name": "빨리"
+                }
+            ]
+        },
+        {
+            "start": 2.184,
+            "end": 3.192,
+            "attributes": [
+                {
+                    "name": "접근"
+                }
+            ]
+        }
+    ]
+}

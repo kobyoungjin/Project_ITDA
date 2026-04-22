@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_yhjeon0732/NIA_SL_SEN1913_REAL18_U.mp4",
+        "name": "NIA_SL_SEN1913_REAL18_U.mp4",
+        "duration": 5,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.765,
+            "end": 2.738,
+            "attributes": [
+                {
+                    "name": "유턴"
+                }
+            ]
+        },
+        {
+            "start": 2.939,
+            "end": 3.833,
+            "attributes": [
+                {
+                    "name": "맞다"
+                }
+            ]
+        }
+    ]
+}

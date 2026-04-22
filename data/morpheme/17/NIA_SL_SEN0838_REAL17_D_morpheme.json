@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0509/NIA_SL_SEN0838_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0838_REAL17_D.mp4",
+        "duration": 5.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.026,
+            "end": 2.871,
+            "attributes": [
+                {
+                    "name": "시청"
+                }
+            ]
+        },
+        {
+            "start": 3.135,
+            "end": 4.124,
+            "attributes": [
+                {
+                    "name": "차두다"
+                }
+            ]
+        }
+    ]
+}

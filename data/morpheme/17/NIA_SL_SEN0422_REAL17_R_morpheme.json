@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0858/NIA_SL_SEN0422_REAL17_R.mp4",
+        "name": "NIA_SL_SEN0422_REAL17_R.mp4",
+        "duration": 4.867,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.678,
+            "end": 2.293,
+            "attributes": [
+                {
+                    "name": "명동"
+                }
+            ]
+        },
+        {
+            "start": 2.456,
+            "end": 3.443,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

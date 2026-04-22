@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0867/NIA_SL_SEN1319_REAL17_D.mp4",
+        "name": "NIA_SL_SEN1319_REAL17_D.mp4",
+        "duration": 7.1,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.319,
+            "end": 2.506,
+            "attributes": [
+                {
+                    "name": "파리바게트"
+                }
+            ]
+        },
+        {
+            "start": 2.856,
+            "end": 3.428,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 3.591,
+            "end": 3.812,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 4.083,
+            "end": 4.455,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 4.961,
+            "end": 5.647,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

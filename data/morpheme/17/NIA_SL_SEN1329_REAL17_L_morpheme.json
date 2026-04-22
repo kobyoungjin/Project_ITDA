@@ -1,0 +1,46 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0868/NIA_SL_SEN1329_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1329_REAL17_L.mp4",
+        "duration": 6.167,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.766,
+            "end": 2.094,
+            "attributes": [
+                {
+                    "name": "3"
+                }
+            ]
+        },
+        {
+            "start": 2.358,
+            "end": 3.23,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.394,
+            "end": 3.708,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        },
+        {
+            "start": 3.935,
+            "end": 4.671,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        }
+    ]
+}

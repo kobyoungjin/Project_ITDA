@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_yhjeon0506/NIA_SL_SEN1210_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1210_REAL17_L.mp4",
+        "duration": 6.667,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.481,
+            "end": 2.311,
+            "attributes": [
+                {
+                    "name": "스타벅스"
+                }
+            ]
+        },
+        {
+            "start": 2.542,
+            "end": 2.964,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.147,
+            "end": 3.532,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 3.706,
+            "end": 4.206,
+            "attributes": [
+                {
+                    "name": "전"
+                }
+            ]
+        },
+        {
+            "start": 4.564,
+            "end": 5.508,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

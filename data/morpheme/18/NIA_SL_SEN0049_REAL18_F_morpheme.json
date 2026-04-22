@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1175/NIA_SL_SEN0049_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0049_REAL18_F.mp4",
+        "duration": 6.284,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.977,
+            "end": 3.492,
+            "attributes": [
+                {
+                    "name": "장애인복지카드"
+                }
+            ]
+        }
+    ]
+}

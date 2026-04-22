@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_emyou1175/NIA_SL_SEN0113_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0113_REAL18_R.mp4",
+        "duration": 6.65,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.962,
+            "end": 2.784,
+            "attributes": [
+                {
+                    "name": "타다"
+                }
+            ]
+        }
+    ]
+}

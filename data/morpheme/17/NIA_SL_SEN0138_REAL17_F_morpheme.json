@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0869/NIA_SL_SEN0138_REAL17_F.mp4",
+        "name": "NIA_SL_SEN0138_REAL17_F.mp4",
+        "duration": 4.8,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.593,
+            "end": 2.157,
+            "attributes": [
+                {
+                    "name": "자전거"
+                }
+            ]
+        },
+        {
+            "start": 2.254,
+            "end": 3.124,
+            "attributes": [
+                {
+                    "name": "있다"
+                }
+            ]
+        }
+    ]
+}

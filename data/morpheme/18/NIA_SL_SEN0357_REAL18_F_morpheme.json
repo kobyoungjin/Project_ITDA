@@ -1,0 +1,19 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_mrkim1171/NIA_SL_SEN0357_REAL18_F.mp4",
+        "name": "NIA_SL_SEN0357_REAL18_F.mp4",
+        "duration": 3.917,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.811,
+            "end": 2.741,
+            "attributes": [
+                {
+                    "name": "조심"
+                }
+            ]
+        }
+    ]
+}

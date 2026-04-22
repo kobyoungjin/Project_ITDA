@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0872/NIA_SL_SEN1369_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1369_REAL17_U.mp4",
+        "duration": 6.3,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.171,
+            "end": 1.542,
+            "attributes": [
+                {
+                    "name": "송파"
+                }
+            ]
+        },
+        {
+            "start": 1.927,
+            "end": 2.377,
+            "attributes": [
+                {
+                    "name": "지하철"
+                }
+            ]
+        },
+        {
+            "start": 2.555,
+            "end": 3.22,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.519,
+            "end": 3.926,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        },
+        {
+            "start": 4.147,
+            "end": 4.833,
+            "attributes": [
+                {
+                    "name": "무엇"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_swlee1174/NIA_SL_SEN0591_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0591_REAL18_D.mp4",
+        "duration": 5.417,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.197,
+            "end": 2.697,
+            "attributes": [
+                {
+                    "name": "손바닥찍다"
+                }
+            ]
+        },
+        {
+            "start": 2.957,
+            "end": 3.64,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

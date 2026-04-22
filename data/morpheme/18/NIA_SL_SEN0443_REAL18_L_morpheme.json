@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_rhkim1173/NIA_SL_SEN0443_REAL18_L.mp4",
+        "name": "NIA_SL_SEN0443_REAL18_L.mp4",
+        "duration": 7.184,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.566,
+            "end": 3.33,
+            "attributes": [
+                {
+                    "name": "신호등"
+                }
+            ]
+        },
+        {
+            "start": 3.58,
+            "end": 4.044,
+            "attributes": [
+                {
+                    "name": "전"
+                }
+            ]
+        },
+        {
+            "start": 4.279,
+            "end": 5.173,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_yhjeon1173/NIA_SL_SEN0655_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0655_REAL18_D.mp4",
+        "duration": 5.35,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.488,
+            "end": 2.081,
+            "attributes": [
+                {
+                    "name": "공항"
+                }
+            ]
+        },
+        {
+            "start": 2.29,
+            "end": 2.876,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 3.065,
+            "end": 3.837,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

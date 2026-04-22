@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0865/NIA_SL_SEN0492_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0492_REAL17_D.mp4",
+        "duration": 5.434,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.605,
+            "end": 2.077,
+            "attributes": [
+                {
+                    "name": "카드"
+                }
+            ]
+        },
+        {
+            "start": 2.253,
+            "end": 2.817,
+            "attributes": [
+                {
+                    "name": "단말기터치"
+                }
+            ]
+        },
+        {
+            "start": 2.887,
+            "end": 3.888,
+            "attributes": [
+                {
+                    "name": "다시"
+                }
+            ]
+        }
+    ]
+}

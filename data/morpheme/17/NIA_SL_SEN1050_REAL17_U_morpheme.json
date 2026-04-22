@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0510/NIA_SL_SEN1050_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1050_REAL17_U.mp4",
+        "duration": 4.767,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.766,
+            "end": 2.581,
+            "attributes": [
+                {
+                    "name": "계단"
+                }
+            ]
+        },
+        {
+            "start": 2.65,
+            "end": 4.232,
+            "attributes": [
+                {
+                    "name": "곳곳"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_yhjeon1176/NIA_SL_SEN0687_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0687_REAL18_U.mp4",
+        "duration": 4.95,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.408,
+            "end": 2.424,
+            "attributes": [
+                {
+                    "name": "샛길"
+                }
+            ]
+        },
+        {
+            "start": 2.655,
+            "end": 3.356,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

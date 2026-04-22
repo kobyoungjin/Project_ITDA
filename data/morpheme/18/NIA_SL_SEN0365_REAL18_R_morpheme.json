@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_mrkim1172/NIA_SL_SEN0365_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0365_REAL18_R.mp4",
+        "duration": 4.55,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.349,
+            "end": 1.883,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        },
+        {
+            "start": 2.052,
+            "end": 2.42,
+            "attributes": [
+                {
+                    "name": "갈아타다"
+                }
+            ]
+        },
+        {
+            "start": 2.565,
+            "end": 3.351,
+            "attributes": [
+                {
+                    "name": "가능"
+                }
+            ]
+        }
+    ]
+}

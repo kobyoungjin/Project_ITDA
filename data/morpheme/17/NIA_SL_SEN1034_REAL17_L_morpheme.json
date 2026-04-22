@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_swlee0509/NIA_SL_SEN1034_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1034_REAL17_L.mp4",
+        "duration": 3.7,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.219,
+            "end": 2.836,
+            "attributes": [
+                {
+                    "name": "돈얼마",
+                    "attribute": [
+                        "1형태소 의문사 있는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

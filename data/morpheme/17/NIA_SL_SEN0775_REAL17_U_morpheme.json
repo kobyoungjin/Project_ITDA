@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1106_sjim0503/NIA_SL_SEN0775_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0775_REAL17_U.mp4",
+        "duration": 5.134,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.812,
+            "end": 2.582,
+            "attributes": [
+                {
+                    "name": "시청"
+                }
+            ]
+        },
+        {
+            "start": 2.887,
+            "end": 3.387,
+            "attributes": [
+                {
+                    "name": "오케이"
+                }
+            ]
+        }
+    ]
+}

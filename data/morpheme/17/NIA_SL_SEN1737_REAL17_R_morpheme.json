@@ -1,0 +1,64 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0869/NIA_SL_SEN1737_REAL17_R.mp4",
+        "name": "NIA_SL_SEN1737_REAL17_R.mp4",
+        "duration": 8.9,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.149,
+            "end": 3,
+            "attributes": [
+                {
+                    "name": "언덕"
+                }
+            ]
+        },
+        {
+            "start": 3.206,
+            "end": 3.706,
+            "attributes": [
+                {
+                    "name": "저기"
+                }
+            ]
+        },
+        {
+            "start": 3.855,
+            "end": 4.154,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 4.462,
+            "end": 5.079,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 5.386,
+            "end": 5.886,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 6.144,
+            "end": 7.43,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

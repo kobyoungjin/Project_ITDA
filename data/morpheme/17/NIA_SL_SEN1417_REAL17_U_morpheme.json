@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_sjim0857/NIA_SL_SEN1417_REAL17_U.mp4",
+        "name": "NIA_SL_SEN1417_REAL17_U.mp4",
+        "duration": 6.534,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.509,
+            "end": 2.009,
+            "attributes": [
+                {
+                    "name": "영등포"
+                }
+            ]
+        },
+        {
+            "start": 2.223,
+            "end": 2.469,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 2.608,
+            "end": 3.526,
+            "attributes": [
+                {
+                    "name": "찾다"
+                }
+            ]
+        },
+        {
+            "start": 3.846,
+            "end": 4.346,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        },
+        {
+            "start": 4.477,
+            "end": 5.198,
+            "attributes": [
+                {
+                    "name": "방법"
+                }
+            ]
+        }
+    ]
+}

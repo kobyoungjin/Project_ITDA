@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_moyu0726/NIA_SL_SEN0854_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0854_REAL18_U.mp4",
+        "duration": 7.034,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.327,
+            "end": 2.942,
+            "attributes": [
+                {
+                    "name": "차"
+                }
+            ]
+        },
+        {
+            "start": 3.08,
+            "end": 3.826,
+            "attributes": [
+                {
+                    "name": "뒤"
+                }
+            ]
+        },
+        {
+            "start": 4,
+            "end": 5.308,
+            "attributes": [
+                {
+                    "name": "트렁크열다"
+                }
+            ]
+        }
+    ]
+}

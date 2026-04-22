@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_mrkim1175/NIA_SL_SEN0397_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0397_REAL18_R.mp4",
+        "duration": 5.384,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.416,
+            "end": 1.807,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 1.912,
+            "end": 2.269,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 2.505,
+            "end": 3.939,
+            "attributes": [
+                {
+                    "name": "알려받다"
+                }
+            ]
+        }
+    ]
+}

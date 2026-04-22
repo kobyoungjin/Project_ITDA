@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_swlee0861/NIA_SL_SEN1652_REAL17_L.mp4",
+        "name": "NIA_SL_SEN1652_REAL17_L.mp4",
+        "duration": 5.934,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.716,
+            "end": 2.163,
+            "attributes": [
+                {
+                    "name": "병원"
+                }
+            ]
+        },
+        {
+            "start": 2.42,
+            "end": 2.92,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 3.296,
+            "end": 4.565,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

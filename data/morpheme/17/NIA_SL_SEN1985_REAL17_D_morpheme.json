@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_yhjeon0874/NIA_SL_SEN1985_REAL17_D.mp4",
+        "name": "NIA_SL_SEN1985_REAL17_D.mp4",
+        "duration": 5.3,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.575,
+            "end": 2.075,
+            "attributes": [
+                {
+                    "name": "접근"
+                }
+            ]
+        },
+        {
+            "start": 2.277,
+            "end": 2.734,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 2.952,
+            "end": 3.982,
+            "attributes": [
+                {
+                    "name": "되다"
+                }
+            ]
+        }
+    ]
+}

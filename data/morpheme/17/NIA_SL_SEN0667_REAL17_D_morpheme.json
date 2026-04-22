@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_rhkim0862/NIA_SL_SEN0667_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0667_REAL17_D.mp4",
+        "duration": 6.034,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.687,
+            "end": 2.574,
+            "attributes": [
+                {
+                    "name": "지름길"
+                }
+            ]
+        },
+        {
+            "start": 2.867,
+            "end": 3.067,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.265,
+            "end": 4.066,
+            "attributes": [
+                {
+                    "name": "가다"
+                }
+            ]
+        }
+    ]
+}

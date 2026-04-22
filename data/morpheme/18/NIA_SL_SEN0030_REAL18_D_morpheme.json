@@ -1,0 +1,22 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1173/NIA_SL_SEN0030_REAL18_D.mp4",
+        "name": "NIA_SL_SEN0030_REAL18_D.mp4",
+        "duration": 4.65,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.978,
+            "end": 3.141,
+            "attributes": [
+                {
+                    "name": "항상",
+                    "attribute": [
+                        "1형태소 의문사 없는 의문형"
+                    ]
+                }
+            ]
+        }
+    ]
+}

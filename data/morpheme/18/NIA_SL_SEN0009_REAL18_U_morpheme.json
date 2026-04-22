@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_bkyu1171/NIA_SL_SEN0009_REAL18_U.mp4",
+        "name": "NIA_SL_SEN0009_REAL18_U.mp4",
+        "duration": 4.217,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 0.733,
+            "end": 1.233,
+            "attributes": [
+                {
+                    "name": "운전"
+                }
+            ]
+        },
+        {
+            "start": 1.474,
+            "end": 2.682,
+            "attributes": [
+                {
+                    "name": "천천히"
+                }
+            ]
+        }
+    ]
+}

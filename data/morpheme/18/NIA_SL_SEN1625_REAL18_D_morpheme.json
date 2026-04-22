@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1113_swlee0723/NIA_SL_SEN1625_REAL18_D.mp4",
+        "name": "NIA_SL_SEN1625_REAL18_D.mp4",
+        "duration": 5.934,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.059,
+            "end": 3.108,
+            "attributes": [
+                {
+                    "name": "터널"
+                }
+            ]
+        },
+        {
+            "start": 3.213,
+            "end": 3.996,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.093,
+            "end": 4.953,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        }
+    ]
+}

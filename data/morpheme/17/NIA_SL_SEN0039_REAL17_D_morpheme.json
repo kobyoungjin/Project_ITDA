@@ -1,0 +1,37 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_hwlee0859/NIA_SL_SEN0039_REAL17_D.mp4",
+        "name": "NIA_SL_SEN0039_REAL17_D.mp4",
+        "duration": 6.4,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.765,
+            "end": 2.531,
+            "attributes": [
+                {
+                    "name": "택시"
+                }
+            ]
+        },
+        {
+            "start": 2.814,
+            "end": 3.515,
+            "attributes": [
+                {
+                    "name": "기본"
+                }
+            ]
+        },
+        {
+            "start": 3.677,
+            "end": 4.773,
+            "attributes": [
+                {
+                    "name": "만원"
+                }
+            ]
+        }
+    ]
+}

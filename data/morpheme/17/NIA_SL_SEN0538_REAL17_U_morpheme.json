@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_mrkim0869/NIA_SL_SEN0538_REAL17_U.mp4",
+        "name": "NIA_SL_SEN0538_REAL17_U.mp4",
+        "duration": 5.1,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 2.241,
+            "end": 2.634,
+            "attributes": [
+                {
+                    "name": "차"
+                }
+            ]
+        },
+        {
+            "start": 2.84,
+            "end": 4.027,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}

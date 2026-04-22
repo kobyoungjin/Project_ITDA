@@ -1,0 +1,28 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1202_mrkim1172/NIA_SL_SEN0370_REAL18_R.mp4",
+        "name": "NIA_SL_SEN0370_REAL18_R.mp4",
+        "duration": 4.317,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.538,
+            "end": 2.101,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 2.246,
+            "end": 3.29,
+            "attributes": [
+                {
+                    "name": "10분"
+                }
+            ]
+        }
+    ]
+}

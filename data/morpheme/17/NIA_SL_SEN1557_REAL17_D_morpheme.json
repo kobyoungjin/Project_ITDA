@@ -1,0 +1,55 @@
+{
+    "metaData": {
+        "url": "https://blackolivevideo.blob.core.windows.net/sign-language/1118_sjim0871/NIA_SL_SEN1557_REAL17_D.mp4",
+        "name": "NIA_SL_SEN1557_REAL17_D.mp4",
+        "duration": 7.834,
+        "exportedOn": "2020/12/10"
+    },
+    "data": [
+        {
+            "start": 1.958,
+            "end": 3.326,
+            "attributes": [
+                {
+                    "name": "육교"
+                }
+            ]
+        },
+        {
+            "start": 3.506,
+            "end": 3.834,
+            "attributes": [
+                {
+                    "name": "곳"
+                }
+            ]
+        },
+        {
+            "start": 3.949,
+            "end": 4.654,
+            "attributes": [
+                {
+                    "name": "다음"
+                }
+            ]
+        },
+        {
+            "start": 4.777,
+            "end": 5.498,
+            "attributes": [
+                {
+                    "name": "도착"
+                }
+            ]
+        },
+        {
+            "start": 5.769,
+            "end": 6.49,
+            "attributes": [
+                {
+                    "name": "내리다"
+                }
+            ]
+        }
+    ]
+}
