@@ -2,7 +2,22 @@
   "permissions": {
     "allow": [
       "Bash(node -e ' *)",
-      "Bash(curl -sI -w \"HTTP %{http_code}\\\\n\" \"https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0871/NIA_SL_SEN0354_REAL17_F.mp4\")"
+      "Bash(curl -sI -w \"HTTP %{http_code}\\\\n\" \"https://blackolivevideo.blob.core.windows.net/sign-language/1118_moyu0871/NIA_SL_SEN0354_REAL17_F.mp4\")",
+      "Bash(python -c ' *)",
+      "Bash(python)",
+      "Bash(python -X utf8 -m api.tools.mediapipe_retarget extract-openpose --keypoint-dir 'C:/Users/ComHolic/Desktop/data/[라벨]01_real_word_keypoint/01/NIA_SL_WORD0001_REAL01_F' --word WORD0001)",
+      "Bash(python -X utf8 -c ' *)",
+      "Bash(start \"\" \"http://localhost:3000/?autoplay=WORD0001\")",
+      "Bash(python -X utf8 -m api.tools.mediapipe_retarget batch-openpose --root 'C:/Users/ComHolic/Desktop/data/[라벨]01_real_word_keypoint/01' --angle F --limit 10)",
+      "Bash(python -X utf8 -m api.tools.mediapipe_retarget batch-openpose --root 'C:/Users/ComHolic/Desktop/data/[라벨]01_real_word_keypoint/01' --angle F)",
+      "Bash(python -X utf8 api/tools/map_word_ids.py)",
+      "Bash(curl -s \"http://localhost:3000/js/translator.js\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/sign-language/search -H 'Content-Type: application/json' -d '{\"query\":\"고민\",\"context\":\"\"}')",
+      "Bash(python -X utf8 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'keyword: {d[\\\\\"data\\\\\"][\\\\\"keyword\\\\\"]}'\\); print\\(f'warm: {d[\\\\\"data\\\\\"][\\\\\"warm_translation\\\\\"][:50]}'\\)\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/sign-language/search -H 'Content-Type: application/json' -d '{\"query\":\"슬프다\",\"context\":\"\"}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/sign-language/search -H 'Content-Type: application/json; charset=utf-8' --data-raw '{\"query\":\"고민\",\"context\":\"\"}')",
+      "Bash(python -X utf8 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(json.dumps\\(d, ensure_ascii=False, indent=2\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('api/tools/mediapipe_retarget.py', encoding='utf-8'\\).read\\(\\)\\)\")"
     ]
   }
 }

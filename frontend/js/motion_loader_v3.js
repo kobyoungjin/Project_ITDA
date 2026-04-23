@@ -109,8 +109,9 @@ async function playMotion(word) {
       const elapsed = (now - startTime) / 1000;  // 초
 
       if (elapsed >= totalDuration) {
-        // 마지막 keyframe 값으로 마무리
-        _applyKeyframe(avatar, keyframes[keyframes.length - 1].bones, 1.0, null);
+        // 마지막 keyframe 값으로 마무리 (motion.space 에 맞춰 world→local 처리)
+        const lastBones = keyframes[keyframes.length - 1].bones;
+        _applyInterpolated(avatar, lastBones, lastBones, 1.0, targetQuats, motion);
         _returnToInitial(avatar, initialQuats).then(() => {
           window.translationModeActive = false;
           window.dispatchEvent(new CustomEvent('itda:motion:played', {
@@ -133,7 +134,7 @@ async function playMotion(word) {
       const span = Math.max(next.time - prev.time, 1e-3);
       const t = Math.min(1, (elapsed - prev.time) / span);
 
-      _applyInterpolated(avatar, prev.bones, next.bones, t, targetQuats);
+      _applyInterpolated(avatar, prev.bones, next.bones, t, targetQuats, motion);
 
       requestAnimationFrame(update);
     }
@@ -142,31 +143,59 @@ async function playMotion(word) {
 }
 
 // ── 두 keyframe 사이 보간 (Quaternion slerp) ────────────────
-function _applyInterpolated(avatar, prevBones, nextBones, t, scratch) {
+// V3.1: JSON 의 quaternion 이 WORLD space 이면, 각 본에 대해 WORLD 를 먼저 보간한 뒤
+//       parent_chain 을 따라 local = inverse(parent_world) * this_world 로 변환.
+//       WORLD space slerp 가 수학적으로 정확하기 때문에 관절 chain 이 꼬이지 않음.
+function _applyInterpolated(avatar, prevBones, nextBones, t, scratch, motion) {
+  const isWorld = motion?.space === 'world';
+  const parentChain = motion?.parent_chain || {};
   const allBones = new Set([...Object.keys(prevBones), ...Object.keys(nextBones)]);
+
+  // 1. 각 본의 현재 world quaternion 을 먼저 계산 (parent 순서 무관)
+  const worldQuats = new Map();
   for (const bName of allBones) {
-    const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
-    if (!bone) continue;
     const qp = prevBones[bName];
     const qn = nextBones[bName] || qp;
     if (!qp) continue;
-    // Scratch quaternion to avoid garbage
     const qa = scratch.get(bName + '_a') || (scratch.set(bName + '_a', new THREE.Quaternion()).get(bName + '_a'));
     const qb = scratch.get(bName + '_b') || (scratch.set(bName + '_b', new THREE.Quaternion()).get(bName + '_b'));
     qa.set(qp.x, qp.y, qp.z, qp.w);
     qb.set(qn.x, qn.y, qn.z, qn.w);
-    bone.quaternion.copy(qa).slerp(qb, t);
+    const qout = new THREE.Quaternion().copy(qa).slerp(qb, t);
+    worldQuats.set(bName, qout);
   }
-}
 
-// ── 단일 keyframe 직접 적용 (마지막 프레임 고정) ────────────
-function _applyKeyframe(avatar, bones, alpha = 1.0) {
-  for (const [bName, q] of Object.entries(bones)) {
+  // 2. Parent 순서로 local 계산하여 bone 에 적용 (부모부터 자식 순)
+  //    간단한 2단계 체인(Arm → ForeArm) 이므로 parent 가 있는 본을 나중에 처리
+  const orderedNames = [...worldQuats.keys()].sort((a, b) => {
+    const aHasParent = parentChain[a] ? 1 : 0;
+    const bHasParent = parentChain[b] ? 1 : 0;
+    return aHasParent - bHasParent;
+  });
+
+  for (const bName of orderedNames) {
     const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
     if (!bone) continue;
-    const target = new THREE.Quaternion(q.x, q.y, q.z, q.w);
-    if (alpha >= 1.0) bone.quaternion.copy(target);
-    else bone.quaternion.slerp(target, alpha);
+    const wq = worldQuats.get(bName);
+    if (!isWorld) {
+      // Legacy: JSON 이 local space. 직접 적용.
+      bone.quaternion.copy(wq);
+      continue;
+    }
+    const parentName = parentChain[bName];
+    if (!parentName) {
+      // Root bone: local = world (부모가 identity 가정)
+      bone.quaternion.copy(wq);
+    } else {
+      const parentWorld = worldQuats.get(parentName);
+      if (!parentWorld) {
+        bone.quaternion.copy(wq);
+        continue;
+      }
+      // local = inverse(parent_world) * this_world
+      const invParent = new THREE.Quaternion().copy(parentWorld).invert();
+      bone.quaternion.copy(invParent).multiply(wq);
+    }
   }
 }
 
@@ -203,3 +232,46 @@ window.ITDAMotionV3 = {
 };
 
 console.info('[MotionV3] 로더 준비됨. ITDAMotionV3.play("<단어>") 로 호출 가능.');
+
+// ── URL 쿼리 파라미터 ?autoplay=WORD0001 로 자동 재생 (검증 편의 기능) ──
+(function _autoplay() {
+  const params = new URLSearchParams(location.search);
+  const target = params.get('autoplay');
+  if (!target) return;
+  console.info(`[MotionV3] autoplay 요청: ${target} (아바타 로드 후 재생 예약)`);
+  // 아바타가 로드된 후에만 가능. 준비 이벤트가 이미 지났을 수 있으므로 폴링.
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
+      clearInterval(timer);
+      console.info(`[MotionV3] 아바타 준비됨 → ${target} 재생 시작`);
+      window.ITDAAvatar5.stopIdle?.();
+      setTimeout(() => playMotion(target), 500);   // 렌더 안정화 후 재생
+    } else if (attempts > 60) {
+      clearInterval(timer);
+      console.warn('[MotionV3] 아바타 로드 타임아웃');
+    }
+  }, 500);
+})();
+
+// ── [검증 편의] WORD 번호 순회 재생 ────────────────────────
+// 사용법: ITDAMotionV3.browse(start=1, end=10)
+// 각 WORD 를 재생하고 자동으로 다음으로 넘김. Console 에서 품질 스팟 체크용.
+async function browseRange(start = 1, end = 10) {
+  for (let n = start; n <= end; n++) {
+    const word = `WORD${String(n).padStart(4, '0')}`;
+    const exists = await hasMotion(word);
+    if (!exists && !CACHE.has(word)) {
+      // 시도: 파일이 실제로 존재하는지 직접 체크
+      const m = await loadMotion(word);
+      if (!m) { console.info(`[browse] ${word} 없음, 스킵`); continue; }
+    }
+    console.info(`[browse] ▶ ${word} (${n - start + 1}/${end - start + 1})`);
+    await playMotion(word);
+    await new Promise(r => setTimeout(r, 500));  // 간격
+  }
+  console.info('[browse] 완료');
+}
+
+window.ITDAMotionV3.browse = browseRange;

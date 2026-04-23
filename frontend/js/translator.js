@@ -71,6 +71,17 @@ async function sendMessage(text) {
   chatInput.value = '';
   emotionOutput.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 텍스트 분석 및 모션 생성 중... ("${text}")</span>`;
 
+  // [V3 Priority] 사용자 입력 자체가 V3 JSON 에 있으면 RAG 거치지 않고 바로 재생
+  // RAG fuzzy match 로 인해 다른 keyword 가 반환되어 V3 를 놓치는 문제 해결
+  if (window.ITDAMotionV3) {
+    const direct = await window.ITDAMotionV3.load(text);
+    if (direct && direct.keyframes?.length) {
+      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${text}</span><br/><span style="font-size:0.75rem; color:var(--text-muted)">실제 KSL 모션 데이터 재생</span>`;
+      animateAvatar([], text);
+      return;   // RAG 경로 건너뜀
+    }
+  }
+
   try {
     const res = await fetch('http://localhost:8000/api/sign-language/search', {
       method: 'POST',
