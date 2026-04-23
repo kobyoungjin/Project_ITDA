@@ -452,6 +452,349 @@ const MOTION_PROFILES_V2 = {
       }
     ]
   },
+
+  // ════════════════════════════════════════════════════════════
+  // [V2.6+ 자율 생성] 아래 7개는 실측 convention(ZYX, LeftArm.z 미러)
+  // 을 적용해 일괄 작성. 사용자 시각 검수 전까지 근사치.
+  // 규약:
+  //   - RightArm.x 음수=UP 양수=DOWN / RightArm.z 음수=FORWARD
+  //   - LeftArm.z 는 부호 반대(Right 음수면 Left 양수)
+  //   - ForeArm.x 음수=팔꿈치 UP(얼굴 쪽)
+  //   - ForeArm.y: Right 양수=중앙, Left 음수=중앙 (대칭)
+  // ════════════════════════════════════════════════════════════
+
+  "미안합니다": {
+    description: "오른손 PALM 을 가슴(심장 부근)에 대고 상체를 살짝 숙여 사과",
+    steps: [
+      // 1) 오른손을 가슴 앞으로 올림 (팔꿈치 굽혀 손이 가슴 중앙)
+      {
+        duration: 500, easing: "easeOut",
+        bones: {
+          Spine: {x: 0.05, y: 0, z: 0},
+          Neck:  {x: 0.05, y: 0, z: 0},
+          RightArm:     {x: 0.15, y: 0, z: -0.7},
+          RightForeArm: {x: -1.3, y: 0.4, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_R: "PALM",
+        morphs: { mouthFrownLeft: 0.2, mouthFrownRight: 0.2, browInnerUp: 0.3 }
+      },
+      // 2) 가슴에 손 댄 채 상체+목 숙임 (사과)
+      {
+        duration: 600, easing: "easeInOut",
+        bones: {
+          Spine: {x: 0.22, y: 0, z: 0},
+          Neck:  {x: 0.28, y: 0, z: 0},
+          RightArm:     {x: 0.15, y: 0, z: -0.7},
+          RightForeArm: {x: -1.3, y: 0.4, z: 0},
+          RightHand:    {x: 0.1, y: 0, z: 0},
+        },
+        handshape_R: "PALM",
+        morphs: { mouthFrownLeft: 0.4, mouthFrownRight: 0.4, browInnerUp: 0.5, Sad: 0.6 }
+      },
+      // 3) 천천히 복귀
+      {
+        duration: 700, easing: "easeIn",
+        bones: {
+          Spine: {x: 0.05, y: 0, z: 0},
+          Neck:  {x: 0.05, y: 0, z: 0},
+          RightArm:     {x: 0.08, y: 0, z: -0.3},
+          RightForeArm: {x: -0.5, y: 0.15, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_R: "PALM",
+        morphs: { Sad: 0.3 }
+      }
+    ]
+  },
+
+  "네": {
+    description: "오른 주먹 FIST 를 가슴 높이에서 위아래로 부드럽게 끄덕임(긍정)",
+    steps: [
+      // 1) 오른손을 가슴 높이로 올림 (주먹)
+      {
+        duration: 350, easing: "easeOut",
+        bones: {
+          Neck: {x: 0.1, y: 0, z: 0},
+          RightArm:     {x: 0.1, y: 0, z: -0.5},
+          RightForeArm: {x: -1.0, y: 0.2, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_R: "FIST",
+        morphs: { mouthSmile: 0.25 }
+      },
+      // 2) 아래로 끄덕 (고개도 함께)
+      {
+        duration: 300, easing: "easeInOut",
+        bones: {
+          Neck: {x: 0.25, y: 0, z: 0},
+          RightArm:     {x: 0.25, y: 0, z: -0.5},
+          RightForeArm: {x: -0.7, y: 0.2, z: 0},
+          RightHand:    {x: 0.2, y: 0, z: 0},
+        },
+        handshape_R: "FIST",
+        morphs: { mouthSmile: 0.3 }
+      },
+      // 3) 다시 위로
+      {
+        duration: 300, easing: "easeInOut",
+        bones: {
+          Neck: {x: 0.05, y: 0, z: 0},
+          RightArm:     {x: 0.1, y: 0, z: -0.5},
+          RightForeArm: {x: -1.0, y: 0.2, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_R: "FIST",
+        morphs: { mouthSmile: 0.35 }
+      }
+    ]
+  },
+
+  "아니오": {
+    description: "오른손 PALM 을 얼굴 옆에서 좌우로 크게 흔들며 부정",
+    steps: [
+      // 1) 손을 얼굴 옆으로 올림 (손바닥 앞)
+      {
+        duration: 400, easing: "easeOut",
+        bones: {
+          RightArm:     {x: -0.4, y: 0, z: -0.25},
+          RightForeArm: {x: -1.1, y: 0, z: 0},
+          RightHand:    {x: 0, y: 0.2, z: 0},
+        },
+        handshape_R: "PALM",
+        morphs: { browLowererLeft: 0.3, browLowererRight: 0.3 }
+      },
+      // 2) 바깥으로 흔듦 (크게)
+      {
+        duration: 300, easing: "easeInOut",
+        bones: {
+          Neck: {x: 0, y: -0.15, z: 0},
+          RightArm:     {x: -0.4, y: 0, z: -0.25},
+          RightForeArm: {x: -1.1, y: 0.5, z: 0},
+          RightHand:    {x: 0, y: 0.3, z: 0.15},
+        },
+        handshape_R: "PALM",
+        morphs: { browLowererLeft: 0.4, browLowererRight: 0.4 }
+      },
+      // 3) 안쪽으로 흔듦
+      {
+        duration: 300, easing: "easeInOut",
+        bones: {
+          Neck: {x: 0, y: 0.15, z: 0},
+          RightArm:     {x: -0.4, y: 0, z: -0.25},
+          RightForeArm: {x: -1.1, y: -0.4, z: 0},
+          RightHand:    {x: 0, y: -0.25, z: -0.15},
+        },
+        handshape_R: "PALM",
+        morphs: { browLowererLeft: 0.4, browLowererRight: 0.4 }
+      },
+      // 4) 한 번 더 바깥 (좌우로 총 2회 흔듦 효과)
+      {
+        duration: 300, easing: "easeInOut",
+        bones: {
+          Neck: {x: 0, y: -0.1, z: 0},
+          RightArm:     {x: -0.4, y: 0, z: -0.25},
+          RightForeArm: {x: -1.1, y: 0.4, z: 0},
+          RightHand:    {x: 0, y: 0.2, z: 0.1},
+        },
+        handshape_R: "PALM",
+        morphs: { browLowererLeft: 0.2, browLowererRight: 0.2 }
+      }
+    ]
+  },
+
+  "도와주세요": {
+    description: "왼손 PALM(받침) 위에 오른 주먹을 올려 위로 들어올리며 도움 청함",
+    steps: [
+      // 1) 왼손을 손바닥 위로 향하게(받침) 가슴 앞 중앙으로
+      {
+        duration: 500, easing: "easeOut",
+        bones: {
+          Spine: {x: 0.03, y: 0, z: 0},
+          LeftArm:      {x: 0.3, y: 0, z:  0.8},
+          RightArm:     {x: 0.3, y: 0, z: -0.8},
+          LeftForeArm:  {x: -1.1, y: -0.4, z: 0},
+          RightForeArm: {x: -1.1, y:  0.4, z: 0},
+          LeftHand:     {x: -0.2, y: 0, z: 0},  // 손바닥 위로 향하게 wrist 회전
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "FIST",
+        morphs: { browInnerUp: 0.3, mouthFrownLeft: 0.15 }
+      },
+      // 2) 오른 주먹이 왼손 위에 얹힘, 함께 살짝 올라감 (부탁의 제스처)
+      {
+        duration: 600, easing: "easeInOut",
+        bones: {
+          Spine: {x: 0.03, y: 0, z: 0},
+          LeftArm:      {x: 0.15, y: 0, z:  0.8},
+          RightArm:     {x: 0.15, y: 0, z: -0.8},
+          LeftForeArm:  {x: -1.15, y: -0.4, z: 0},
+          RightForeArm: {x: -1.15, y:  0.4, z: 0},
+          LeftHand:     {x: -0.2, y: 0, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "FIST",
+        morphs: { browInnerUp: 0.5, Sad: 0.3 }
+      },
+      // 3) 복귀
+      {
+        duration: 600, easing: "easeIn",
+        bones: {
+          Spine: {x: 0, y: 0, z: 0},
+          LeftArm:      {x: 0.1, y: 0, z:  0.3},
+          RightArm:     {x: 0.1, y: 0, z: -0.3},
+          LeftForeArm:  {x: -0.4, y: -0.1, z: 0},
+          RightForeArm: {x: -0.4, y:  0.1, z: 0},
+          LeftHand:     {x: 0, y: 0, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { browInnerUp: 0.2 }
+      }
+    ]
+  },
+
+  "기뻐요": {
+    description: "양손 PALM 을 가슴에서 바깥 위로 펼치며 기쁨 표현",
+    steps: [
+      // 1) 양손을 가슴 앞에 모음
+      {
+        duration: 400, easing: "easeOut",
+        bones: {
+          LeftArm:      {x: 0.2, y: 0, z:  0.6},
+          RightArm:     {x: 0.2, y: 0, z: -0.6},
+          LeftForeArm:  {x: -1.1, y: -0.3, z: 0},
+          RightForeArm: {x: -1.1, y:  0.3, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.5 }
+      },
+      // 2) 양손을 바깥 위로 활짝 펼침
+      {
+        duration: 550, easing: "easeInOut",
+        bones: {
+          Spine: {x: -0.05, y: 0, z: 0},  // 상체 약간 펴짐
+          LeftArm:      {x: -0.3, y: 0, z:  0.3},  // 위+바깥
+          RightArm:     {x: -0.3, y: 0, z: -0.3},
+          LeftForeArm:  {x: -0.5, y:  0.1, z: 0},
+          RightForeArm: {x: -0.5, y: -0.1, z: 0},
+          LeftHand:     {x: 0, y: 0, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.9, eyeWideLeft: 0.3, eyeWideRight: 0.3 }
+      },
+      // 3) 복귀
+      {
+        duration: 600, easing: "easeIn",
+        bones: {
+          Spine: {x: 0, y: 0, z: 0},
+          LeftArm:      {x: 0.1, y: 0, z:  0.2},
+          RightArm:     {x: 0.1, y: 0, z: -0.2},
+          LeftForeArm:  {x: -0.3, y: 0, z: 0},
+          RightForeArm: {x: -0.3, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthSmile: 0.5 }
+      }
+    ]
+  },
+
+  "슬퍼요": {
+    description: "양손을 얼굴 앞에서 천천히 아래로 내리며 슬픔(눈물 흐르는 이미지)",
+    steps: [
+      // 1) 손을 얼굴 옆으로 올림
+      {
+        duration: 500, easing: "easeOut",
+        bones: {
+          Spine: {x: 0.05, y: 0, z: 0},
+          Neck:  {x: 0.1, y: 0, z: 0},
+          LeftArm:      {x: -0.3, y: 0, z:  0.25},
+          RightArm:     {x: -0.3, y: 0, z: -0.25},
+          LeftForeArm:  {x: -1.3, y: -0.1, z: 0},
+          RightForeArm: {x: -1.3, y:  0.1, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthFrownLeft: 0.4, mouthFrownRight: 0.4, browInnerUp: 0.6, Sad: 0.7 }
+      },
+      // 2) 천천히 아래로 내림 (가슴 → 허리)
+      {
+        duration: 800, easing: "easeInOut",
+        bones: {
+          Spine: {x: 0.1, y: 0, z: 0},
+          Neck:  {x: 0.2, y: 0, z: 0},
+          LeftArm:      {x: 0.5, y: 0, z:  0.4},
+          RightArm:     {x: 0.5, y: 0, z: -0.4},
+          LeftForeArm:  {x: -0.7, y: -0.2, z: 0},
+          RightForeArm: {x: -0.7, y:  0.2, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthFrownLeft: 0.6, mouthFrownRight: 0.6, browInnerUp: 0.8, Sad: 0.9 }
+      },
+      // 3) 복귀
+      {
+        duration: 700, easing: "easeIn",
+        bones: {
+          Spine: {x: 0.05, y: 0, z: 0},
+          Neck:  {x: 0.1, y: 0, z: 0},
+          LeftArm:      {x: 0.2, y: 0, z:  0.2},
+          RightArm:     {x: 0.2, y: 0, z: -0.2},
+          LeftForeArm:  {x: -0.3, y: 0, z: 0},
+          RightForeArm: {x: -0.3, y: 0, z: 0},
+        },
+        handshape_L: "PALM",
+        handshape_R: "PALM",
+        morphs: { mouthFrownLeft: 0.3, Sad: 0.4 }
+      }
+    ]
+  },
+
+  "이름": {
+    description: "오른 V 수형(검지+중지)을 이마 옆에 대었다가 떼며 이름 질문/지칭",
+    steps: [
+      // 1) V 수형을 이마 옆으로
+      {
+        duration: 400, easing: "easeOut",
+        bones: {
+          RightArm:     {x: -0.4, y: 0, z: -0.2},
+          RightForeArm: {x: -1.3, y: 0.1, z: 0},
+          RightHand:    {x: 0, y: 0.1, z: 0},
+        },
+        handshape_R: "V",
+        morphs: { eyeWideLeft: 0.2, eyeWideRight: 0.2 }
+      },
+      // 2) 이마에 가볍게 터치
+      {
+        duration: 300, easing: "easeInOut",
+        bones: {
+          RightArm:     {x: -0.5, y: 0, z: -0.2},
+          RightForeArm: {x: -1.5, y: 0.1, z: 0},
+          RightHand:    {x: 0.1, y: 0.1, z: 0},
+        },
+        handshape_R: "V",
+        morphs: { eyeWideLeft: 0.3, eyeWideRight: 0.3 }
+      },
+      // 3) 앞쪽으로 내밀기 (질문 제스처)
+      {
+        duration: 450, easing: "easeInOut",
+        bones: {
+          RightArm:     {x: -0.1, y: 0, z: -0.7},
+          RightForeArm: {x: -0.6, y: 0.1, z: 0},
+          RightHand:    {x: 0, y: 0, z: 0},
+        },
+        handshape_R: "V",
+        morphs: { browInnerUp: 0.4, mouthSmile: 0.2 }
+      }
+    ]
+  },
 };
 
 // ── 프로필 셀렉터: V2 우선, 없으면 V1 폴백 ──────────────────
@@ -510,6 +853,30 @@ async function animateAvatar(emotions, keyword) {
 
   // [Debug] Idle 애니메이션이 팔 본을 덮어쓰는 것을 방지하기 위해 번역 재생 직전 정지
   avatar.stopIdle?.();
+
+  // [Option A / V3] MediaPipe 로 추출된 keyframe JSON 이 있으면 우선 재생
+  // 감정 morph 는 V2 EMOTION_MORPH_MAP 을 그대로 적용 (선처리)
+  if (window.ITDAMotionV3 && window.ITDAMotion?.version !== 'v1') {
+    try {
+      const motion = await window.ITDAMotionV3.load(keyword);
+      if (motion && motion.keyframes?.length) {
+        // 감정 선처리 (V2 와 동일 방식)
+        if (emotions?.length) {
+          for (const emName of emotions) {
+            const effect = EMOTION_MORPH_MAP[emName];
+            if (effect) for (const [m, v] of Object.entries(effect)) {
+              if (typeof v === 'number') avatar.setMorphTarget(m, v);
+            }
+          }
+        }
+        window.translationModeActive = true;
+        await window.ITDAMotionV3.play(keyword);
+        return;  // V3 재생 완료 — V2 경로 건너뜀
+      }
+    } catch (e) {
+      console.warn('[Motion] V3 로드 실패, V2 폴백:', e.message);
+    }
+  }
 
   window.translationModeActive = true;
   if (translationTimeout) clearTimeout(translationTimeout);
