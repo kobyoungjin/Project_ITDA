@@ -32,7 +32,9 @@ import * as THREE from 'three';
 
 const CACHE = new Map();
 const INDEX_URL = './data/ksl_motions/index.json';
+const HANDSHAPE_LIB_URL = './data/handshape_library.json';
 let _index = null;
+let _handshapeLib = null;
 
 // ── 서버 index 로드 (있으면 use, 없으면 on-demand 로드) ──────
 async function _loadIndex() {
@@ -49,6 +51,22 @@ async function _loadIndex() {
   return _index;
 }
 
+// ── 수형 라이브러리 로드 ───────────────────────────────────
+async function _loadHandshapeLib() {
+  if (_handshapeLib !== null) return _handshapeLib;
+  try {
+    const res = await fetch(HANDSHAPE_LIB_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`handshape library HTTP ${res.status}`);
+    const data = await res.json();
+    _handshapeLib = data.shapes;
+    console.info(`[MotionV3] 수형 라이브러리 로드 완료 (${Object.keys(_handshapeLib).length}개)`);
+  } catch (e) {
+    console.error('[MotionV3] 수형 라이브러리 로드 실패:', e);
+    _handshapeLib = {};
+  }
+  return _handshapeLib;
+}
+
 // ── 단일 모션 JSON 로드 + 캐싱 ─────────────────────────────
 async function loadMotion(word) {
   if (CACHE.has(word)) return CACHE.get(word);
@@ -57,8 +75,9 @@ async function loadMotion(word) {
     const res = await fetch(url, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const motion = await res.json();
-    if (motion.version !== 'v3') {
-      console.warn(`[MotionV3] ${word}: version=${motion.version} (v3 아님)`);
+    // v3 또는 v4 지원
+    if (motion.version !== 'v3' && motion.version !== 'v4') {
+      console.warn(`[MotionV3] ${word}: version=${motion.version} (v3/v4 아님)`);
     }
     CACHE.set(word, motion);
     return motion;
@@ -79,25 +98,29 @@ async function playMotion(word) {
   const avatar = window.ITDAAvatar5;
   if (!avatar) { console.warn('[MotionV3] 아바타 미로드'); return; }
 
-  const motion = await loadMotion(word);
+  const [motion, _lib] = await Promise.all([loadMotion(word), _loadHandshapeLib()]);
   if (!motion || !motion.keyframes?.length) return false;
 
   // Idle 간섭 제거
   avatar.stopIdle?.();
   window.translationModeActive = true;
 
+  // 손가락 rest 캐시 (한 번만). 수형 offset 합성 시 사용.
+  _captureHandRest(avatar);
+
   const keyframes = motion.keyframes;
   const totalDuration = keyframes[keyframes.length - 1].time;
   console.info(`[MotionV3] 재생 "${word}" (${keyframes.length} keyframes, ${totalDuration.toFixed(2)}s)`);
 
   const startTime = performance.now();
-  const targetQuats = new Map();  // bone → THREE.Quaternion (reused)
+  const targetQuats = new Map();
 
-  // 사용된 모든 본 이름 수집 + 초기 quaternion 저장 (복귀용)
+  // 복귀용 initial quat: arm + 손가락 rest 전부 포함
   const touchedBones = new Set();
-  for (const kf of keyframes) {
-    for (const bName of Object.keys(kf.bones)) touchedBones.add(bName);
-  }
+  for (const kf of keyframes) for (const bName of Object.keys(kf.bones)) touchedBones.add(bName);
+  // 손가락 rest 도 복귀 대상에 포함 (수형이 적용되면 본이 변했으므로 원복 필요)
+  for (const bName of Object.keys(avatar._handshapeRest || {})) touchedBones.add(bName);
+
   const initialQuats = new Map();
   for (const bName of touchedBones) {
     const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
@@ -109,9 +132,9 @@ async function playMotion(word) {
       const elapsed = (now - startTime) / 1000;  // 초
 
       if (elapsed >= totalDuration) {
-        // 마지막 keyframe 값으로 마무리 (motion.space 에 맞춰 world→local 처리)
-        const lastBones = keyframes[keyframes.length - 1].bones;
-        _applyInterpolated(avatar, lastBones, lastBones, 1.0, targetQuats, motion);
+        // 마지막 keyframe 값으로 마무리
+        const lastKF = keyframes[keyframes.length - 1];
+        _applyInterpolated(avatar, lastKF, lastKF, 1.0, targetQuats, motion);
         _returnToInitial(avatar, initialQuats).then(() => {
           window.translationModeActive = false;
           window.dispatchEvent(new CustomEvent('itda:motion:played', {
@@ -134,7 +157,7 @@ async function playMotion(word) {
       const span = Math.max(next.time - prev.time, 1e-3);
       const t = Math.min(1, (elapsed - prev.time) / span);
 
-      _applyInterpolated(avatar, prev.bones, next.bones, t, targetQuats, motion);
+      _applyInterpolated(avatar, prev, next, t, targetQuats, motion);
 
       requestAnimationFrame(update);
     }
@@ -143,19 +166,35 @@ async function playMotion(word) {
 }
 
 // ── 두 keyframe 사이 보간 (Quaternion slerp) ────────────────
-// V3.1: JSON 의 quaternion 이 WORLD space 이면, 각 본에 대해 WORLD 를 먼저 보간한 뒤
-//       parent_chain 을 따라 local = inverse(parent_world) * this_world 로 변환.
-//       WORLD space slerp 가 수학적으로 정확하기 때문에 관절 chain 이 꼬이지 않음.
-function _applyInterpolated(avatar, prevBones, nextBones, t, scratch, motion) {
+// V3 JSON:  arm/forearm 은 WORLD space slerp → parent_chain 으로 local 변환.
+// V4 JSON:  위 + handshape_right/left (수형 이름) → 라이브러리 offset 을 rest 에 합성.
+//
+// Hand bone 이름은 'Hand(Thumb|Index|Middle|Ring|Pinky)\d' 패턴. 아래 정규식으로 구분.
+const HAND_BONE_RE = /Hand(Thumb|Index|Middle|Ring|Pinky)\d/;
+
+function _isHandBone(name) { return HAND_BONE_RE.test(name); }
+
+function _applyInterpolated(avatar, prevKF, nextKF, t, scratch, motion) {
   const isWorld = motion?.space === 'world';
   const parentChain = motion?.parent_chain || {};
-  const allBones = new Set([...Object.keys(prevBones), ...Object.keys(nextBones)]);
+  const lib = _handshapeLib || {};
 
-  // 1. 각 본의 현재 world quaternion 을 먼저 계산 (parent 순서 무관)
+  // 수형 선택 (keyframe override → motion default).
+  // 수형 전환은 단어 내에서 드물다는 전제. prev→next 가 다른 수형이면 단순히 next 로 snap.
+  const hsRightName = nextKF.handshape_right || motion.handshape_right || null;
+  const hsLeftName  = nextKF.handshape_left  || motion.handshape_left  || null;
+  const hsRight = hsRightName && lib[hsRightName] ? lib[hsRightName] : null;
+  const hsLeft  = hsLeftName  && lib[hsLeftName]  ? lib[hsLeftName]  : null;
+
+  // 1. arm/forearm 류 (keyframe.bones) 만 slerp (손가락은 수형으로 따로 처리)
+  const allArmBones = new Set();
+  for (const n of Object.keys(prevKF.bones || {})) if (!_isHandBone(n)) allArmBones.add(n);
+  for (const n of Object.keys(nextKF.bones || {})) if (!_isHandBone(n)) allArmBones.add(n);
+
   const worldQuats = new Map();
-  for (const bName of allBones) {
-    const qp = prevBones[bName];
-    const qn = nextBones[bName] || qp;
+  for (const bName of allArmBones) {
+    const qp = prevKF.bones[bName];
+    const qn = nextKF.bones[bName] || qp;
     if (!qp) continue;
     const qa = scratch.get(bName + '_a') || (scratch.set(bName + '_a', new THREE.Quaternion()).get(bName + '_a'));
     const qb = scratch.get(bName + '_b') || (scratch.set(bName + '_b', new THREE.Quaternion()).get(bName + '_b'));
@@ -165,38 +204,55 @@ function _applyInterpolated(avatar, prevBones, nextBones, t, scratch, motion) {
     worldQuats.set(bName, qout);
   }
 
-  // 2. Parent 순서로 local 계산하여 bone 에 적용 (부모부터 자식 순)
-  //    간단한 2단계 체인(Arm → ForeArm) 이므로 parent 가 있는 본을 나중에 처리
-  const orderedNames = [...worldQuats.keys()].sort((a, b) => {
-    const aHasParent = parentChain[a] ? 1 : 0;
-    const bHasParent = parentChain[b] ? 1 : 0;
-    return aHasParent - bHasParent;
-  });
-
-  for (const bName of orderedNames) {
+  // 2. arm bone 에 적용 (world → local via parent_chain)
+  const ordered = [...worldQuats.keys()].sort((a, b) =>
+    (parentChain[a] ? 1 : 0) - (parentChain[b] ? 1 : 0)
+  );
+  for (const bName of ordered) {
     const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
     if (!bone) continue;
     const wq = worldQuats.get(bName);
-    if (!isWorld) {
-      // Legacy: JSON 이 local space. 직접 적용.
-      bone.quaternion.copy(wq);
-      continue;
-    }
+    if (!isWorld) { bone.quaternion.copy(wq); continue; }
     const parentName = parentChain[bName];
-    if (!parentName) {
-      // Root bone: local = world (부모가 identity 가정)
+    const parentWorld = parentName ? worldQuats.get(parentName) : null;
+    if (!parentWorld) {
       bone.quaternion.copy(wq);
     } else {
-      const parentWorld = worldQuats.get(parentName);
-      if (!parentWorld) {
-        bone.quaternion.copy(wq);
-        continue;
-      }
-      // local = inverse(parent_world) * this_world
-      const invParent = new THREE.Quaternion().copy(parentWorld).invert();
-      bone.quaternion.copy(invParent).multiply(wq);
+      const invP = new THREE.Quaternion().copy(parentWorld).invert();
+      bone.quaternion.copy(invP).multiply(wq);
     }
   }
+
+  // 3. 수형 적용 (rest × offset)
+  _applyHandshapeOffset(avatar, hsRight, 'Right');
+  _applyHandshapeOffset(avatar, hsLeft,  'Left');
+}
+
+// ── 수형 offset 을 rest 에 합성 ──────────────────────────
+// _handshapeRest 는 playMotion 시작 시 저장된 손가락 본 기본 quaternion.
+function _applyHandshapeOffset(avatar, shape, side) {
+  if (!shape || !avatar?._handshapeRest) return;
+  const rest = avatar._handshapeRest;
+  const prefix = side + 'Hand';
+  const tmp = new THREE.Quaternion();
+  for (const [bn, q] of Object.entries(shape)) {
+    if (!bn.startsWith(prefix)) continue;
+    const bone = avatar.bones[bn] || avatar.bones['mixamorig:' + bn];
+    const r = rest[bn];
+    if (!bone || !r) continue;
+    tmp.set(q.x, q.y, q.z, q.w);
+    bone.quaternion.copy(r).multiply(tmp);
+  }
+}
+
+// playMotion 시작 시 손가락 본 rest 저장
+function _captureHandRest(avatar) {
+  if (avatar._handshapeRest) return;
+  const rest = {};
+  for (const name of Object.keys(avatar.bones || {})) {
+    if (_isHandBone(name)) rest[name] = avatar.bones[name].quaternion.clone();
+  }
+  avatar._handshapeRest = rest;
 }
 
 // ── 초기 자세로 부드럽게 복귀 (V2 엔진과 동일 톤) ───────────
