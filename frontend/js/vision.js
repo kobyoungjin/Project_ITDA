@@ -144,6 +144,89 @@ let prevWristY = null; // 모션 변화량 추적을 위한 이전 손목 Y좌�
 
 let wsRetryCount = 0;
 
+// [P0] Pose 캐시 — PoseLandmarker 결과를 sendFrameWS 타이밍에 백엔드로 함께 전송
+let latestPoseLandmarks = null;
+const POSE_KEYS = {
+  nose: 0,
+  left_shoulder: 11,  right_shoulder: 12,
+  left_elbow: 13,     right_elbow: 14,
+  left_wrist: 15,     right_wrist: 16,
+  left_hip: 23,       right_hip: 24,
+};
+
+// [P2] 모션 세그먼테이션 상태머신 ──────────────────────────────
+//  idle      : 손이 감지 안됨
+//  moving    : 손목 속도 > 임계값
+//  settling  : 속도 떨어지는 중 (감속)
+//  stable    : 500ms 이상 거의 정지 → 수어 한 단어가 "완성"됐다고 판정,
+//              백엔드에 full-pipeline 실행 플래그 전달
+const MOTION_THRESHOLDS = {
+  MOVING_SPEED: 0.015,  // 정규화 좌표/프레임 (약 1.5% 화면 이동)
+  STABLE_SPEED: 0.004,
+  STABLE_HOLD_MS: 500,  // 정지 상태가 이 시간 이상 유지되면 stable 로 승급
+};
+const motionState = {
+  phase: 'idle',         // idle | moving | settling | stable
+  lastWristR: null,      // 오른쪽 손목 최신 좌표
+  lastWristL: null,
+  speed: 0,              // 두 손목 중 큰 속도
+  stillSince: 0,         // ms 타임스탬프 (정지 시작 시각)
+  lastPhaseChange: 0,    // 최근 phase 변경 시각 (디바운스)
+};
+
+function _updateMotionPhase(hands, nowMs) {
+  // 손이 없으면 idle
+  if (!hands || hands.length === 0) {
+    motionState.lastWristR = motionState.lastWristL = null;
+    motionState.speed = 0;
+    if (motionState.phase !== 'idle') {
+      motionState.phase = 'idle';
+      motionState.lastPhaseChange = nowMs;
+    }
+    return;
+  }
+
+  // 두 손목 속도 중 큰 값을 사용
+  let maxSpeed = 0;
+  for (const h of hands) {
+    const w = h.landmarks[0];
+    const key = h.handedness === 'Right' ? 'lastWristR' : 'lastWristL';
+    const prev = motionState[key];
+    if (prev) {
+      const dx = w.x - prev.x, dy = w.y - prev.y;
+      const s = Math.hypot(dx, dy);
+      if (s > maxSpeed) maxSpeed = s;
+    }
+    motionState[key] = { x: w.x, y: w.y };
+  }
+  motionState.speed = maxSpeed;
+
+  const prevPhase = motionState.phase;
+  if (maxSpeed > MOTION_THRESHOLDS.MOVING_SPEED) {
+    motionState.phase = 'moving';
+    motionState.stillSince = 0;
+  } else if (maxSpeed > MOTION_THRESHOLDS.STABLE_SPEED) {
+    motionState.phase = (prevPhase === 'moving' || prevPhase === 'settling') ? 'settling' : motionState.phase;
+  } else {
+    // 거의 정지
+    if (!motionState.stillSince) motionState.stillSince = nowMs;
+    const heldMs = nowMs - motionState.stillSince;
+    if (heldMs >= MOTION_THRESHOLDS.STABLE_HOLD_MS &&
+        (prevPhase === 'moving' || prevPhase === 'settling')) {
+      motionState.phase = 'stable';  // 이번 프레임 1회만 stable 로 트리거
+    } else if (prevPhase === 'stable') {
+      motionState.phase = 'idle';    // stable 은 1프레임 이벤트
+    }
+  }
+  if (prevPhase !== motionState.phase) {
+    motionState.lastPhaseChange = nowMs;
+    // [P2 HUD] phase 변경 즉시 UI로 통지 — WS 연결과 무관하게 단독 모드에서도 동작
+    window.dispatchEvent(new CustomEvent('itda:motion:phase', {
+      detail: { phase: motionState.phase, speed: motionState.speed },
+    }));
+  }
+}
+
 function connectWebSocket() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
   ws = new WebSocket(WS_URL);
@@ -156,6 +239,14 @@ function connectWebSocket() {
       const ack = JSON.parse(evt.data);
       if (ack.rag_result) {
         window.dispatchEvent(new CustomEvent('itda:rag:result', { detail: ack }));
+      }
+      // [P0] 백엔드 Handshape 분석 결과 브로드캐스트 → avatar/HUD/교육 모듈이 구독
+      if (ack.hand_analyses && ack.hand_analyses.length > 0) {
+        window.dispatchEvent(new CustomEvent('itda:hands:analysis', { detail: ack.hand_analyses }));
+      }
+      // [P0] 백엔드 Pose 분석 결과 브로드캐스트
+      if (ack.pose_analysis) {
+        window.dispatchEvent(new CustomEvent('itda:pose:analysis', { detail: ack.pose_analysis }));
       }
     } catch(e) {}
   };
@@ -172,20 +263,29 @@ function connectWebSocket() {
 }
 
 function sendFrameWS(hands) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
   const now = performance.now();
-  
+
+  // [P2] 모션 상태머신은 WS 연결 여부와 무관하게 매 프레임 갱신 (phase 이벤트는 단독 모드에서도 유용)
+  _updateMotionPhase(hands, now);
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
   // [과제 3] 0.5초(500ms) 단위로 버퍼링/제한 (기존 33fps 무한 호출 방지)
-  if (now - lastSendTime < 500) return; 
+  // 단, motion_phase === 'stable' 프레임은 최종 판정 트리거이므로 throttle 예외 적용
+  const isFinalTrigger = motionState.phase === 'stable';
+  if (!isFinalTrigger && now - lastSendTime < 500) return;
   lastSendTime = now;
 
-  const ESSENTIAL_INDICES = [0, 3, 4, 6, 8, 10, 12, 14, 16, 18, 20];
+  // [P0] 손 관절 Handshape 분류기: 21개 전체 랜드마크 전송 (MCP/PIP/DIP 굴곡 각도 계산 필수)
+  // 손목(0)을 원점으로 하여 상대좌표로 정규화 → 카메라 거리 변화에 강건한 분류
   const handDataList = hands.map(h => {
-    const keypoints = ESSENTIAL_INDICES.map(idx => {
-       const lm = h.landmarks[idx];
-       return { x: +(lm.x).toFixed(4), y: +(lm.y).toFixed(4), z: +(lm.z).toFixed(4) };
-    });
-    return { handedness: h.handedness, keypoints: keypoints };
+    const wrist = h.landmarks[0];
+    const keypoints = h.landmarks.map(lm => ({
+      x: +(lm.x - wrist.x).toFixed(4),
+      y: +(lm.y - wrist.y).toFixed(4),
+      z: +((lm.z ?? 0) - (wrist.z ?? 0)).toFixed(4),
+    }));
+    return { handedness: h.handedness, keypoints: keypoints, normalized: true };
   });
 
   // [과제 1] 원시 좌표(x,y,z) 대신 백엔드가 이해하기 쉬운 메타데이터 추출
@@ -205,15 +305,36 @@ function sendFrameWS(hands) {
     prevWristY = null;
   }
 
+  // [P0] Pose 동봉: 어깨/팔꿈치/손목/엉덩이 좌표를 POSE_KEYS 라벨 기반 dict 로 변환
+  let poseField = null;
+  if (latestPoseLandmarks) {
+    const lmDict = {};
+    for (const [label, idx] of Object.entries(POSE_KEYS)) {
+      const lm = latestPoseLandmarks[idx];
+      if (!lm) continue;
+      lmDict[label] = {
+        x: +lm.x.toFixed(4),
+        y: +lm.y.toFixed(4),
+        z: +(lm.z ?? 0).toFixed(4),
+        visibility: +(lm.visibility ?? 1.0).toFixed(3),
+      };
+    }
+    if (Object.keys(lmDict).length > 0) poseField = { landmarks: lmDict };
+  }
+
   ws.send(JSON.stringify({
     frame_id: frameCounter++,
     session_id: sessionId,
     timestamp_ms: now,
     fps: currentFPS,
     hands: handDataList,
+    pose: poseField,
     meta_features: {               // 백엔드로 보낼 정제된 특징
       movement: movement_desc,
-      hand_count: hands.length
+      hand_count: hands.length,
+      // [P2] 모션 상태 — 백엔드가 Track2/Track3 게이팅에 사용
+      motion_phase: motionState.phase,
+      motion_speed: +motionState.speed.toFixed(4),
     }
   }));
 }
@@ -230,8 +351,10 @@ async function processFrame(timestamp) {
 
   // ① 포즈 감지 (PoseLandmarker) — 팔·어깨·몸통
   const poseResult = poseLandmarker.detectForVideo(videoEl, timestamp);
+  // [P0] 백엔드 pose_analyzer 로 보낼 최신 스냅샷 캐싱
+  latestPoseLandmarks = poseResult.landmarks?.[0] ?? null;
   window.dispatchEvent(new CustomEvent('itda:pose:results', {
-    detail: { landmarks: poseResult.landmarks?.[0] ?? null },
+    detail: { landmarks: latestPoseLandmarks },
   }));
 
   // ② 얼굴 감지 (FaceLandmarker)

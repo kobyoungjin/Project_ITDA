@@ -33,10 +33,22 @@ async def search_sign_language(request: SearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/refresh-pipeline")
-async def refresh_pipeline():
-    """데이터 파이프라인을 수동으로 재실행하여 FAISS 벡터 스토어를 갱신합니다."""
+async def refresh_pipeline(force: bool = True):
+    """
+    데이터 파이프라인을 수동 재실행하여 FAISS 벡터 스토어를 갱신.
+
+    [⑤ FAISS 캐시 무효화]
+    force=True (기본) → 기존 캐시를 버리고 AI Hub dedup·감정 추론을 새로 반영
+    force=False       → 이미 캐시가 있으면 건너뜀 (빠른 기동용)
+    """
     try:
-        count = data_pipeline.process_and_store()
-        return {"status": "success", "message": f"{count}개의 수어-감정 데이터 처리 성공"}
+        count = data_pipeline.process_and_store(force_refresh=force)
+        mode = "강제 재빌드" if force else "증분 로드"
+        return {
+            "status": "success",
+            "mode": mode,
+            "count": count,
+            "message": f"{count}개 수어-감정 데이터 처리 성공 ({mode})"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
