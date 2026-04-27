@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-MORPHEME_ROOT = Path(r"C:/Users/ComHolic/Desktop/data/[라벨]01_real_word_morpheme/morpheme/01")
+MORPHEME_ROOT = Path(r"C:/Users/ComHolic/Desktop/data/01_real_word_morpheme/morpheme/01")
 MOTIONS_DIR = ROOT / "frontend" / "data" / "ksl_motions"
 
 # Windows 파일명에 쓸 수 없는 문자

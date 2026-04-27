@@ -22,9 +22,27 @@
 import * as THREE from 'three';
 
 const LIBRARY_URL = './data/handshape_library.json';
+const LS_PREFIX = 'itda.handshape.override.';
 
 let _library = null;
 let _loading = null;
+let _overrides = {};   // name → { bone: {x,y,z,w} } ABSOLUTE quaternions (from preview save)
+
+function _loadOverrides() {
+  const map = {};
+  let count = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LS_PREFIX)) {
+        const name = k.slice(LS_PREFIX.length);
+        try { map[name] = JSON.parse(localStorage.getItem(k)); count++; } catch {}
+      }
+    }
+  } catch (e) { console.warn('[Handshape] localStorage 읽기 실패:', e); }
+  if (count > 0) console.info(`[Handshape] localStorage 오버라이드 ${count}개 병합 (허브 반영)`);
+  return map;
+}
 
 async function load() {
   if (_library) return _library;
@@ -33,12 +51,17 @@ async function load() {
     const res = await fetch(LIBRARY_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`handshape library HTTP ${res.status}`);
     _library = await res.json();
+    _overrides = _loadOverrides();
     const n = Object.keys(_library.shapes || {}).length;
-    console.info(`[Handshape] 라이브러리 로드 완료: ${n}개 수형`);
+    console.info(`[Handshape] 라이브러리 로드 완료: ${n}개 수형 (+ 오버라이드 ${Object.keys(_overrides).length})`);
     return _library;
   })();
   return _loading;
 }
+
+/** 해당 수형에 localStorage 절대값 오버라이드가 있으면 true. */
+function hasOverride(name) { return !!_overrides[name]; }
+function getOverride(name) { return _overrides[name] || null; }
 
 function has(name) {
   return !!(_library?.shapes?.[name]);
@@ -77,19 +100,28 @@ function _ensureRest(avatar) {
 
 const _tmpQ = new THREE.Quaternion();
 
-/** 양손 수형 적용. avatar 는 bones dict 를 가지고 있어야 함. */
+/** 양손 수형 적용.
+ *  localStorage 오버라이드 있으면 절대값 직접 적용 (rest 불필요).
+ *  없으면 파일 라이브러리 값을 rest × offset 으로 합성. */
 function apply(avatar, name) {
   if (!avatar?.bones) { console.warn('[Handshape] avatar.bones 없음'); return false; }
-  const shape = _library?.shapes?.[name];
+  const override = _overrides[name];
+  const shape = override || _library?.shapes?.[name];
   if (!shape) { console.warn(`[Handshape] 미발견: ${name}`); return false; }
   const rest = _ensureRest(avatar);
+  const useAbsolute = !!override;   // 오버라이드는 최종 local quat 이므로 rest 곱셈 불필요
 
   for (const [bn, q] of Object.entries(shape)) {
     const bone = avatar.bones[bn] || avatar.bones['mixamorig:' + bn];
-    const restQ = rest[bn];
-    if (!bone || !restQ) continue;
+    if (!bone) continue;
     _tmpQ.set(q.x, q.y, q.z, q.w);
-    bone.quaternion.copy(restQ).multiply(_tmpQ);
+    if (useAbsolute) {
+      bone.quaternion.copy(_tmpQ);
+    } else {
+      const restQ = rest[bn];
+      if (!restQ) continue;
+      bone.quaternion.copy(restQ).multiply(_tmpQ);
+    }
   }
   return true;
 }
@@ -97,18 +129,25 @@ function apply(avatar, name) {
 /** 한 손만 수형 적용. */
 function applyOne(avatar, name, side) {
   if (!avatar?.bones) return false;
-  const shape = _library?.shapes?.[name];
+  const override = _overrides[name];
+  const shape = override || _library?.shapes?.[name];
   if (!shape) return false;
   const rest = _ensureRest(avatar);
   const prefix = side + 'Hand';
+  const useAbsolute = !!override;
 
   for (const [bn, q] of Object.entries(shape)) {
     if (!bn.startsWith(prefix)) continue;
     const bone = avatar.bones[bn] || avatar.bones['mixamorig:' + bn];
-    const restQ = rest[bn];
-    if (!bone || !restQ) continue;
+    if (!bone) continue;
     _tmpQ.set(q.x, q.y, q.z, q.w);
-    bone.quaternion.copy(restQ).multiply(_tmpQ);
+    if (useAbsolute) {
+      bone.quaternion.copy(_tmpQ);
+    } else {
+      const restQ = rest[bn];
+      if (!restQ) continue;
+      bone.quaternion.copy(restQ).multiply(_tmpQ);
+    }
   }
   return true;
 }
@@ -131,6 +170,9 @@ window.ITDAHandshape = {
   has,
   list,
   getQuats,
+  hasOverride,
+  getOverride,
+  reloadOverrides: () => { _overrides = _loadOverrides(); },
 };
 
 // 자동 로드
