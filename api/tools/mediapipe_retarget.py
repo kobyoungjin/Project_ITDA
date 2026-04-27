@@ -116,48 +116,51 @@ def quat_distance(a: np.ndarray, b: np.ndarray) -> float:
 # ════════════════════════════════════════════════════════════════
 
 # T-pose 에서 각 본이 "가리키는" 방향 (bone's primary axis in world space at rest).
-# MediaPipe world frame 과 동일 계열로 맞춤 (X=오른쪽, Y=위, Z=앞).
+# [실측 기반 / 2026-04-24] sonyr.glb GLB 에서 pygltflib 로 추출:
+#   - 캐릭터의 오른쪽 팔/손/손가락 = world -X 방향 (RightArm pos x=-0.16)
+#   - 캐릭터의 왼쪽  팔/손/손가락 = world +X 방향
+# AI Hub 데이터(signer 정면 카메라)와 좌표계 일치 (signer 오른쪽 = -X)
 REST_DIRECTIONS = {
     # 상완 + 전완
-    "RightArm":     np.array([1.0, 0.0, 0.0]),
-    "LeftArm":      np.array([-1.0, 0.0, 0.0]),
-    "RightForeArm": np.array([1.0, 0.0, 0.0]),
-    "LeftForeArm":  np.array([-1.0, 0.0, 0.0]),
-    # 손목 (Hand 본): T-pose 에서 손이 팔 연장선으로 뻗음
-    "RightHand":    np.array([1.0, 0.0, 0.0]),
-    "LeftHand":     np.array([-1.0, 0.0, 0.0]),
-    # 손가락 마디: 손목 기준 원위 방향으로 뻗음 (rest: 평손)
-    "RightHandThumb1":  np.array([1.0, 0.0, 0.0]),
-    "RightHandThumb2":  np.array([1.0, 0.0, 0.0]),
-    "RightHandThumb3":  np.array([1.0, 0.0, 0.0]),
-    "RightHandIndex1":  np.array([1.0, 0.0, 0.0]),
-    "RightHandIndex2":  np.array([1.0, 0.0, 0.0]),
-    "RightHandIndex3":  np.array([1.0, 0.0, 0.0]),
-    "RightHandMiddle1": np.array([1.0, 0.0, 0.0]),
-    "RightHandMiddle2": np.array([1.0, 0.0, 0.0]),
-    "RightHandMiddle3": np.array([1.0, 0.0, 0.0]),
-    "RightHandRing1":   np.array([1.0, 0.0, 0.0]),
-    "RightHandRing2":   np.array([1.0, 0.0, 0.0]),
-    "RightHandRing3":   np.array([1.0, 0.0, 0.0]),
-    "RightHandPinky1":  np.array([1.0, 0.0, 0.0]),
-    "RightHandPinky2":  np.array([1.0, 0.0, 0.0]),
-    "RightHandPinky3":  np.array([1.0, 0.0, 0.0]),
-    # Left 쪽도 동일하지만 방향은 -X
-    "LeftHandThumb1":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandThumb2":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandThumb3":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandIndex1":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandIndex2":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandIndex3":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandMiddle1": np.array([-1.0, 0.0, 0.0]),
-    "LeftHandMiddle2": np.array([-1.0, 0.0, 0.0]),
-    "LeftHandMiddle3": np.array([-1.0, 0.0, 0.0]),
-    "LeftHandRing1":   np.array([-1.0, 0.0, 0.0]),
-    "LeftHandRing2":   np.array([-1.0, 0.0, 0.0]),
-    "LeftHandRing3":   np.array([-1.0, 0.0, 0.0]),
-    "LeftHandPinky1":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandPinky2":  np.array([-1.0, 0.0, 0.0]),
-    "LeftHandPinky3":  np.array([-1.0, 0.0, 0.0]),
+    "RightArm":     np.array([-1.0, 0.0, 0.0]),
+    "LeftArm":      np.array([+1.0, 0.0, 0.0]),
+    "RightForeArm": np.array([-1.0, 0.0, 0.0]),
+    "LeftForeArm":  np.array([+1.0, 0.0, 0.0]),
+    # 손목
+    "RightHand":    np.array([-1.0, 0.0, 0.0]),
+    "LeftHand":     np.array([+1.0, 0.0, 0.0]),
+    # 손가락 — Right 쪽 (world -X 로 뻗음)
+    "RightHandThumb1":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandThumb2":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandThumb3":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandIndex1":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandIndex2":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandIndex3":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandMiddle1": np.array([-1.0, 0.0, 0.0]),
+    "RightHandMiddle2": np.array([-1.0, 0.0, 0.0]),
+    "RightHandMiddle3": np.array([-1.0, 0.0, 0.0]),
+    "RightHandRing1":   np.array([-1.0, 0.0, 0.0]),
+    "RightHandRing2":   np.array([-1.0, 0.0, 0.0]),
+    "RightHandRing3":   np.array([-1.0, 0.0, 0.0]),
+    "RightHandPinky1":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandPinky2":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandPinky3":  np.array([-1.0, 0.0, 0.0]),
+    # Left 쪽 (world +X 로 뻗음)
+    "LeftHandThumb1":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandThumb2":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandThumb3":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandIndex1":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandIndex2":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandIndex3":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandMiddle1": np.array([+1.0, 0.0, 0.0]),
+    "LeftHandMiddle2": np.array([+1.0, 0.0, 0.0]),
+    "LeftHandMiddle3": np.array([+1.0, 0.0, 0.0]),
+    "LeftHandRing1":   np.array([+1.0, 0.0, 0.0]),
+    "LeftHandRing2":   np.array([+1.0, 0.0, 0.0]),
+    "LeftHandRing3":   np.array([+1.0, 0.0, 0.0]),
+    "LeftHandPinky1":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandPinky2":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandPinky3":  np.array([+1.0, 0.0, 0.0]),
 }
 
 
@@ -671,12 +674,16 @@ BODY25 = {
 
 
 def _openpose_pose_to_dict(pose_flat: list) -> dict:
-    """BODY_25 flat 배열(100 float) → pose_analyzer 호환 dict."""
+    """BODY_25 flat 배열(100 float) → pose_analyzer 호환 dict.
+
+    [중요] 좌표계 변환은 retarget_pose_frame.to_np() 가 담당 (y, z 부호 반전).
+    여기서는 raw 값을 그대로 전달 — 두 번 변환되면 학날개 되니 절대 변환 추가 금지.
+    """
     def pt(idx):
         base = idx * 4
-        return {"x": pose_flat[base],
-                "y": pose_flat[base + 1],
-                "z": pose_flat[base + 2]}
+        return {"x":  pose_flat[base],
+                "y":  pose_flat[base + 1],
+                "z":  pose_flat[base + 2]}
     return {
         "left_shoulder":  pt(BODY25["LShoulder"]),
         "right_shoulder": pt(BODY25["RShoulder"]),
@@ -685,6 +692,11 @@ def _openpose_pose_to_dict(pose_flat: list) -> dict:
         "left_wrist":     pt(BODY25["LWrist"]),
         "right_wrist":    pt(BODY25["RWrist"]),
     }
+
+
+def _flip_hand_keypoints(hand_flat: list) -> list:
+    """손 keypoint passthrough — 좌표 변환은 retarget_hand_chain 측에서 일관 처리."""
+    return hand_flat
 
 
 def _smooth_positions_centered(frames_raw: list[dict], window: int = 5) -> list[dict]:
@@ -750,12 +762,12 @@ def extract_from_openpose_dir(keypoint_dir: str | Path, word: str,
             if len(pose_flat) < 100:
                 continue
             pose_dict = _openpose_pose_to_dict(pose_flat)
-            # 손 keypoints 도 함께 보관 (retargeting 시 사용)
+            # 손 keypoints 도 함께 보관 (retargeting 시 사용) — 동일 좌표계 변환
             pose_frames.append({
                 "time": round(i / fps, 4),
                 "pose": pose_dict,
-                "hand_right": people.get("hand_right_keypoints_3d") or [],
-                "hand_left":  people.get("hand_left_keypoints_3d") or [],
+                "hand_right": _flip_hand_keypoints(people.get("hand_right_keypoints_3d") or []),
+                "hand_left":  _flip_hand_keypoints(people.get("hand_left_keypoints_3d") or []),
             })
         except Exception as e:
             print(f"  경고 {jf.name}: {e}")

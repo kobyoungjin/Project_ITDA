@@ -45,15 +45,21 @@
       <button id="copy-data" class="success">📋 현재 포즈 JSON 복사</button>
     </div>
     <div class="btnrow">
-      <button id="mark-ok" class="secondary" style="background:#00e6a0;color:#0a0e18">✓ OK</button>
+      <button id="mark-ok" class="secondary" style="background:#00e6a0;color:#0a0e18">✓ OK 저장</button>
       <button id="mark-bad" class="secondary" style="background:#ff6baf;color:#0a0e18">✗ 수정필요</button>
     </div>
+    <div class="btnrow">
+      <button id="export-lib" class="success">📥 라이브러리 다운로드</button>
+      <button id="clear-overrides" class="secondary" style="background:#475569">🗑️ 초기화</button>
+    </div>
     <div id="help">
-      1. GUI에서 손가락 각도를 정밀 조정.<br>
-      2. <b>JSON 복사</b> 후 라이브러리에 반영.<br>
-      3. 정확하면 <b>✓ OK</b> 표시.
+      <b>가상환경 → 허브 반영 방법</b>:<br>
+      1. GUI에서 손가락 조정 → <b>✓ OK 저장</b> (localStorage 저장, 메인앱 즉시 반영).<br>
+      2. 세션 영구 보존 원하면 <b>📥 다운로드</b> → <code>frontend/data/</code> 에 덮어쓰기.<br>
+      3. 모든 오버라이드 지우려면 <b>🗑️ 초기화</b>.
     </div>
     <div id="verdict">검증 결과: OK 0 / 수정필요 0 / 미확인 22</div>
+    <div id="override-count" style="margin-top:8px; font-size:0.75rem; color:#94a3b8"></div>
     <textarea id="output-json" placeholder="여기에 JSON 데이터가 표시됩니다." 
               style="width:100%; height:120px; margin-top:12px; background:#0f172a; color:#10b981; 
                      border:1px solid #334155; border-radius:6px; font-family:monospace; font-size:0.75rem; 
@@ -240,21 +246,31 @@
     function showShape(i) {
       idx = (i + shapeNames.length) % shapeNames.length;
       const name = shapeNames[idx];
-      const shape = shapes[name];
-      
+
       // 모든 bone 초기화
       for (const [bn, q0] of Object.entries(initialQuats)) {
         bones[bn]?.quaternion.copy(q0);
       }
-      
-      // 수형 적용: rest × offset (rest 자세에서 추가 회전)
+
+      // localStorage 오버라이드 우선 — 있으면 최종 local quat 그대로 복사 (rest 합성 이미 반영된 값)
+      const override = localStorage.getItem(LS_PREFIX + name);
       const _tmpQ = new THREE.Quaternion();
-      for (const [bn, q] of Object.entries(shape)) {
-        const bone = bones[bn];
-        const rest = initialQuats[bn];
-        if (bone && rest) {
-          _tmpQ.set(q.x, q.y, q.z, q.w);
-          bone.quaternion.copy(rest).multiply(_tmpQ);
+      if (override) {
+        const saved = JSON.parse(override);
+        for (const [bn, q] of Object.entries(saved)) {
+          const bone = bones[bn];
+          if (bone) bone.quaternion.set(q.x, q.y, q.z, q.w);
+        }
+      } else {
+        // 파일 라이브러리: rest × offset 합성
+        const shape = shapes[name];
+        for (const [bn, q] of Object.entries(shape)) {
+          const bone = bones[bn];
+          const rest = initialQuats[bn];
+          if (bone && rest) {
+            _tmpQ.set(q.x, q.y, q.z, q.w);
+            bone.quaternion.copy(rest).multiply(_tmpQ);
+          }
         }
       }
       
@@ -287,16 +303,88 @@
     };
     document.getElementById('copy-data').onclick = () => copyCurrentPose();
     document.getElementById('mark-ok').onclick = () => {
-      verdicts[shapeNames[idx]] = 'ok'; showShape(idx + 1);
+      // ✓ OK 저장: 현재 손가락 본의 local quaternion 을 localStorage 에 박제 (허브 반영)
+      const name = shapeNames[idx];
+      saveShapeToLocalStorage(name);
+      verdicts[name] = 'ok';
+      showShape(idx + 1);
     };
     document.getElementById('mark-bad').onclick = () => {
       verdicts[shapeNames[idx]] = 'bad'; showShape(idx + 1);
     };
+    document.getElementById('export-lib').onclick = () => exportLibrary();
+    document.getElementById('clear-overrides').onclick = () => clearOverrides();
 
     addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight') showShape(idx + 1);
       if (e.key === 'ArrowLeft') showShape(idx - 1);
+      if (e.key === 'o') document.getElementById('mark-ok').click();
+      if (e.key === 'x') document.getElementById('mark-bad').click();
     });
+
+    // ── 가상환경 → 허브 반영 메커니즘 ─────────────────────────
+    // 키마다 하나의 수형을 저장. main app 의 handshape_loader 가 로드 시 병합함.
+    const LS_PREFIX = 'itda.handshape.override.';
+
+    function saveShapeToLocalStorage(name) {
+      const result = {};
+      fingerBones.forEach(bn => {
+        const bone = bones[bn];
+        if (!bone) return;
+        const q = bone.quaternion;
+        // Bone 이름에서 namespace prefix (mixamorig: 등) 제거
+        const clean = bn.replace(/^.*:/, '');
+        result[clean] = { x: +q.x.toFixed(5), y: +q.y.toFixed(5), z: +q.z.toFixed(5), w: +q.w.toFixed(5) };
+      });
+      localStorage.setItem(LS_PREFIX + name, JSON.stringify(result));
+      console.info(`[Preview→Hub] "${name}" localStorage 저장 (${Object.keys(result).length} bones)`);
+      updateOverrideCount();
+    }
+
+    function updateOverrideCount() {
+      let n = 0;
+      for (const k in localStorage) if (k.startsWith(LS_PREFIX)) n++;
+      const el = document.getElementById('override-count');
+      if (el) el.textContent = `🌉 허브 반영 대기: ${n}개 수형 (localStorage)`;
+    }
+
+    async function exportLibrary() {
+      // 파일 라이브러리 + localStorage 오버라이드 병합 → 다운로드
+      try {
+        const res = await fetch('./data/handshape_library.json', { cache: 'no-cache' });
+        const lib = await res.json();
+        let overridden = 0;
+        for (const name of Object.keys(lib.shapes)) {
+          const raw = localStorage.getItem(LS_PREFIX + name);
+          if (raw) { lib.shapes[name] = JSON.parse(raw); overridden++; }
+        }
+        lib.meta = { ...(lib.meta||{}), exported_at: new Date().toISOString(), overridden };
+        const blob = new Blob([JSON.stringify(lib, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'handshape_library.json';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert(`라이브러리 다운로드 완료.\n오버라이드 반영: ${overridden}개 수형\n\nfrontend/data/handshape_library.json 에 덮어쓰면 영구 반영됩니다.`);
+      } catch (e) {
+        alert('내보내기 실패: ' + e.message);
+      }
+    }
+
+    function clearOverrides() {
+      const confirmed = confirm('모든 localStorage 오버라이드를 지웁니다. 파일 라이브러리(handshape_library.json) 는 그대로 유지됩니다. 계속할까요?');
+      if (!confirmed) return;
+      const toRemove = [];
+      for (const k in localStorage) if (k.startsWith(LS_PREFIX)) toRemove.push(k);
+      toRemove.forEach(k => localStorage.removeItem(k));
+      updateOverrideCount();
+      alert(`${toRemove.length}개 오버라이드 제거됨. 메인앱 새로고침 시 파일 값으로 복귀.`);
+      showShape(idx);  // 현재 수형 다시 그리기
+    }
+
+    // 페이지 로드 시 현재 상태 표시
+    updateOverrideCount();
 
     (function loop() {
       controls.update();

@@ -107,6 +107,8 @@ async function playMotion(word) {
 
   // 손가락 rest 캐시 (한 번만). 수형 offset 합성 시 사용.
   _captureHandRest(avatar);
+  // arm/forearm/hand 본의 자체 world rest quat 캐시 (한 번만).
+  _captureArmRestWorld(avatar);
 
   const keyframes = motion.keyframes;
   const totalDuration = keyframes[keyframes.length - 1].time;
@@ -204,32 +206,67 @@ function _applyInterpolated(avatar, prevKF, nextKF, t, scratch, motion) {
     worldQuats.set(bName, qout);
   }
 
-  // 2. arm bone 에 적용 (world → local via parent_chain)
-  const ordered = [...worldQuats.keys()].sort((a, b) =>
-    (parentChain[a] ? 1 : 0) - (parentChain[b] ? 1 : 0)
-  );
-  for (const bName of ordered) {
-    const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
-    if (!bone) continue;
-    const wq = worldQuats.get(bName);
-    if (!isWorld) { bone.quaternion.copy(wq); continue; }
-    const parentName = parentChain[bName];
-    const parentWorld = parentName ? worldQuats.get(parentName) : null;
-    if (!parentWorld) {
-      bone.quaternion.copy(wq);
-    } else {
-      const invP = new THREE.Quaternion().copy(parentWorld).invert();
-      bone.quaternion.copy(invP).multiply(wq);
+  // 2. arm bone 에 적용 — 정확한 world→local 변환
+  //
+  //  핵심 수식 (본 자체 W_rest 사용):
+  //    W_new = wq * W_rest_self           [bone 의 새 world quat]
+  //    bone.quaternion = inverse(parent.getWorldQuaternion()) * W_new
+  //
+  //  Parent 의 world quat 은 three.js 가 제공 (이미 갱신된 부모 반영).
+  //  따라서 부모-자식 순서로 적용 + bone.updateMatrixWorld() 로 자식에게 전파.
+  if (!isWorld) {
+    // Legacy local space: 그냥 적용
+    for (const [bName, wq] of worldQuats) {
+      const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+      if (bone) bone.quaternion.copy(wq);
+    }
+  } else {
+    const restWorld = avatar._armRestWorld || new Map();
+    const _tmpW = new THREE.Quaternion();
+    const _tmpP = new THREE.Quaternion();
+
+    // 부모-자식 순서: parent_chain 깊이 기준 (root → forearm → hand)
+    const depth = (n) => {
+      let d = 0, cur = n;
+      while (parentChain[cur]) { d++; cur = parentChain[cur]; if (d > 10) break; }
+      return d;
+    };
+    const ordered = [...worldQuats.keys()].sort((a, b) => depth(a) - depth(b));
+
+    for (const bName of ordered) {
+      const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+      if (!bone) continue;
+      const wq = worldQuats.get(bName);
+      const Wrest = restWorld.get(bName);
+
+      if (!Wrest) {
+        // Rest 캐시 없음 — 단순 적용 (수학적으로 부정확하지만 fallback)
+        bone.quaternion.copy(wq);
+      } else {
+        // W_new = wq * W_rest
+        _tmpW.copy(wq).multiply(Wrest);
+        // 부모의 현재 world quat (three.js 에서 직접)
+        bone.parent.getWorldQuaternion(_tmpP);
+        // bone.quaternion = inverse(parentWorld) * W_new
+        bone.quaternion.copy(_tmpP).invert().multiply(_tmpW);
+      }
+      // 자식이 부모 world 를 다시 읽을 때 최신값 보이도록 강제 갱신
+      bone.updateMatrixWorld(true);
     }
   }
 
-  // 3. 수형 적용 (rest × offset)
-  _applyHandshapeOffset(avatar, hsRight, 'Right');
-  _applyHandshapeOffset(avatar, hsLeft,  'Left');
+  // 3. 수형 적용 — handshape_loader 가 오버라이드 체크 포함 (가상환경 반영)
+  if (window.ITDAHandshape) {
+    if (hsRightName) window.ITDAHandshape.applyOne(avatar, hsRightName, 'Right');
+    if (hsLeftName)  window.ITDAHandshape.applyOne(avatar, hsLeftName,  'Left');
+  } else {
+    // Fallback: 로더 없으면 rest × offset 직접
+    _applyHandshapeOffset(avatar, hsRight, 'Right');
+    _applyHandshapeOffset(avatar, hsLeft,  'Left');
+  }
 }
 
-// ── 수형 offset 을 rest 에 합성 ──────────────────────────
-// _handshapeRest 는 playMotion 시작 시 저장된 손가락 본 기본 quaternion.
+// ── Fallback: 수형 offset 을 rest 에 합성 ──────────────────
 function _applyHandshapeOffset(avatar, shape, side) {
   if (!shape || !avatar?._handshapeRest) return;
   const rest = avatar._handshapeRest;
@@ -255,12 +292,29 @@ function _captureHandRest(avatar) {
   avatar._handshapeRest = rest;
 }
 
+// arm/forearm/hand 본 자체의 world rest quat 저장.
+// 매 프레임 W_new = wq * W_rest_self 로 합성, 부모-자식 순서로 local 변환.
+function _captureArmRestWorld(avatar) {
+  if (avatar._armRestWorld) return;
+  const map = new Map();
+  const armBoneNames = ['RightArm','LeftArm','RightForeArm','LeftForeArm','RightHand','LeftHand'];
+  for (const name of armBoneNames) {
+    const bone = avatar.bones[name] || avatar.bones['mixamorig:' + name];
+    if (!bone) continue;
+    const wq = new THREE.Quaternion();
+    bone.getWorldQuaternion(wq);
+    map.set(name, wq);
+  }
+  avatar._armRestWorld = map;
+  console.info(`[MotionV3] arm rest world quats 캐시: ${map.size}개`);
+}
+
 // ── 초기 자세로 부드럽게 복귀 (V2 엔진과 동일 톤) ───────────
 async function _returnToInitial(avatar, initialQuats) {
   const duration = 800;
   const startTime = performance.now();
   const currentQuats = new Map();
-  for (const [bName, q] of initialQuats) {
+  for (const [bName] of initialQuats) {
     const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
     if (bone) currentQuats.set(bName, bone.quaternion.clone());
   }
