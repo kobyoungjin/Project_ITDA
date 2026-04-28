@@ -111,7 +111,12 @@ async function sendMessage(text) {
       }
 
       // 아바타 애니메이션 트리거 (감정 + 키워드 기반 모션)
-      animateAvatar(data.emotions, data.keyword);
+      // RAG 엔진에서 완전히 동떨어진 단어로 판별하여 감정 배열이 비어있다면 동작 생략
+      if (data.emotions && data.emotions.length > 0) {
+        animateAvatar(data.emotions, data.keyword);
+      } else if (data.keyword !== text) {
+        animateAvatar(data.emotions, data.keyword);
+      }
     }
   } catch (err) {
     console.error("[Search Error]", err);
@@ -122,9 +127,8 @@ async function sendMessage(text) {
       emotionOutput.innerHTML = `<span style="color:#00F2FE; font-weight:800;">[로컬 매칭] : ${fallbackKeyword}</span>`;
       animateAvatar(['행복'], fallbackKeyword);
     } else {
-      emotionOutput.innerHTML = `<span style="color:#ffb8b8">"안녕", "고마워", "사랑해", "네", "아니" 등이나 문장을 입력해보세요.</span>`;
-      // 모르는 단어라도 감정을 담아 움직이도록 함 (Generic Fallback)
-      animateAvatar(['정보전달'], text);
+      emotionOutput.innerHTML = `<span style="color:#ffb8b8">"${text}"에 해당하는 수어 동작을 찾지 못했어요. 다른 단어나 짧은 문장으로 입력해 보세요.</span>`;
+      // 모르는 단어일 경우 어색한 임의 동작을 하지 않고 대기 상태 유지
     }
   }
 }

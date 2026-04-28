@@ -338,6 +338,25 @@ window.ITDAMotionV3 = {
   load: loadMotion,
   play: playMotion,
   has: hasMotion,
+  setAsIdle: async function(word) {
+    const motion = await loadMotion(word);
+    if (!motion || !motion.keyframes?.length) return false;
+    if (window.ITDAAvatar5) {
+      window.ITDAAvatar5.stopIdle?.();
+      _captureHandRest(window.ITDAAvatar5);
+      _captureArmRestWorld(window.ITDAAvatar5);
+      const kf = motion.keyframes[0];
+      const scratch = new Map();
+      _applyInterpolated(window.ITDAAvatar5, kf, kf, 1.0, scratch, motion);
+      // Update initialBoneQuats so reset() returns to this pose
+      for (const [name, bone] of Object.entries(window.ITDAAvatar5.bones)) {
+        if (window.ITDAAvatar5.initialBoneQuats) {
+          window.ITDAAvatar5.initialBoneQuats[name] = bone.quaternion.clone();
+        }
+      }
+      console.info(`[MotionV3] Idle pose updated to starting pose of "${word}"`);
+    }
+  },
   _cache: CACHE,
 };
 
@@ -383,5 +402,22 @@ async function browseRange(start = 1, end = 10) {
   }
   console.info('[browse] 완료');
 }
-
 window.ITDAMotionV3.browse = browseRange;
+
+// ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
+(function _setDefaultIdle() {
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
+      clearInterval(timer);
+      const params = new URLSearchParams(location.search);
+      // 만약 autoplay 중이 아니라면 기본 Idle 자세를 설정
+      if (!params.get('autoplay')) {
+        window.ITDAMotionV3.setAsIdle('감사');
+      }
+    } else if (attempts > 60) {
+      clearInterval(timer);
+    }
+  }, 500);
+})();

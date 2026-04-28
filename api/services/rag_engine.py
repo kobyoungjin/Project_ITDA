@@ -23,11 +23,26 @@ class RagEngine:
             if not search_results:
                 return {
                     "keyword": query,
-                    "warm_translation": "현재 해당 단어의 따뜻한 수어 표현을 지식베이스에서 찾고 있어요. 더 많은 언어를 배우도록 하겠습니다.",
+                    "warm_translation": "현재 해당 단어의 따뜻한 수어 표현을 지식베이스에서 찾고 있어요.",
                     "video_url": "",
                     "emotions": []
                 }
             best_match = search_results[0]['data']
+            
+            # [휴리스틱] 엉뚱한 단어 매칭 방지 (자/모음이 아닌 완성형 글자 기준)
+            # 사용자의 입력 쿼리와 RAG가 찾은 키워드 간에 단 한 글자라도 겹치는지 확인
+            q_chars = set(query.replace(" ", ""))
+            k_chars = set(best_match['keyword'].replace(" ", ""))
+            
+            # 의미 기반 검색(RAG)이더라도, 너무 동떨어진 쓰레기값이 매칭되는 것을 막기 위한 최소한의 필터
+            if not q_chars.intersection(k_chars) and len(query) > 1:
+                # 겹치는 글자가 아예 없다면, 검색 실패로 간주
+                return {
+                    "keyword": query,
+                    "warm_translation": f"'{query}'에 해당하는 정확한 수어 동작을 아직 배우지 못했어요.",
+                    "video_url": "",
+                    "emotions": []
+                }
         
         # 3단계(SLM) 연동 전, 백엔드 자체 RAG 전처리 결과 반환
         return {
