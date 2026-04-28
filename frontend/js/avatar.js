@@ -26,20 +26,21 @@ scene.fog = new THREE.FogExp2(0x02040a, 0.05);
 
 // ── 렌더러 및 카메라 (모바일 컨테이너 대응) ──────────────────────
 const canvas = document.querySelector('#three-canvas');
-const container = document.querySelector('#app-container');
+const container = document.querySelector('#avatar-area');
 
 const getAppSize = () => {
-  let width = container ? container.clientWidth : window.innerWidth;
-  let height = container ? container.clientHeight : window.innerHeight;
+  const target = document.querySelector('#avatar-area') || document.querySelector('#app-container');
+  let width = target ? target.clientWidth : window.innerWidth;
+  let height = target ? target.clientHeight : window.innerHeight;
   if (width === 0) width = Math.min(window.innerWidth, 450);
-  if (height === 0) height = window.innerHeight;
+  if (height === 0) height = window.innerHeight * 0.6;
   return { width, height };
 };
 
 const initialSize = getAppSize();
 
-const camera = new THREE.PerspectiveCamera(42, initialSize.width / initialSize.height, 0.1, 100);
-camera.position.set(0, 1.45, 1.8);
+const camera = new THREE.PerspectiveCamera(40, initialSize.width / initialSize.height, 0.1, 100);
+camera.position.set(0, 1.35, 1.5);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -48,12 +49,13 @@ renderer.shadowMap.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-// ── 컨트롤 ────────────────────────────────────────────────────
+// ── 컨트롤 (각도 및 크기 고정) ───────────────────────────────
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.target.set(0, 1.45, 0);
-controls.minDistance = 1.0;
-controls.maxDistance = 8;
+controls.enableDamping = false;
+controls.target.set(0, 1.35, 0); // 상체 중심
+controls.enableRotate = false;  // 회전 방지
+controls.enableZoom = false;    // 확대/축소 방지
+controls.enablePan = false;     // 이동 방지
 controls.update();
 
 // ── 조명 (표준) ───────────────────────────────────────────────

@@ -173,11 +173,16 @@
     }
     .hud-item {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       color: var(--accent-cyan);
-      background: rgba(5, 8, 16, 0.65);
-      padding: 3px 10px; border-radius: 6px;
-      border: 1px solid rgba(0,242,254,.15);
+      background: rgba(15, 23, 42, 0.8);
+      padding: 4px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     /* ── 간단한 우측 상단 상태 분석창 ───────────────────────── */
@@ -434,33 +439,10 @@
       header { padding: 0.6rem 1rem; }
       .logo { font-size: 1rem; gap: 0.4rem; }
       .logo-icon { width: 26px; height: 26px; font-size: 13px; }
-      .badge-step { display: none; }
-      .badge-status { font-size: 0.6rem; padding: 0.15rem 0.5rem; }
-
-      #cam-pip {
-        top: auto; bottom: 8.5rem; right: 0.8rem;
-        width: 140px; border-radius: 12px;
-        z-index: 20;
-      }
-      .hud { top: 0.8rem; left: 0.8rem; gap: 0.2rem; }
-      .hud-item { font-size: 0.65rem; padding: 2px 8px; }
-
-      #cam-pip {
-        bottom: 7.5rem; right: 0.8rem; width: 100px;
-      }
-      #mini-status {
-        top: 3.5rem; right: 0.8rem; padding: 0.5rem;
-      }
-
-      #translation-panel {
-        bottom: 0px; left: 0px; transform: none;
-        width: 100%; max-width: none;
-        border-radius: 0; border: none; border-top: 1px solid var(--border);
-        padding: 1rem 1.2rem;
-        flex-direction: column; gap: 0.6rem;
-      }
-      .t-output { font-size: 1rem; }
-      .controls { bottom: 8.5rem; right: 0.8rem; display: none; } 
+      
+      #split-layout { flex-direction: column; }
+      #top-section { height: 40%; }
+      #bottom-section { height: 60%; }
     }
 
     @media (max-width: 480px) {
@@ -482,134 +464,76 @@
         ITDA <em>SIGN</em>
       </div>
       <div class="header-right">
-        <!-- [⑥ Education] 번역 / 학습 모드 토글 -->
-        <div id="mode-toggle">
-          <button class="mode-btn active" data-mode="translate">🔁 번역</button>
-          <button class="mode-btn" data-mode="learn">🎓 학습</button>
-        </div>
-        <span class="badge badge-step">STEP 5</span>
-        <span class="badge badge-status" id="phase-badge">표정 동기화 · 초기화 중…</span>
+        <div class="hud-item" id="fps-display">FPS: 0</div>
+        <div class="hud-item" id="joint-status">Joints: ACTIVE</div>
       </div>
     </header>
 
-    <!-- ── 메인 ──────────────────────────────────────────── -->
-    <main>
-      <!-- Three.js 캔버스 -->
-      <canvas id="three-canvas"></canvas>
-
-
-      <!-- HUD -->
-      <div class="hud">
-        <div class="hud-item" id="fps-display">FPS: --</div>
-        <div class="hud-item" id="joint-status">Joints: LOADING</div>
-      </div>
-
-      <!-- 웹캠 PIP -->
-      <div id="cam-pip">
-        <div class="pip-label">📷 실시간 카메라</div>
-        <video id="vision-video" autoplay muted playsinline></video>
-        <canvas id="vision-canvas"></canvas>
-      </div>
-
-      <!-- AI Hub 참조 영상 PIP -->
-      <div id="ref-pip">
-        <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
-        <button id="btn-close-ref">✕</button>
-        <video id="ref-video" controls muted></video>
-      </div>
-
-      <!-- [⑥ Education] 학습 카드 (기본 숨김, 학습 모드 전환 시 표시) -->
-      <div id="lesson-card" style="display:none;">
-        <div class="lesson-header">
-          <span class="lesson-emoji" id="lesson-emoji">🎓</span>
-          <div>
-            <div class="lesson-label">목표 단어</div>
-            <div class="lesson-word" id="lesson-word">—</div>
+    <!-- ── 메인 (4:6 분할 레이아웃) ─────────────────────── -->
+    <main id="split-layout" style="display: flex; flex-direction: column; height: calc(100vh - 60px);">
+      
+      <!-- [위쪽 40%] 실시간 카메라 + 수어 예측 -->
+      <div id="top-section" style="flex: 4; display: flex; flex-direction: column; background: #000; border-bottom: 1px solid var(--border); overflow: hidden; position: relative;">
+        <!-- 카메라 영역 -->
+        <div id="camera-area" style="flex: 1; position: relative; overflow: hidden;">
+          <div class="pip-label" style="position: absolute; top: 0.5rem; left: 0.5rem; z-index: 10;">📷 실시간 카메라</div>
+          
+          <!-- [NEW] 카메라 우상단 상태 표시 (손 개수 + 표정) -->
+          <div id="cam-status-overlay" style="position: absolute; top: 0.5rem; right: 0.5rem; z-index: 20; display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;">
+            <div id="mini-hand-output" style="background: rgba(0,0,0,0.6); color: var(--accent-cyan); padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(0,242,254,0.2);">0개 ✋</div>
+            <div id="mini-emotion-output" style="background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">중립 😐</div>
           </div>
-        </div>
-        <div class="lesson-hint" id="lesson-hint">단어를 선택하세요</div>
-        <div class="lesson-status" id="lesson-status" data-state="idle">대기 중</div>
-        <div class="lesson-nav">
-          <button id="lesson-prev" class="lesson-nav-btn" title="이전 단어">◀</button>
-          <button id="lesson-stop" class="lesson-nav-btn" title="학습 종료">⏹</button>
-          <button id="lesson-next" class="lesson-nav-btn" title="다음 단어">▶</button>
-        </div>
-      </div>
 
-      <!-- 간단한 우측 상단 상태 분석창 -->
-      <div id="mini-status">
-        <div class="mini-row">
-          <span class="mini-label">인식 중인 손:</span>
-          <span class="mini-val" id="mini-hand-output">0개 ✋</span>
+          <video id="vision-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+          <canvas id="vision-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none;"></canvas>
         </div>
-        <!-- [P0 HUD] 수형(handshape) 배지 -->
-        <div class="mini-row">
-          <span class="mini-label">수형:</span>
-          <span class="mini-val" id="mini-handshape-output">
-            <span class="hs-badge unknown">대기</span>
-          </span>
-        </div>
-        <!-- [P0 HUD] 손목 위치 구역 (얼굴/가슴/허리) -->
-        <div class="mini-row">
-          <span class="mini-label">손 위치:</span>
-          <span class="mini-val" id="mini-pose-output" style="font-size:0.68rem;">—</span>
-        </div>
-        <!-- [P2 HUD] 모션 신호등 -->
-        <div class="mini-row">
-          <span class="mini-label">모션:</span>
-          <span class="mini-val" id="mini-motion-output" style="font-size:0.68rem;">
-            <span class="motion-dot idle"></span>idle
-          </span>
-        </div>
-        <div class="mini-row">
-          <span class="mini-label">감지된 표정:</span>
-          <span class="mini-val" id="mini-emotion-output">중립 😐</span>
-        </div>
-        <!-- [③ STT] 현재 음성 인식 소스 표시 -->
-        <div class="mini-row">
-          <span class="mini-label">🎤 STT:</span>
-          <span class="mini-val" id="mini-stt-source" style="font-size:0.68rem;">초기화 중…</span>
-        </div>
-        <!-- [Tier1] 모션 엔진 버전 토글 (V2 해부학 ↔ V1 레거시 비교) -->
-        <div class="mini-row">
-          <span class="mini-label">🦴 모션:</span>
-          <span class="mini-val" id="motion-version-toggle" style="display:inline-flex; gap:4px; pointer-events:auto;">
-            <button class="mv-btn active" data-v="v2" title="해부학 정밀 프로필">V2</button>
-            <button class="mv-btn" data-v="v1" title="레거시 프로필">V1</button>
-          </span>
-        </div>
-        <div class="mini-row" style="flex-direction: column; align-items: flex-start; gap: 0.2rem; margin-top: 0.3rem;">
-          <span class="mini-label">🗣️ 음성/텍스트 응답</span>
-          <span class="mini-val" id="emotion-output" style="font-size:0.75rem; line-height:1.3; color:var(--text-main); font-weight:normal; max-width: 140px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-family: inherit;">
-            <em style="color:var(--text-muted); font-style:normal;">입력을 기다리고 있습니다...</em>
-          </span>
-        </div>
-      </div>
-
-      <!-- 번역 패널 (하단) -->
-      <div id="translation-panel">
         
-        <!-- 양방향 텍스트/음성 입력 -->
-        <div class="input-group">
-          <input type="text" id="chat-input" class="text-input" placeholder="번역할 내용을 입력하세요..." />
-          <button id="btn-mic" class="btn-action btn-mic" title="음성 인식">🎤</button>
-          <button id="btn-send" class="btn-action btn-send" title="전송">➤</button>
-        </div>
-
-        <!-- RAG 수어 예측 결과 (Vision) -->
-        <div class="t-group">
-          <div class="t-label">비전(캠) 분석 → 수어 예측 (SLM-RAG)</div>
-          <div class="t-output" id="slm-output">
+        <!-- 수어 예측 결과 영역 (레이블 제거 및 높이 축소) -->
+        <div id="prediction-area" style="background: var(--bg-card); padding: 0.6rem 1.2rem; border-top: 1px solid var(--border); min-height: 50px; display: flex; align-items: center;">
+          <div class="t-output" id="slm-output" style="font-size: 1.1rem; width: 100%;">
             <em style="color:var(--text-muted)">수어 동작을 하면 분석 결과가 나타납니다.</em>
           </div>
         </div>
       </div>
 
-      <!-- 컨트롤 버튼 -->
-      <div class="controls">
-        <button class="btn-circle" id="btn-play-word" title="WORD0001 재생" style="background: var(--accent-cyan); color: #000;">▶</button>
-        <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
-        <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
+      <!-- [아래쪽 60%] 아바타 + 텍스트 입력 -->
+      <div id="bottom-section" style="flex: 6; display: flex; flex-direction: column; position: relative; background: var(--bg-deep);">
+        <!-- 아바타 영역 -->
+        <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
+          <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+          
+          <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
+          <div id="ref-pip">
+            <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
+            <button id="btn-close-ref">✕</button>
+            <video id="ref-video" controls muted></video>
+          </div>
+
+          <!-- 기존 mini-status 삭제됨 (손 개수/표정은 카메라 상단으로 이동) -->
+          <div id="mini-status" style="display:none;">
+            <div id="mini-handshape-output"></div>
+            <div id="mini-pose-output"></div>
+            <div id="mini-motion-output"></div>
+            <div id="mini-stt-source"></div>
+            <div id="motion-version-toggle"></div>
+            <div id="emotion-output"></div>
+          </div>
+        </div>
+
+        <!-- 텍스트 입력 영역 -->
+        <div id="input-section" style="background: var(--bg-glass); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 1rem 1.5rem;">
+          <div class="input-group" style="border: none; padding-bottom: 0;">
+            <input type="text" id="chat-input" class="text-input" placeholder="번역할 내용을 입력하세요..." />
+            <button id="btn-mic" class="btn-action btn-mic" title="음성 인식">🎤</button>
+            <button id="btn-send" class="btn-action btn-send" title="전송">➤</button>
+          </div>
+        </div>
+
+        <!-- 컨트롤 버튼 (아바타 영역 하단 플로팅) -->
+        <div class="controls" style="bottom: 5rem; right: 1rem;">
+          <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
+          <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
+        </div>
       </div>
 
       <!-- 비전 로딩 오버레이 -->
@@ -652,7 +576,7 @@
 
   <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
   <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
-  <script type="module" src="./js/motion_loader_v3.js?v=20260424d"></script>
+  <script type="module" src="./js/motion_loader_v3.js?v=20260428"></script>
 
   <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
   <script type="module" src="./js/education.js"></script>
@@ -662,12 +586,11 @@
     // MediaPipe 준비 완료 → 로딩 오버레이 해제
     window.addEventListener('itda:vision:ready', () => {
       document.getElementById('vision-overlay').classList.add('hidden');
-      document.getElementById('phase-badge').textContent = '✅ 얼굴 + 손동작 동기화 중';
     });
 
     // 아바타 준비 완료 알림
     window.addEventListener('itda:avatar:ready', () => {
-      document.getElementById('phase-badge').textContent = '표정 동기화 · 모델 로드 완료';
+      // document.getElementById('phase-badge').textContent = '표정 동기화 · 모델 로드 완료';
     });
 
     // 감정 Morph Target 값을 HUD 퍼센트에 반영
@@ -680,9 +603,11 @@
       const surprised = ((bsMap.eyeWideLeft    ?? 0) + (bsMap.eyeWideRight    ?? 0) + (bsMap.jawOpen ?? 0)) / 3;
       const sad       = ((bsMap.mouthFrownLeft ?? 0) + (bsMap.mouthFrownRight ?? 0) + (bsMap.browInnerUp ?? 0)) / 3;
 
+      /*
       updateEmotionBar('angry',     angry);
       updateEmotionBar('surprised', surprised);
       updateEmotionBar('sad',       sad);
+      */
 
       // 주요 감정 결정
       const dominant = [
@@ -779,10 +704,12 @@
       }
     }
 
+    /*
     modeBtns.forEach(b => b.addEventListener('click', () => _setMode(b.dataset.mode)));
     document.getElementById('lesson-prev').addEventListener('click', () => _activateWord(lessonIndex - 1));
     document.getElementById('lesson-next').addEventListener('click', () => _activateWord(lessonIndex + 1));
     document.getElementById('lesson-stop').addEventListener('click', () => _setMode('translate'));
+    */
 
     // 학습 피드백 이벤트 → 카드 UI 갱신
     window.addEventListener('itda:lesson:feedback', (e) => {
@@ -873,6 +800,7 @@
     }
 
     // 컨트롤 버튼
+    /*
     document.getElementById('btn-play-word').addEventListener('click', () => {
       if (window.ITDAMotionV3) {
         window.ITDAMotionV3.play('WORD0001');
@@ -880,6 +808,7 @@
         console.warn('ITDAMotionV3가 아직 로드되지 않았습니다.');
       }
     });
+    */
 
     document.getElementById('btn-reset').addEventListener('click', () => {
       window.ITDAAvatar5?.reset();

@@ -243,14 +243,12 @@ function _applyInterpolated(avatar, prevKF, nextKF, t, scratch, motion) {
         // Rest 캐시 없음 — 단순 적용 (수학적으로 부정확하지만 fallback)
         bone.quaternion.copy(wq);
       } else {
-        // W_new = wq * W_rest
         _tmpW.copy(wq).multiply(Wrest);
-        // 부모의 현재 world quat (three.js 에서 직접)
         bone.parent.getWorldQuaternion(_tmpP);
-        // bone.quaternion = inverse(parentWorld) * W_new
         bone.quaternion.copy(_tmpP).invert().multiply(_tmpW);
       }
       // 자식이 부모 world 를 다시 읽을 때 최신값 보이도록 강제 갱신
+            
       bone.updateMatrixWorld(true);
     }
   }
@@ -403,6 +401,25 @@ async function browseRange(start = 1, end = 10) {
   console.info('[browse] 완료');
 }
 window.ITDAMotionV3.browse = browseRange;
+
+// ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
+(function _setDefaultIdle() {
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
+      clearInterval(timer);
+      const params = new URLSearchParams(location.search);
+      // 만약 autoplay 중이 아니라면 기본 Idle 자세를 설정
+      if (!params.get('autoplay')) {
+        window.ITDAMotionV3.setAsIdle('감사');
+      }
+    } else if (attempts > 60) {
+      clearInterval(timer);
+    }
+  }, 500);
+})();
+
 
 // ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
 (function _setDefaultIdle() {
