@@ -196,6 +196,129 @@
     .mini-val { font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan); font-weight: bold; }
     .mini-val em { font-style: normal; }
 
+    /* ── [P0 HUD] handshape 배지 · motion 신호등 ───────────── */
+    .hs-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      margin-right: 3px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: rgba(0, 242, 254, 0.12);
+      border: 1px solid rgba(0, 242, 254, 0.4);
+      color: var(--accent-cyan);
+    }
+    .hs-badge.unknown { color: #94a3b8; border-color: rgba(148,163,184,0.4); background: rgba(148,163,184,0.08); }
+    .region-chip {
+      font-size: 0.65rem; color: var(--text-muted); margin-left: 4px;
+    }
+    .motion-dot {
+      display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+      background: #64748b; box-shadow: 0 0 3px rgba(0,0,0,0.5);
+      transition: background-color .25s, box-shadow .25s;
+      vertical-align: middle; margin-right: 5px;
+    }
+    .motion-dot.idle     { background: #64748b; }                                /* ⚪ 회색 */
+    .motion-dot.moving   { background: #facc15; box-shadow: 0 0 6px #facc15aa; } /* 🟡 노랑 */
+    .motion-dot.settling { background: #fb923c; box-shadow: 0 0 6px #fb923caa; } /* 🟠 주황 */
+    .motion-dot.stable   { background: #22c55e; box-shadow: 0 0 10px #22c55e; } /* 🟢 초록 */
+    @keyframes motion-stable-pulse {
+      0%   { box-shadow: 0 0 10px #22c55e; transform: scale(1.0); }
+      40%  { box-shadow: 0 0 22px #22c55e; transform: scale(1.6); }
+      100% { box-shadow: 0 0 10px #22c55e; transform: scale(1.0); }
+    }
+    .motion-dot.stable.flash { animation: motion-stable-pulse 0.7s ease-out 1; }
+
+    /* ── [⑥ Education] 모드 토글 & 학습 카드 ─────────────── */
+    #mode-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.4);
+    }
+    .mode-btn {
+      background: transparent; color: var(--text-muted);
+      border: 0; padding: 5px 12px;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .mode-btn:hover { color: var(--text-main); }
+    .mode-btn.active {
+      background: rgba(0, 242, 254, 0.15);
+      color: var(--accent-cyan);
+      box-shadow: inset 0 0 8px rgba(0, 242, 254, 0.25);
+    }
+
+    #lesson-card {
+      position: absolute; top: 4.5rem; right: 1.2rem;
+      width: 260px;
+      background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(14px);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.9rem 1rem; z-index: 35;
+      box-shadow: var(--shadow-lg);
+      color: var(--text-main);
+      font-size: 0.78rem;
+    }
+    .lesson-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
+    .lesson-emoji { font-size: 2rem; line-height: 1; }
+    .lesson-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+    .lesson-word  { font-size: 1.2rem; font-weight: 800; color: var(--accent-cyan); }
+    .lesson-hint  {
+      font-size: 0.7rem; color: var(--text-muted); line-height: 1.45;
+      padding: 0.5rem 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 0.6rem;
+    }
+    .lesson-status {
+      font-size: 0.76rem; font-weight: 700;
+      padding: 0.4rem 0.6rem; border-radius: 6px; text-align: center;
+      transition: all .2s;
+    }
+    .lesson-status[data-state="idle"]    { background: rgba(100,116,139,0.25); color: #94a3b8; }
+    .lesson-status[data-state="trying"]  { background: rgba(250,204,21,0.2);   color: #fde68a; }
+    .lesson-status[data-state="success"] {
+      background: rgba(34,197,94,0.25); color: #86efac;
+      animation: lesson-success-pulse 0.8s ease-out 1;
+    }
+    @keyframes lesson-success-pulse {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.08); box-shadow: 0 0 18px rgba(34,197,94,0.7); }
+      100% { transform: scale(1); }
+    }
+    .lesson-nav { display: flex; gap: 0.4rem; margin-top: 0.7rem; justify-content: space-between; }
+    .lesson-nav-btn {
+      flex: 1; background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0,242,254,0.25);
+      color: var(--accent-cyan);
+      padding: 0.35rem 0; border-radius: 6px;
+      cursor: pointer; font-size: 0.85rem;
+      transition: all .15s;
+    }
+    .lesson-nav-btn:hover { background: rgba(0, 242, 254, 0.2); }
+
+    /* ── [Tier1] 모션 엔진 V2/V1 토글 ───────────────────── */
+    #motion-version-toggle {
+      display: inline-flex; gap: 4px;
+    }
+    .mv-btn {
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem; font-weight: 700;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .mv-btn:hover { color: var(--text-main); }
+    .mv-btn.active {
+      background: rgba(0, 242, 254, 0.2);
+      color: var(--accent-cyan);
+      border-color: rgba(0, 242, 254, 0.5);
+      box-shadow: inset 0 0 6px rgba(0, 242, 254, 0.2);
+    }
+
     /* ── 번역 패널 (하단 중앙) ───────────────────────── */
     #translation-panel {
       position: absolute;
@@ -359,6 +482,11 @@
         ITDA <em>SIGN</em>
       </div>
       <div class="header-right">
+        <!-- [⑥ Education] 번역 / 학습 모드 토글 -->
+        <div id="mode-toggle">
+          <button class="mode-btn active" data-mode="translate">🔁 번역</button>
+          <button class="mode-btn" data-mode="learn">🎓 학습</button>
+        </div>
         <span class="badge badge-step">STEP 5</span>
         <span class="badge badge-status" id="phase-badge">표정 동기화 · 초기화 중…</span>
       </div>
@@ -390,15 +518,65 @@
         <video id="ref-video" controls muted></video>
       </div>
 
+      <!-- [⑥ Education] 학습 카드 (기본 숨김, 학습 모드 전환 시 표시) -->
+      <div id="lesson-card" style="display:none;">
+        <div class="lesson-header">
+          <span class="lesson-emoji" id="lesson-emoji">🎓</span>
+          <div>
+            <div class="lesson-label">목표 단어</div>
+            <div class="lesson-word" id="lesson-word">—</div>
+          </div>
+        </div>
+        <div class="lesson-hint" id="lesson-hint">단어를 선택하세요</div>
+        <div class="lesson-status" id="lesson-status" data-state="idle">대기 중</div>
+        <div class="lesson-nav">
+          <button id="lesson-prev" class="lesson-nav-btn" title="이전 단어">◀</button>
+          <button id="lesson-stop" class="lesson-nav-btn" title="학습 종료">⏹</button>
+          <button id="lesson-next" class="lesson-nav-btn" title="다음 단어">▶</button>
+        </div>
+      </div>
+
       <!-- 간단한 우측 상단 상태 분석창 -->
       <div id="mini-status">
         <div class="mini-row">
           <span class="mini-label">인식 중인 손:</span>
           <span class="mini-val" id="mini-hand-output">0개 ✋</span>
         </div>
+        <!-- [P0 HUD] 수형(handshape) 배지 -->
+        <div class="mini-row">
+          <span class="mini-label">수형:</span>
+          <span class="mini-val" id="mini-handshape-output">
+            <span class="hs-badge unknown">대기</span>
+          </span>
+        </div>
+        <!-- [P0 HUD] 손목 위치 구역 (얼굴/가슴/허리) -->
+        <div class="mini-row">
+          <span class="mini-label">손 위치:</span>
+          <span class="mini-val" id="mini-pose-output" style="font-size:0.68rem;">—</span>
+        </div>
+        <!-- [P2 HUD] 모션 신호등 -->
+        <div class="mini-row">
+          <span class="mini-label">모션:</span>
+          <span class="mini-val" id="mini-motion-output" style="font-size:0.68rem;">
+            <span class="motion-dot idle"></span>idle
+          </span>
+        </div>
         <div class="mini-row">
           <span class="mini-label">감지된 표정:</span>
           <span class="mini-val" id="mini-emotion-output">중립 😐</span>
+        </div>
+        <!-- [③ STT] 현재 음성 인식 소스 표시 -->
+        <div class="mini-row">
+          <span class="mini-label">🎤 STT:</span>
+          <span class="mini-val" id="mini-stt-source" style="font-size:0.68rem;">초기화 중…</span>
+        </div>
+        <!-- [Tier1] 모션 엔진 버전 토글 (V2 해부학 ↔ V1 레거시 비교) -->
+        <div class="mini-row">
+          <span class="mini-label">🦴 모션:</span>
+          <span class="mini-val" id="motion-version-toggle" style="display:inline-flex; gap:4px; pointer-events:auto;">
+            <button class="mv-btn active" data-v="v2" title="해부학 정밀 프로필">V2</button>
+            <button class="mv-btn" data-v="v1" title="레거시 프로필">V1</button>
+          </span>
         </div>
         <div class="mini-row" style="flex-direction: column; align-items: flex-start; gap: 0.2rem; margin-top: 0.3rem;">
           <span class="mini-label">🗣️ 음성/텍스트 응답</span>
@@ -454,12 +632,29 @@
   </script>
 
   <!-- ── 모듈 로딩 순서: avatar → retargeting → vision ── -->
-  <script type="module" src="./js/avatar.js"></script>
-  <script type="module" src="./js/retargeting.js"></script>
-  <script type="module" src="./js/vision.js"></script>
+  <!-- [캐시버스팅] 모든 주요 JS 에 v 쿼리 파라미터 부여. 코드 수정 시 아래 버전만 올리면 브라우저 강제 fetch -->
+  <script type="module" src="./js/avatar.js?v=20260422c"></script>
+  <script type="module" src="./js/retargeting.js?v=20260422c"></script>
+  <script type="module" src="./js/vision.js?v=20260422c"></script>
+
+  <!-- ── [③ STT] Web Speech primary + Whisper fallback ── -->
+  <!-- translator.js 가 window.ITDAStt 를 참조하므로 먼저 로드 -->
+  <script src="./js/stt/audio_capture.js?v=20260422c"></script>
+  <script src="./js/stt/stt_client.js?v=20260422c"></script>
+  <script src="./js/stt/stt-adapter.js?v=20260422c"></script>
 
   <!-- ── 텍스트/음성 양방향 번역 스크립트 ──────────────── -->
-  <script type="module" src="./js/translator.js"></script>
+  <script type="module" src="./js/translator.js?v=20260422c"></script>
+
+  <!-- ── [2단계] 수형 라이브러리 로더 (motion_loader_v3 이전에 로드) ── -->
+  <script type="module" src="./js/handshape_loader.js?v=20260424d"></script>
+
+  <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
+  <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
+  <script type="module" src="./js/motion_loader_v3.js?v=20260424d"></script>
+
+  <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
+  <script type="module" src="./js/education.js"></script>
 
   <!-- ── UI 제어 스크립트 ────────────────────────────── -->
   <script type="module">
@@ -511,6 +706,140 @@
         miniHandEl.textContent = count > 0 ? `${count}개 🤝` : '0개 ✋';
       }
     });
+
+    // [P0 HUD] 백엔드 Handshape 분석 결과 → 수형 배지 갱신
+    // ws_vision 가 VisionAck.hand_analyses 로 송신 → vision.js 가 itda:hands:analysis 로 브로드캐스트
+    window.addEventListener('itda:hands:analysis', (e) => {
+      const analyses = e.detail || [];
+      const el = document.getElementById('mini-handshape-output');
+      if (!el) return;
+      if (analyses.length === 0) {
+        el.innerHTML = '<span class="hs-badge unknown">대기</span>';
+        return;
+      }
+      // 손별 수형 배지. handedness 아이콘(L/R)과 함께 표시.
+      const html = analyses.map(a => {
+        const icon = a.handedness === 'Right' ? 'R' : a.handedness === 'Left' ? 'L' : '?';
+        const cls = (a.handshape && a.handshape !== 'UNKNOWN') ? 'hs-badge' : 'hs-badge unknown';
+        return `<span class="${cls}" title="${a.handedness}">${icon}·${a.handshape || 'UNKNOWN'}</span>`;
+      }).join('');
+      el.innerHTML = html;
+    });
+
+    // [P0 HUD] 백엔드 Pose 분석 결과 → 손목 구역 · 팔꿈치 각도 표시
+    window.addEventListener('itda:pose:analysis', (e) => {
+      const p = e.detail;
+      const el = document.getElementById('mini-pose-output');
+      if (!el) return;
+      if (!p) { el.textContent = '—'; return; }
+      // 예: "R:얼굴(125°) · L:가슴(170°)"
+      el.innerHTML = `<span>R:${p.wrist_region_R}(${Math.round(p.elbow_bend_R)}°)</span>` +
+                     `<span class="region-chip">L:${p.wrist_region_L}(${Math.round(p.elbow_bend_L)}°)</span>`;
+    });
+
+    // [P2 HUD] Motion phase 신호등
+    const MOTION_LABELS = { idle:'대기', moving:'움직임', settling:'감속', stable:'완료 ✓' };
+    window.addEventListener('itda:motion:phase', (e) => {
+      const phase = e.detail?.phase || 'idle';
+      const el = document.getElementById('mini-motion-output');
+      if (!el) return;
+      // stable(=1회성 번역 확정 트리거) 상태에만 플래시 클래스 부여
+      const flashCls = phase === 'stable' ? ' flash' : '';
+      el.innerHTML = `<span class="motion-dot ${phase}${flashCls}"></span>${MOTION_LABELS[phase] || phase}`;
+    });
+
+    // [⑥ Education] 모드 토글 + 학습 카드 제어
+    const modeBtns    = document.querySelectorAll('#mode-toggle .mode-btn');
+    const lessonCard  = document.getElementById('lesson-card');
+    const lessonWord  = document.getElementById('lesson-word');
+    const lessonEmoji = document.getElementById('lesson-emoji');
+    const lessonHint  = document.getElementById('lesson-hint');
+    const lessonStatus= document.getElementById('lesson-status');
+    let currentMode   = 'translate';
+    let lessonIndex   = 0;
+
+    function _activateWord(idx) {
+      if (!window.ITDAEducation) return;
+      const words = window.ITDAEducation.getWords();
+      if (!words.length) return;
+      lessonIndex = ((idx % words.length) + words.length) % words.length;
+      window.ITDAEducation.start(words[lessonIndex]);
+    }
+
+    function _setMode(mode) {
+      currentMode = mode;
+      modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      if (mode === 'learn') {
+        lessonCard.style.display = 'block';
+        _activateWord(lessonIndex);
+      } else {
+        lessonCard.style.display = 'none';
+        window.ITDAEducation?.stop();
+      }
+    }
+
+    modeBtns.forEach(b => b.addEventListener('click', () => _setMode(b.dataset.mode)));
+    document.getElementById('lesson-prev').addEventListener('click', () => _activateWord(lessonIndex - 1));
+    document.getElementById('lesson-next').addEventListener('click', () => _activateWord(lessonIndex + 1));
+    document.getElementById('lesson-stop').addEventListener('click', () => _setMode('translate'));
+
+    // 학습 피드백 이벤트 → 카드 UI 갱신
+    window.addEventListener('itda:lesson:feedback', (e) => {
+      const d = e.detail || {};
+      if (d.status === 'started') {
+        lessonWord.textContent  = d.word;
+        lessonEmoji.textContent = d.emoji || '🎓';
+        lessonHint.textContent  = d.hint || '';
+        lessonStatus.dataset.state = 'idle';
+        lessonStatus.textContent = '시도해 보세요 ✍️';
+      } else if (d.status === 'trying') {
+        lessonStatus.dataset.state = 'trying';
+        lessonStatus.textContent = '🟡 ' + (d.message || '조금만 더!');
+      } else if (d.status === 'success') {
+        lessonStatus.dataset.state = 'success';
+        lessonStatus.textContent = '🟢 ' + (d.message || '정답!');
+      } else if (d.status === 'stopped') {
+        lessonStatus.dataset.state = 'idle';
+        lessonStatus.textContent = '대기 중';
+      }
+    });
+
+    // [Tier1] 모션 엔진 V2/V1 토글 — 마지막 재생 단어를 재생하며 비교
+    window.ITDAMotion = window.ITDAMotion || { version: 'v2' };
+    let _lastPlayedWord = null;
+    window.addEventListener('itda:motion:played', (e) => {
+      _lastPlayedWord = e.detail?.keyword || null;
+    });
+    document.querySelectorAll('.mv-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.v;
+        window.ITDAMotion.version = v;
+        document.querySelectorAll('.mv-btn').forEach(b => b.classList.toggle('active', b === btn));
+        console.info(`[Motion Engine] 버전 전환 → ${v}${v === 'v2' ? ' (해부학 정밀)' : ' (레거시)'}`);
+        // 최근에 재생한 단어가 있으면 자동 재생해 A/B 비교가 즉시 체감되게 함
+        if (_lastPlayedWord && window.ITDATranslator?.replay) {
+          window.ITDATranslator.replay(_lastPlayedWord);
+        }
+      });
+    });
+
+    // [③ STT] 소스 배지 초기화 및 상태 반영
+    const STT_SOURCE_LABELS = {
+      'web-speech': '🌐 Browser (Web Speech)',
+      'whisper':    '🖥️ Server (Whisper)',
+    };
+    function _updateSttBadge(state = 'idle') {
+      const el = document.getElementById('mini-stt-source');
+      if (!el) return;
+      const src = window.ITDAStt?.getSource?.() || 'web-speech';
+      const label = STT_SOURCE_LABELS[src] || src;
+      const indicator = state === 'listening' ? ' 🔴' : state === 'error' ? ' ⚠️' : '';
+      el.textContent = label + indicator;
+    }
+    // stt-adapter 가 이미 로드됐을 수도, 아직일 수도 있음 — 둘 다 대응
+    if (window.ITDAStt) _updateSttBadge();
+    else window.addEventListener('load', () => _updateSttBadge(), { once: true });
+    window.addEventListener('itda:stt:state', (e) => _updateSttBadge(e.detail));
 
     // ── 백엔드 RAG + SLM 결과 수신 및 UI 렌더링 ──
     window.addEventListener('itda:rag:result', (e) => {

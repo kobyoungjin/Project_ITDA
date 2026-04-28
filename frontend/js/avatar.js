@@ -80,6 +80,7 @@ const clock = new THREE.Clock();
 
 // ── 모델 URL (fallback 순서) ──────────────────────────────────
 const MODEL_URLS = [
+  './models/sonyr.glb',
   './models/ITDAModel.glb',
   'https://raw.githubusercontent.com/hmthanh/3d-human-model/main/TranThiNgocTham.glb',
   'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb',
@@ -235,6 +236,13 @@ window.ITDAAvatar5 = {
       if (initial) bone.quaternion.copy(initial);
     }
     if (headMesh) headMesh.morphTargetInfluences?.fill(0);
+  },
+
+  // [Debug] Idle 등 AnimationMixer 를 번역 재생 시 정지/재개할 수 있게 노출
+  get mixer() { return mixer; },
+  stopIdle() {
+    mixer?.stopAllAction();
+    console.info('[Avatar] Idle mixer 정지됨 (번역 재생 중 간섭 방지)');
   },
 
   get bones() { return bones; },
