@@ -116,12 +116,69 @@ def quat_distance(a: np.ndarray, b: np.ndarray) -> float:
 # ════════════════════════════════════════════════════════════════
 
 # T-pose 에서 각 본이 "가리키는" 방향 (bone's primary axis in world space at rest).
-# MediaPipe world frame 과 동일 계열로 맞춤 (X=오른쪽, Y=위, Z=앞).
+# [실측 기반 / 2026-04-24] sonyr.glb GLB 에서 pygltflib 로 추출:
+#   - 캐릭터의 오른쪽 팔/손/손가락 = world -X 방향 (RightArm pos x=-0.16)
+#   - 캐릭터의 왼쪽  팔/손/손가락 = world +X 방향
+# AI Hub 데이터(signer 정면 카메라)와 좌표계 일치 (signer 오른쪽 = -X)
 REST_DIRECTIONS = {
-    "RightArm":     np.array([1.0, 0.0, 0.0]),   # shoulder → elbow: 오른쪽
-    "LeftArm":      np.array([-1.0, 0.0, 0.0]),  # shoulder → elbow: 왼쪽
-    "RightForeArm": np.array([1.0, 0.0, 0.0]),   # elbow → wrist: 오른쪽
-    "LeftForeArm":  np.array([-1.0, 0.0, 0.0]),
+    # 상완 + 전완
+    "RightArm":     np.array([-1.0, 0.0, 0.0]),
+    "LeftArm":      np.array([+1.0, 0.0, 0.0]),
+    "RightForeArm": np.array([-1.0, 0.0, 0.0]),
+    "LeftForeArm":  np.array([+1.0, 0.0, 0.0]),
+    # 손목
+    "RightHand":    np.array([-1.0, 0.0, 0.0]),
+    "LeftHand":     np.array([+1.0, 0.0, 0.0]),
+    # 손가락 — Right 쪽 (world -X 로 뻗음)
+    "RightHandThumb1":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandThumb2":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandThumb3":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandIndex1":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandIndex2":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandIndex3":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandMiddle1": np.array([-1.0, 0.0, 0.0]),
+    "RightHandMiddle2": np.array([-1.0, 0.0, 0.0]),
+    "RightHandMiddle3": np.array([-1.0, 0.0, 0.0]),
+    "RightHandRing1":   np.array([-1.0, 0.0, 0.0]),
+    "RightHandRing2":   np.array([-1.0, 0.0, 0.0]),
+    "RightHandRing3":   np.array([-1.0, 0.0, 0.0]),
+    "RightHandPinky1":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandPinky2":  np.array([-1.0, 0.0, 0.0]),
+    "RightHandPinky3":  np.array([-1.0, 0.0, 0.0]),
+    # Left 쪽 (world +X 로 뻗음)
+    "LeftHandThumb1":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandThumb2":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandThumb3":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandIndex1":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandIndex2":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandIndex3":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandMiddle1": np.array([+1.0, 0.0, 0.0]),
+    "LeftHandMiddle2": np.array([+1.0, 0.0, 0.0]),
+    "LeftHandMiddle3": np.array([+1.0, 0.0, 0.0]),
+    "LeftHandRing1":   np.array([+1.0, 0.0, 0.0]),
+    "LeftHandRing2":   np.array([+1.0, 0.0, 0.0]),
+    "LeftHandRing3":   np.array([+1.0, 0.0, 0.0]),
+    "LeftHandPinky1":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandPinky2":  np.array([+1.0, 0.0, 0.0]),
+    "LeftHandPinky3":  np.array([+1.0, 0.0, 0.0]),
+}
+
+
+# OpenPose hand 21 keypoints 인덱스 (표준)
+# 0: wrist
+# 1-4:  Thumb (CMC, MCP, IP, TIP)
+# 5-8:  Index (MCP, PIP, DIP, TIP)
+# 9-12: Middle (MCP, PIP, DIP, TIP)
+# 13-16: Ring
+# 17-20: Pinky
+FINGER_CHAINS = {
+    # (손가락 이름, [키포인트 idx 4개], 아바타 본 이름 접미사)
+    # 아바타는 3마디 (1, 2, 3) — AI Hub 의 4개 중 처음 3개 (tip 제외) 사용
+    "Thumb":  ([1, 2, 3], ["Thumb1", "Thumb2", "Thumb3"]),
+    "Index":  ([5, 6, 7], ["Index1", "Index2", "Index3"]),
+    "Middle": ([9, 10, 11], ["Middle1", "Middle2", "Middle3"]),
+    "Ring":   ([13, 14, 15], ["Ring1", "Ring2", "Ring3"]),
+    "Pinky":  ([17, 18, 19], ["Pinky1", "Pinky2", "Pinky3"]),
 }
 
 
@@ -153,17 +210,87 @@ def retarget_arm_chain(shoulder: np.ndarray, elbow: np.ndarray, wrist: np.ndarra
     arm_key = f"{side}Arm"
     fore_key = f"{side}ForeArm"
 
-    # Upper arm: rest direction → target direction
-    upper_local = quat_from_unit_vectors(REST_DIRECTIONS[arm_key], upper_target)
-
-    # ForeArm: 전역 회전을 계산한 뒤 부모(upper arm) 역회전을 곱해 local 로 변환
-    fore_world = quat_from_unit_vectors(REST_DIRECTIONS[fore_key], fore_target)
-    fore_local = quat_multiply(quat_inverse(upper_local), fore_world)
+    # [V3.1 변경] WORLD quaternion 으로 저장 (local 계산은 playback 시)
+    # 이유: local 끼리 slerp 하면 forearm_world ≠ slerp(fore_world_a, fore_world_b)
+    # 꿀렁거림 현상 발생. World 끼리 slerp 하면 수학적으로 정확.
+    upper_world = quat_from_unit_vectors(REST_DIRECTIONS[arm_key], upper_target)
+    fore_world  = quat_from_unit_vectors(REST_DIRECTIONS[fore_key], fore_target)
 
     return {
-        arm_key: quat_to_dict(upper_local),
-        fore_key: quat_to_dict(fore_local),
+        arm_key: quat_to_dict(upper_world),
+        fore_key: quat_to_dict(fore_world),
     }
+
+
+def _build_full_parent_chain() -> dict:
+    """
+    V3 JSON 에 들어갈 parent_chain. motion_loader_v3 가 world → local 계산용.
+    - RightArm/LeftArm: root (parent = None)
+    - ForeArm: Arm 의 자식
+    - Hand: ForeArm 의 자식
+    - 손가락 마디 1 (Thumb1 등): Hand 의 자식
+    - 손가락 마디 2 (Thumb2): 마디 1 의 자식
+    - 손가락 마디 3 (Thumb3): 마디 2 의 자식
+    """
+    chain = {
+        "RightArm": None,
+        "LeftArm": None,
+        "RightForeArm": "RightArm",
+        "LeftForeArm": "LeftArm",
+        "RightHand": "RightForeArm",
+        "LeftHand": "LeftForeArm",
+    }
+    for side in ("Right", "Left"):
+        for finger in ("Thumb", "Index", "Middle", "Ring", "Pinky"):
+            chain[f"{side}Hand{finger}1"] = f"{side}Hand"
+            chain[f"{side}Hand{finger}2"] = f"{side}Hand{finger}1"
+            chain[f"{side}Hand{finger}3"] = f"{side}Hand{finger}2"
+    return chain
+
+
+def retarget_hand_chain(hand_kps_3d: list, side: str) -> dict:
+    """
+    OpenPose 손 21개 keypoint 3D → 손목(Hand) + 손가락 15개 본의 world quaternion.
+
+    hand_kps_3d: flat [x,y,z,conf] × 21 (총 84 float)
+    side: "Right" 또는 "Left"
+
+    Returns:
+      { "RightHand": {x,y,z,w}, "RightHandIndex1": {...}, ... }
+    """
+    if not hand_kps_3d or len(hand_kps_3d) < 84:
+        return {}
+
+    def pt(idx):
+        b = idx * 4
+        return np.array([hand_kps_3d[b], -hand_kps_3d[b+1], -hand_kps_3d[b+2]], dtype=float)
+
+    wrist = pt(0)
+    # Hand 본: wrist → middle finger MCP 방향을 손목 orientation 으로
+    middle_mcp = pt(9)
+    hand_dir = vec_normalize(middle_mcp - wrist)
+
+    out = {}
+    hand_key = f"{side}Hand"
+    hand_world = quat_from_unit_vectors(REST_DIRECTIONS[hand_key], hand_dir)
+    out[hand_key] = quat_to_dict(hand_world)
+
+    # 각 손가락 3마디 세그먼트: (MCP→PIP), (PIP→DIP), (DIP→TIP)
+    for finger_name, (idx_list, bone_suffixes) in FINGER_CHAINS.items():
+        # 세그먼트 정의: mcp=idx_list[0]-1 대신 5,6,7 패턴 → (wrist|mcp, pip, dip)
+        # 실제로는 Thumb1 = wrist-mcp 방향, Thumb2 = mcp-ip, Thumb3 = ip-tip
+        # Thumb: idx_list=[1,2,3] → segs: (wrist,1), (1,2), (2,3)
+        # Index: idx_list=[5,6,7] → segs: (wrist,5), (5,6), (6,7)
+        segs = [(0, idx_list[0]), (idx_list[0], idx_list[1]), (idx_list[1], idx_list[2])]
+        for i, ((a, b), suffix) in enumerate(zip(segs, bone_suffixes)):
+            bone_key = f"{side}Hand{suffix}"
+            if bone_key not in REST_DIRECTIONS:
+                continue
+            seg_dir = vec_normalize(pt(b) - pt(a))
+            world_q = quat_from_unit_vectors(REST_DIRECTIONS[bone_key], seg_dir)
+            out[bone_key] = quat_to_dict(world_q)
+
+    return out
 
 
 def retarget_pose_frame(pose_landmarks: dict) -> dict:
@@ -187,8 +314,11 @@ def retarget_pose_frame(pose_landmarks: dict) -> dict:
             return {}
 
     def to_np(d: dict) -> np.ndarray:
-        # MediaPipe: y 는 아래가 양수 → 우리 Three.js 와 동일하게 뒤집음
-        return np.array([d["x"], -d["y"], d.get("z", 0.0)], dtype=float)
+        # OpenPose/MediaPipe 카메라 좌표 → Three.js world 좌표 변환
+        #   Y: 아래가 양수 → 위가 양수로 (부호 반전)
+        #   Z: 카메라로부터 멀어짐이 양수 → 뷰어 쪽이 양수로 (부호 반전)
+        #   X: 동일
+        return np.array([d["x"], -d["y"], -d.get("z", 0.0)], dtype=float)
 
     rs, re, rw = map(to_np, [pose_landmarks["right_shoulder"],
                              pose_landmarks["right_elbow"],
@@ -204,10 +334,74 @@ def retarget_pose_frame(pose_landmarks: dict) -> dict:
 
 
 # ════════════════════════════════════════════════════════════════
+# Quaternion 스무딩 — slerp 기반 EMA
+# ════════════════════════════════════════════════════════════════
+#
+# OpenPose 3D 재구성은 프레임마다 잔여 noise 가 있어 각 관절의 quaternion 이
+# 독립적으로 떨림. 결과적으로 상완·전완·손목이 서로 다른 속도로 움직여
+# "팔이 꿀렁거리는" 현상 발생. EMA 로 noise 를 공유/감쇄.
+
+def quat_slerp(a: np.ndarray, b: np.ndarray, t: float) -> np.ndarray:
+    """두 quaternion 간 spherical lerp (Three.js Quaternion.slerp 호환)."""
+    a = a / (np.linalg.norm(a) + 1e-8)
+    b = b / (np.linalg.norm(b) + 1e-8)
+    dot = float(np.dot(a, b))
+    if dot < 0.0:
+        b = -b
+        dot = -dot
+    if dot > 0.9995:
+        # 거의 동일 — linear lerp 로 충분
+        result = a + t * (b - a)
+        return result / (np.linalg.norm(result) + 1e-8)
+    theta_0 = math.acos(max(-1.0, min(1.0, dot)))
+    theta = theta_0 * t
+    sin_t = math.sin(theta)
+    sin_t0 = math.sin(theta_0)
+    s1 = math.cos(theta) - dot * sin_t / sin_t0
+    s2 = sin_t / sin_t0
+    return a * s1 + b * s2
+
+
+def smooth_quaternion_frames(frames: list[dict], alpha: float = 0.35) -> list[dict]:
+    """
+    프레임 시퀀스의 각 bone quaternion 에 slerp 기반 EMA 적용.
+    alpha 가 클수록 원본에 가까움, 작을수록 부드러움.
+    """
+    if len(frames) <= 1:
+        return frames
+
+    smoothed = [frames[0]]
+    prev_bones = {k: np.array([v["x"], v["y"], v["z"], v["w"]])
+                  for k, v in frames[0]["bones"].items()}
+
+    for i in range(1, len(frames)):
+        curr = frames[i]
+        curr_bones = {}
+        new_bones = {}
+        for bname, q_dict in curr["bones"].items():
+            qc = np.array([q_dict["x"], q_dict["y"], q_dict["z"], q_dict["w"]])
+            qp = prev_bones.get(bname, qc)
+            # EMA: qnew = slerp(qp, qc, alpha)
+            # alpha=1 → 완전 현재 채택, alpha=0 → 이전 유지
+            q_smooth = quat_slerp(qp, qc, alpha)
+            curr_bones[bname] = q_smooth
+            new_bones[bname] = {
+                "x": round(float(q_smooth[0]), 5),
+                "y": round(float(q_smooth[1]), 5),
+                "z": round(float(q_smooth[2]), 5),
+                "w": round(float(q_smooth[3]), 5),
+            }
+        smoothed.append({"time": curr["time"], "bones": new_bones})
+        prev_bones = curr_bones
+
+    return smoothed
+
+
+# ════════════════════════════════════════════════════════════════
 # Keyframe 압축
 # ════════════════════════════════════════════════════════════════
 
-def reduce_keyframes(frames: list[dict], min_delta_rad: float = 0.08) -> list[dict]:
+def reduce_keyframes(frames: list[dict], min_delta_rad: float = 0.05) -> list[dict]:
     """
     연속 프레임 중 quaternion 변화량이 임계치 미만이면 제거 (노이즈 + 중복 완화).
     첫 프레임과 마지막 프레임은 항상 보존.
@@ -461,6 +655,218 @@ def _self_test():
 # CLI
 # ════════════════════════════════════════════════════════════════
 
+# ════════════════════════════════════════════════════════════════
+# OpenPose BODY_25 Extractor (AI Hub keypoint 데이터 전용)
+# ════════════════════════════════════════════════════════════════
+#
+# AI Hub 103 keypoint 데이터셋은 영상 대신 OpenPose 형식의 3D 스켈레톤 JSON 을 제공.
+# 폴더 구조: NIA_SL_WORD####_REAL##_X/ 안에 프레임별 JSON 150개 정도.
+# 각 JSON: {"people": {"pose_keypoints_3d": [...], "hand_left_keypoints_3d": [...], ...}}
+# pose_keypoints_3d 는 BODY_25 × (x, y, z, conf) = 100개 float.
+
+# BODY_25 인덱스 (OpenPose 표준)
+BODY25 = {
+    "Nose": 0, "Neck": 1,
+    "RShoulder": 2, "RElbow": 3, "RWrist": 4,
+    "LShoulder": 5, "LElbow": 6, "LWrist": 7,
+    "MidHip": 8,
+}
+
+
+def _openpose_pose_to_dict(pose_flat: list) -> dict:
+    """BODY_25 flat 배열(100 float) → pose_analyzer 호환 dict.
+
+    [중요] 좌표계 변환은 retarget_pose_frame.to_np() 가 담당 (y, z 부호 반전).
+    여기서는 raw 값을 그대로 전달 — 두 번 변환되면 학날개 되니 절대 변환 추가 금지.
+    """
+    def pt(idx):
+        base = idx * 4
+        return {"x":  pose_flat[base],
+                "y":  pose_flat[base + 1],
+                "z":  pose_flat[base + 2]}
+    return {
+        "left_shoulder":  pt(BODY25["LShoulder"]),
+        "right_shoulder": pt(BODY25["RShoulder"]),
+        "left_elbow":     pt(BODY25["LElbow"]),
+        "right_elbow":    pt(BODY25["RElbow"]),
+        "left_wrist":     pt(BODY25["LWrist"]),
+        "right_wrist":    pt(BODY25["RWrist"]),
+    }
+
+
+def _flip_hand_keypoints(hand_flat: list) -> list:
+    """손 keypoint passthrough — 좌표 변환은 retarget_hand_chain 측에서 일관 처리."""
+    return hand_flat
+
+
+def _smooth_positions_centered(frames_raw: list[dict], window: int = 5) -> list[dict]:
+    """
+    관절 위치에 대해 center-aligned moving average 적용 (zero-lag).
+    각 프레임의 keypoint 위치를 ±window//2 프레임 평균으로 대체.
+    EMA 같은 phase lag 없이 micro-jitter 제거.
+    pose 만 스무딩하고 hand_right/hand_left (flat float list) 은 원본 유지.
+    """
+    if window < 3 or len(frames_raw) < window:
+        return frames_raw
+    half = window // 2
+    keys = list(frames_raw[0]["pose"].keys())
+    out = []
+    for i in range(len(frames_raw)):
+        lo = max(0, i - half)
+        hi = min(len(frames_raw), i + half + 1)
+        window_frames = frames_raw[lo:hi]
+        new_pose = {}
+        for k in keys:
+            xs, ys, zs = [], [], []
+            for f in window_frames:
+                p = f["pose"].get(k)
+                if p:
+                    xs.append(p["x"]); ys.append(p["y"]); zs.append(p["z"])
+            if xs:
+                new_pose[k] = {"x": sum(xs)/len(xs),
+                               "y": sum(ys)/len(ys),
+                               "z": sum(zs)/len(zs)}
+        # [중요] 원본 frame 의 hand_right/hand_left 보존 — smoothing 후 retargeting 에서 필요
+        out.append({
+            "time": frames_raw[i]["time"],
+            "pose": new_pose,
+            "hand_right": frames_raw[i].get("hand_right", []),
+            "hand_left":  frames_raw[i].get("hand_left", []),
+        })
+    return out
+
+
+def extract_from_openpose_dir(keypoint_dir: str | Path, word: str,
+                               fps: float = 30.0) -> dict:
+    """
+    AI Hub 103 OpenPose keypoint 폴더 → MOTION_PROFILES_V3 dict.
+
+    keypoint_dir: NIA_SL_WORD####_REAL##_X 폴더 (프레임 JSON 150개 정도)
+    word: 저장할 단어 이름
+    """
+    kd = Path(keypoint_dir)
+    json_files = sorted(kd.glob("*_keypoints.json"))
+    if not json_files:
+        raise FileNotFoundError(f"keypoint JSON 없음: {kd}")
+
+    print(f"[OpenPose] {kd.name} 프레임 {len(json_files)}개 로드...")
+
+    # 1단계: 원본 pose + hand keypoints 수집 (retargeting 전)
+    pose_frames = []
+    for i, jf in enumerate(json_files):
+        try:
+            with open(jf, encoding="utf-8") as f:
+                data = json.load(f)
+            people = data.get("people", {})
+            pose_flat = people.get("pose_keypoints_3d") or []
+            if len(pose_flat) < 100:
+                continue
+            pose_dict = _openpose_pose_to_dict(pose_flat)
+            # 손 keypoints 도 함께 보관 (retargeting 시 사용) — 동일 좌표계 변환
+            pose_frames.append({
+                "time": round(i / fps, 4),
+                "pose": pose_dict,
+                "hand_right": _flip_hand_keypoints(people.get("hand_right_keypoints_3d") or []),
+                "hand_left":  _flip_hand_keypoints(people.get("hand_left_keypoints_3d") or []),
+            })
+        except Exception as e:
+            print(f"  경고 {jf.name}: {e}")
+
+    # 2단계: 위치 단계 zero-lag smoothing (pose 만 — hand 는 keypoint 많아 개별 smoothing 영향 적음)
+    pose_frames = _smooth_positions_centered(pose_frames, window=5)
+
+    # 3단계: smoothed pose + hand → quaternion retargeting (arm + hand + fingers)
+    raw_frames = []
+    for pf in pose_frames:
+        bones = retarget_pose_frame(pf["pose"])
+        # Hand + 손가락 추가
+        if pf.get("hand_right"):
+            bones.update(retarget_hand_chain(pf["hand_right"], "Right"))
+        if pf.get("hand_left"):
+            bones.update(retarget_hand_chain(pf["hand_left"], "Left"))
+        if bones:
+            raw_frames.append({"time": pf["time"], "bones": bones})
+
+    if not raw_frames:
+        raise RuntimeError("유효한 pose 프레임 없음")
+
+    # [핵심 수정] Keyframe 압축 제거 — 시간 간격 불균일이 꿀렁거림의 원흉이었음.
+    # rest 구간이 과도 압축되어 0.7초간 느린 slerp → jello 현상.
+    # 원본 프레임 전부 유지 → 시간 간격 균일(0.033s), 자연스러운 재생.
+    # JSON 크기는 ~50KB → ~85KB 로 증가하지만 여전히 경량.
+    smoothed = raw_frames
+    compact = smoothed  # 압축 없음
+    print(f"[OpenPose] keyframe: {len(raw_frames)} 프레임 전부 유지 (등간격 {1/fps*1000:.0f}ms)")
+
+    return {
+        "id": word,
+        "description": f"auto-generated from OpenPose keypoints {kd.name}",
+        "version": "v3",
+        "source": "openpose-aihub",
+        "space": "world",  # [V3.1] quaternion 은 WORLD space — playback 에서 local 계산
+        "parent_chain": _build_full_parent_chain(),
+        "fps": fps,
+        "keyframes": compact,
+    }
+
+
+def _batch_openpose(args):
+    """
+    keypoint 루트 (예: [라벨]01_real_word_keypoint/01) 아래 NIA_SL_WORD####_REAL##_<angle> 폴더를
+    모두 순회하면서 V3 JSON 생성. 각 WORD 는 지정 angle 하나만 사용.
+    """
+    from time import time as _now
+    root = Path(args.root)
+    if not root.exists():
+        print(f"[Batch] 루트 없음: {root}")
+        return
+
+    angle = args.angle
+    pattern = f"*_REAL*_{angle}"
+    dirs = sorted([d for d in root.glob(pattern) if d.is_dir()])
+    if args.limit:
+        dirs = dirs[:args.limit]
+
+    total = len(dirs)
+    print(f"[Batch] {root.name} 에서 {total}개 폴더 발견 (angle={angle})")
+    if total == 0:
+        return
+
+    t0 = _now()
+    ok = 0
+    fail = 0
+
+    # 중복 WORD ID 제거: WORD0001_REAL01_F 와 WORD0001_REAL17_F 둘 다 있으면 첫 번째만
+    seen_words = set()
+    for i, d in enumerate(dirs, 1):
+        # 폴더 이름에서 WORD ID 추출: NIA_SL_WORD0001_REAL01_F → WORD0001
+        parts = d.name.split("_")
+        word_id = next((p for p in parts if p.startswith("WORD")), None)
+        if not word_id:
+            continue
+        if word_id in seen_words:
+            continue
+        seen_words.add(word_id)
+
+        try:
+            motion = extract_from_openpose_dir(d, word_id, fps=30.0)
+            save_motion_json(motion, args.output)
+            ok += 1
+            if i % 50 == 0 or i == total:
+                elapsed = _now() - t0
+                rate = i / elapsed
+                eta = (total - i) / rate if rate > 0 else 0
+                print(f"[Batch] 진행 {i}/{total} ({i/total*100:.1f}%) "
+                      f"속도 {rate:.1f}/s  ETA {eta:.0f}s")
+        except Exception as e:
+            fail += 1
+            print(f"[Batch] 실패 {word_id}: {e}")
+
+    elapsed = _now() - t0
+    print(f"\n[Batch] 완료: 성공 {ok}, 실패 {fail}, 경과 {elapsed:.1f}s "
+          f"({ok/elapsed:.1f} words/s)")
+
+
 def _extract_from_morpheme(args):
     """AI Hub morpheme JSON 을 읽어 해당 단어 segment 를 자동 추출."""
     morph_path = Path(args.morpheme)
@@ -507,6 +913,24 @@ def main():
     sp_morph.add_argument("--word", required=True, help="추출할 단어")
     sp_morph.add_argument("--output", default=default_output)
 
+    sp_op = sub.add_parser("extract-openpose",
+                           help="AI Hub 103 OpenPose keypoint 폴더 → V3 JSON")
+    sp_op.add_argument("--keypoint-dir", required=True,
+                       help="NIA_SL_WORD####_REAL##_X 폴더 경로")
+    sp_op.add_argument("--word", required=True, help="저장할 단어 이름")
+    sp_op.add_argument("--fps", type=float, default=30.0)
+    sp_op.add_argument("--output", default=default_output)
+
+    sp_batch = sub.add_parser("batch-openpose",
+                              help="AI Hub keypoint 루트에서 모든 WORD*_F 폴더 일괄 변환")
+    sp_batch.add_argument("--root", required=True,
+                          help="keypoint 루트 (예: C:/.../[라벨]01_real_word_keypoint/01)")
+    sp_batch.add_argument("--angle", default="F", choices=["D","F","L","R","U"],
+                          help="사용할 카메라 각도 (기본 F=Front)")
+    sp_batch.add_argument("--output", default=default_output)
+    sp_batch.add_argument("--limit", type=int, default=None,
+                          help="테스트용: 최대 N개만 변환")
+
     sub.add_parser("self-test", help="Synthetic pose 로 수학 검증")
 
     args = ap.parse_args()
@@ -516,6 +940,11 @@ def main():
         save_motion_json(motion, args.output)
     elif args.cmd == "extract-from-morpheme":
         _extract_from_morpheme(args)
+    elif args.cmd == "extract-openpose":
+        motion = extract_from_openpose_dir(args.keypoint_dir, args.word, fps=args.fps)
+        save_motion_json(motion, args.output)
+    elif args.cmd == "batch-openpose":
+        _batch_openpose(args)
     elif args.cmd == "self-test":
         _self_test()
     else:

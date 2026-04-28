@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ITDA 수형 라이브러리 미리보기</title>
+  <style>
+    body { margin:0; background:#0a0e18; color:#e2e8f0; font-family:system-ui,sans-serif; overflow:hidden; }
+    #canvas { display:block; width:100vw; height:100vh; }
+    #panel { position:fixed; top:16px; left:16px; background:rgba(15,23,42,0.92); padding:16px 20px;
+             border:1px solid rgba(255,255,255,0.1); border-radius:12px; min-width:280px; z-index:10; }
+    #panel h1 { font-size:1rem; margin:0 0 12px; color:#00f2fe; }
+    #shape-name { font-size:1.8rem; font-weight:700; color:#fff; margin:8px 0 4px; }
+    #shape-index { font-size:0.85rem; color:#94a3b8; margin-bottom:16px; }
+    select { width:100%; padding:8px 10px; background:#1e293b; color:#fff; border:1px solid #334155;
+             border-radius:6px; font-size:0.95rem; margin-bottom:12px; }
+    .btnrow { display:flex; gap:8px; margin-bottom:12px; }
+    button { flex:1; padding:10px; background:#7c3aed; color:#fff; border:0; border-radius:6px;
+             font-weight:600; cursor:pointer; font-size:0.9rem; }
+    button:hover { background:#9048f5; }
+    button.secondary { background:#334155; }
+    button.success { background:#059669; }
+    button.success:hover { background:#05b689; }
+    #help { font-size:0.75rem; color:#94a3b8; line-height:1.6; border-top:1px solid #334155; padding-top:10px; }
+    #verdict { margin-top:12px; padding:10px; background:#1e293b; border-radius:6px; font-size:0.85rem; }
+    .ok { color:#00e6a0; font-weight:700; }
+    .bad { color:#ff6baf; font-weight:700; }
+    
+    /* lil-gui custom position */
+    .lil-gui { position: fixed !important; top: 16px !important; right: 16px !important; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="panel">
+    <h1>✋ KSL 수형 정밀 편집기</h1>
+    <div id="shape-name">-</div>
+    <div id="shape-index">-</div>
+    <select id="shape-select"></select>
+    <div class="btnrow">
+      <button id="prev">◀ 이전</button>
+      <button id="next">다음 ▶</button>
+    </div>
+    <div class="btnrow">
+      <button id="reset" class="secondary">Rest 포즈</button>
+      <button id="copy-data" class="success">📋 현재 포즈 JSON 복사</button>
+    </div>
+    <div class="btnrow">
+      <button id="mark-ok" class="secondary" style="background:#00e6a0;color:#0a0e18">✓ OK 저장</button>
+      <button id="mark-bad" class="secondary" style="background:#ff6baf;color:#0a0e18">✗ 수정필요</button>
+    </div>
+    <div class="btnrow">
+      <button id="export-lib" class="success">📥 라이브러리 다운로드</button>
+      <button id="clear-overrides" class="secondary" style="background:#475569">🗑️ 초기화</button>
+    </div>
+    <div id="help">
+      <b>가상환경 → 허브 반영 방법</b>:<br>
+      1. GUI에서 손가락 조정 → <b>✓ OK 저장</b> (localStorage 저장, 메인앱 즉시 반영).<br>
+      2. 세션 영구 보존 원하면 <b>📥 다운로드</b> → <code>frontend/data/</code> 에 덮어쓰기.<br>
+      3. 모든 오버라이드 지우려면 <b>🗑️ 초기화</b>.
+    </div>
+    <div id="verdict">검증 결과: OK 0 / 수정필요 0 / 미확인 22</div>
+    <div id="override-count" style="margin-top:8px; font-size:0.75rem; color:#94a3b8"></div>
+    <textarea id="output-json" placeholder="여기에 JSON 데이터가 표시됩니다." 
+              style="width:100%; height:120px; margin-top:12px; background:#0f172a; color:#10b981; 
+                     border:1px solid #334155; border-radius:6px; font-family:monospace; font-size:0.75rem; 
+                     padding:8px; resize:none;"></textarea>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three":          "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/":  "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "lil-gui":        "https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import GUI from 'lil-gui';
+
+    // ── 씬 ──
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0e18);
+    const canvas = document.getElementById('canvas');
+    const camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.1, 100);
+    camera.position.set(0, 1.35, 2.2); // 손까지 보이도록
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(devicePixelRatio);
+    renderer.setSize(innerWidth, innerHeight);
+    addEventListener('resize', () => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+    });
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 1.35, 0);
+    controls.minDistance = 0.5;
+    controls.maxDistance = 6;
+    controls.update();
+    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+    const dl = new THREE.DirectionalLight(0xffffff, 2.0);
+    dl.position.set(2, 5, 3);
+    scene.add(dl);
+
+    // ── 상태 ──
+    let bones = {};           // name → bone
+    let initialQuats = {};    // name → Quaternion at rest
+    let shapes = {};          // handshape name → { bone: {x,y,z,w} }
+    let shapeNames = [];
+    let idx = 0;
+    let verdicts = {};        // name → 'ok' | 'bad' | null
+    
+    // GUI 상태
+    let gui = new GUI({ title: '본 정밀 제어 (Euler)' });
+    const guiState = {
+      selectedBone: '',
+      mirror: true,
+      copyJSON: () => copyCurrentPose()
+    };
+    const fingerBones = []; // 손가락 관련 본 이름 리스트
+
+    // ── 아바타 로드 ──
+    new GLTFLoader().load('./models/sonyr.glb', (gltf) => {
+      const model = gltf.scene;
+      scene.add(model);
+      model.traverse(obj => {
+        // 모든 객체 이름을 일단 수집 (디버깅용)
+        const n = obj.name;
+        if (obj.isBone || n.toLowerCase().includes('hand')) {
+          bones[n] = obj;
+          initialQuats[n] = obj.quaternion.clone();
+          
+          const isFinger = /Thumb|Index|Middle|Ring|Pinky/i.test(n) && /Hand/i.test(n);
+          if (isFinger) {
+            fingerBones.push(n);
+          }
+        }
+      });
+      console.log('[Debug] 모든 감지된 객체:', Object.keys(bones));
+      console.info(`[HandshapeEditor] 수집된 손가락 본: ${fingerBones.length}개`, fingerBones);
+      if (fingerBones.length === 0) {
+        console.warn('[HandshapeEditor] 손가락 본을 찾지 못했습니다. 전체 본 목록을 확인하세요:', Object.keys(bones));
+      }
+      initGUI();
+      loadShapes();
+    });
+
+    function initGUI() {
+      gui.add(guiState, 'mirror').name('양손 대칭 적용');
+      gui.add(guiState, 'copyJSON').name('📋 현재 포즈 JSON 복사');
+      
+      const rightFolder = gui.addFolder('Right Hand');
+      const leftFolder = gui.addFolder('Left Hand');
+      
+      // 손가락별 그룹화
+      const fingers = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
+      fingers.forEach(f => {
+        const rSub = rightFolder.addFolder(f);
+        const lSub = leftFolder.addFolder(f);
+        [1, 2, 3].forEach(num => {
+          const bname = `RightHand${f}${num}`;
+          const lname = `LeftHand${f}${num}`;
+          if (bones[bname]) addBoneControl(rSub, bname, lname);
+          if (bones[lname]) addBoneControl(lSub, lname, null);
+        });
+        rSub.close(); lSub.close();
+      });
+      rightFolder.open();
+    }
+
+    function addBoneControl(folder, bname, mirrorName) {
+      const bone = bones[bname];
+      const folderSub = folder.addFolder(bname.replace('RightHand', '').replace('LeftHand', ''));
+      
+      const updateBone = () => {
+        if (guiState.mirror && mirrorName && bones[mirrorName]) {
+          // 미러링: X는 동일, Y/Z는 반전 (리그 구조에 따라 다를 수 있음)
+          bones[mirrorName].rotation.set(bone.rotation.x, -bone.rotation.y, -bone.rotation.z);
+        }
+      };
+
+      folderSub.add(bone.rotation, 'x', -Math.PI, Math.PI).name('Flex (X)').onChange(updateBone);
+      folderSub.add(bone.rotation, 'y', -Math.PI, Math.PI).name('Twist (Y)').onChange(updateBone);
+      folderSub.add(bone.rotation, 'z', -Math.PI, Math.PI).name('Spread (Z)').onChange(updateBone);
+      folderSub.close();
+    }
+
+    function copyCurrentPose() {
+      const result = {};
+      const outArea = document.getElementById('output-json');
+      
+      console.log('[Export] 현재 수집된 fingerBones:', fingerBones);
+      
+      fingerBones.forEach(bn => {
+        const bone = bones[bn];
+        if (bone) {
+          const q = bone.quaternion;
+          const cleanName = bn.replace(/^.*:/, ''); 
+          result[cleanName] = {
+            x: Number(q.x.toFixed(5)),
+            y: Number(q.y.toFixed(5)),
+            z: Number(q.z.toFixed(5)),
+            w: Number(q.w.toFixed(5))
+          };
+        }
+      });
+      
+      const json = JSON.stringify(result, null, 2);
+      outArea.value = json; // 텍스트 영역에 표시
+      outArea.select();     // 자동 선택
+      
+      navigator.clipboard.writeText(json).then(() => {
+        alert('데이터가 추출되었습니다!\n아래 텍스트 영역의 내용을 복사하여 library.json에 붙여넣으세요.');
+      }).catch(err => {
+        console.warn('클립보드 복사 실패, 직접 복사하세요:', err);
+        alert('텍스트 영역에 데이터가 생성되었습니다. 직접 복사해 주세요.');
+      });
+    }
+
+    async function loadShapes() {
+      try {
+        const res = await fetch('./data/handshape_library.json', { cache: 'no-cache' });
+        const lib = await res.json();
+        shapes = lib.shapes;
+        shapeNames = Object.keys(shapes);
+        shapeNames.forEach(n => verdicts[n] = null);
+        
+        const sel = document.getElementById('shape-select');
+        sel.innerHTML = '';
+        shapeNames.forEach((n, i) => {
+          const o = document.createElement('option');
+          o.value = i; o.textContent = n;
+          sel.appendChild(o);
+        });
+        sel.onchange = () => showShape(+sel.value);
+        showShape(0);
+      } catch (e) {
+        console.error('라이브러리 로드 실패:', e);
+      }
+    }
+
+    function showShape(i) {
+      idx = (i + shapeNames.length) % shapeNames.length;
+      const name = shapeNames[idx];
+
+      // 모든 bone 초기화
+      for (const [bn, q0] of Object.entries(initialQuats)) {
+        bones[bn]?.quaternion.copy(q0);
+      }
+
+      // localStorage 오버라이드 우선 — 있으면 최종 local quat 그대로 복사 (rest 합성 이미 반영된 값)
+      const override = localStorage.getItem(LS_PREFIX + name);
+      const _tmpQ = new THREE.Quaternion();
+      if (override) {
+        const saved = JSON.parse(override);
+        for (const [bn, q] of Object.entries(saved)) {
+          const bone = bones[bn];
+          if (bone) bone.quaternion.set(q.x, q.y, q.z, q.w);
+        }
+      } else {
+        // 파일 라이브러리: rest × offset 합성
+        const shape = shapes[name];
+        for (const [bn, q] of Object.entries(shape)) {
+          const bone = bones[bn];
+          const rest = initialQuats[bn];
+          if (bone && rest) {
+            _tmpQ.set(q.x, q.y, q.z, q.w);
+            bone.quaternion.copy(rest).multiply(_tmpQ);
+          }
+        }
+      }
+      
+      // GUI 컨트롤러 값 갱신 (릴릿-구이 리프레시)
+      gui.controllersRecursive().forEach(c => c.updateDisplay());
+
+      document.getElementById('shape-name').textContent = name;
+      const verdict = verdicts[name];
+      const mark = verdict === 'ok' ? '✓' : verdict === 'bad' ? '✗' : '·';
+      document.getElementById('shape-index').textContent = `${idx+1} / ${shapeNames.length}  [${mark}]`;
+      document.getElementById('shape-select').value = idx;
+      updateVerdict();
+    }
+
+    function updateVerdict() {
+      let ok = 0, bad = 0, pending = 0;
+      for (const n of shapeNames) {
+        const v = verdicts[n];
+        if (v === 'ok') ok++; else if (v === 'bad') bad++; else pending++;
+      }
+      document.getElementById('verdict').innerHTML =
+        `<span class="ok">OK ${ok}</span> / <span class="bad">수정필요 ${bad}</span> / 미확인 ${pending}`;
+    }
+
+    document.getElementById('next').onclick = () => showShape(idx + 1);
+    document.getElementById('prev').onclick = () => showShape(idx - 1);
+    document.getElementById('reset').onclick = () => {
+      for (const [bn, q0] of Object.entries(initialQuats)) bones[bn]?.quaternion.copy(q0);
+      gui.controllersRecursive().forEach(c => c.updateDisplay());
+    };
+    document.getElementById('copy-data').onclick = () => copyCurrentPose();
+    document.getElementById('mark-ok').onclick = () => {
+      // ✓ OK 저장: 현재 손가락 본의 local quaternion 을 localStorage 에 박제 (허브 반영)
+      const name = shapeNames[idx];
+      saveShapeToLocalStorage(name);
+      verdicts[name] = 'ok';
+      showShape(idx + 1);
+    };
+    document.getElementById('mark-bad').onclick = () => {
+      verdicts[shapeNames[idx]] = 'bad'; showShape(idx + 1);
+    };
+    document.getElementById('export-lib').onclick = () => exportLibrary();
+    document.getElementById('clear-overrides').onclick = () => clearOverrides();
+
+    addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') showShape(idx + 1);
+      if (e.key === 'ArrowLeft') showShape(idx - 1);
+      if (e.key === 'o') document.getElementById('mark-ok').click();
+      if (e.key === 'x') document.getElementById('mark-bad').click();
+    });
+
+    // ── 가상환경 → 허브 반영 메커니즘 ─────────────────────────
+    // 키마다 하나의 수형을 저장. main app 의 handshape_loader 가 로드 시 병합함.
+    const LS_PREFIX = 'itda.handshape.override.';
+
+    function saveShapeToLocalStorage(name) {
+      const result = {};
+      fingerBones.forEach(bn => {
+        const bone = bones[bn];
+        if (!bone) return;
+        const q = bone.quaternion;
+        // Bone 이름에서 namespace prefix (mixamorig: 등) 제거
+        const clean = bn.replace(/^.*:/, '');
+        result[clean] = { x: +q.x.toFixed(5), y: +q.y.toFixed(5), z: +q.z.toFixed(5), w: +q.w.toFixed(5) };
+      });
+      localStorage.setItem(LS_PREFIX + name, JSON.stringify(result));
+      console.info(`[Preview→Hub] "${name}" localStorage 저장 (${Object.keys(result).length} bones)`);
+      updateOverrideCount();
+    }
+
+    function updateOverrideCount() {
+      let n = 0;
+      for (const k in localStorage) if (k.startsWith(LS_PREFIX)) n++;
+      const el = document.getElementById('override-count');
+      if (el) el.textContent = `🌉 허브 반영 대기: ${n}개 수형 (localStorage)`;
+    }
+
+    async function exportLibrary() {
+      // 파일 라이브러리 + localStorage 오버라이드 병합 → 다운로드
+      try {
+        const res = await fetch('./data/handshape_library.json', { cache: 'no-cache' });
+        const lib = await res.json();
+        let overridden = 0;
+        for (const name of Object.keys(lib.shapes)) {
+          const raw = localStorage.getItem(LS_PREFIX + name);
+          if (raw) { lib.shapes[name] = JSON.parse(raw); overridden++; }
+        }
+        lib.meta = { ...(lib.meta||{}), exported_at: new Date().toISOString(), overridden };
+        const blob = new Blob([JSON.stringify(lib, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'handshape_library.json';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert(`라이브러리 다운로드 완료.\n오버라이드 반영: ${overridden}개 수형\n\nfrontend/data/handshape_library.json 에 덮어쓰면 영구 반영됩니다.`);
+      } catch (e) {
+        alert('내보내기 실패: ' + e.message);
+      }
+    }
+
+    function clearOverrides() {
+      const confirmed = confirm('모든 localStorage 오버라이드를 지웁니다. 파일 라이브러리(handshape_library.json) 는 그대로 유지됩니다. 계속할까요?');
+      if (!confirmed) return;
+      const toRemove = [];
+      for (const k in localStorage) if (k.startsWith(LS_PREFIX)) toRemove.push(k);
+      toRemove.forEach(k => localStorage.removeItem(k));
+      updateOverrideCount();
+      alert(`${toRemove.length}개 오버라이드 제거됨. 메인앱 새로고침 시 파일 값으로 복귀.`);
+      showShape(idx);  // 현재 수형 다시 그리기
+    }
+
+    // 페이지 로드 시 현재 상태 표시
+    updateOverrideCount();
+
+    (function loop() {
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    })();
+
+  </script>
+</body>
+</html>

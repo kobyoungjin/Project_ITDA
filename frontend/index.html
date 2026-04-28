@@ -632,22 +632,26 @@
   </script>
 
   <!-- ── 모듈 로딩 순서: avatar → retargeting → vision ── -->
-  <script type="module" src="./js/avatar.js"></script>
-  <script type="module" src="./js/retargeting.js"></script>
-  <script type="module" src="./js/vision.js"></script>
+  <!-- [캐시버스팅] 모든 주요 JS 에 v 쿼리 파라미터 부여. 코드 수정 시 아래 버전만 올리면 브라우저 강제 fetch -->
+  <script type="module" src="./js/avatar.js?v=20260422c"></script>
+  <script type="module" src="./js/retargeting.js?v=20260422c"></script>
+  <script type="module" src="./js/vision.js?v=20260422c"></script>
 
   <!-- ── [③ STT] Web Speech primary + Whisper fallback ── -->
   <!-- translator.js 가 window.ITDAStt 를 참조하므로 먼저 로드 -->
-  <script src="./js/stt/audio_capture.js"></script>
-  <script src="./js/stt/stt_client.js"></script>
-  <script src="./js/stt/stt-adapter.js"></script>
+  <script src="./js/stt/audio_capture.js?v=20260422c"></script>
+  <script src="./js/stt/stt_client.js?v=20260422c"></script>
+  <script src="./js/stt/stt-adapter.js?v=20260422c"></script>
 
   <!-- ── 텍스트/음성 양방향 번역 스크립트 ──────────────── -->
-  <script type="module" src="./js/translator.js"></script>
+  <script type="module" src="./js/translator.js?v=20260422c"></script>
+
+  <!-- ── [2단계] 수형 라이브러리 로더 (motion_loader_v3 이전에 로드) ── -->
+  <script type="module" src="./js/handshape_loader.js?v=20260424d"></script>
 
   <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
   <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
-  <script type="module" src="./js/motion_loader_v3.js"></script>
+  <script type="module" src="./js/motion_loader_v3.js?v=20260424d"></script>
 
   <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
   <script type="module" src="./js/education.js"></script>
