@@ -1,0 +1,171 @@
+Total words with variations: 169
+
+걷다 (6 variants): 걷다.json, 걷다_2.json, 걷다_3.json, 걷다_4.json, 걷다_5.json, 걷다_6.json
+꺼지다 (6 variants): 꺼지다.json, 꺼지다_2.json, 꺼지다_3.json, 꺼지다_4.json, 꺼지다_5.json, 꺼지다_6.json
+가다 (4 variants): 가다.json, 가다_2.json, 가다_3.json, 가다_4.json
+결심 (4 variants): 결심.json, 결심_2.json, 결심_3.json, 결심_4.json
+결점 (4 variants): 결점.json, 결점_2.json, 결점_3.json, 결점_4.json
+근근이 (4 variants): 근근이.json, 근근이_2.json, 근근이_3.json, 근근이_4.json
+막히다 (4 variants): 막히다.json, 막히다_2.json, 막히다_3.json, 막히다_4.json
+뻔뻔 (4 variants): 뻔뻔.json, 뻔뻔_2.json, 뻔뻔_3.json, 뻔뻔_4.json
+얕보다 (4 variants): 얕보다.json, 얕보다_2.json, 얕보다_3.json, 얕보다_4.json
+유구무언 (4 variants): 유구무언.json, 유구무언_2.json, 유구무언_3.json, 유구무언_4.json
+지도 (4 variants): 지도.json, 지도_2.json, 지도_3.json, 지도_4.json
+함구 (4 variants): 함구.json, 함구_2.json, 함구_3.json, 함구_4.json
+거만 (3 variants): 거만.json, 거만_2.json, 거만_3.json
+거지 (3 variants): 거지.json, 거지_2.json, 거지_3.json
+격노 (3 variants): 격노.json, 격노_2.json, 격노_3.json
+내뱉다 (3 variants): 내뱉다.json, 내뱉다_2.json, 내뱉다_3.json
+놀랍다 (3 variants): 놀랍다.json, 놀랍다_2.json, 놀랍다_3.json
+대출 (3 variants): 대출.json, 대출_2.json, 대출_3.json
+돕다 (3 variants): 돕다.json, 돕다_2.json, 돕다_3.json
+때리다 (3 variants): 때리다.json, 때리다_2.json, 때리다_3.json
+뚱뚱하다 (3 variants): 뚱뚱하다.json, 뚱뚱하다_2.json, 뚱뚱하다_3.json
+맞다 (3 variants): 맞다.json, 맞다_2.json, 맞다_3.json
+맥없다 (3 variants): 맥없다.json, 맥없다_2.json, 맥없다_3.json
+무례 (3 variants): 무례.json, 무례_2.json, 무례_3.json
+무자비 (3 variants): 무자비.json, 무자비_2.json, 무자비_3.json
+밉다 (3 variants): 밉다.json, 밉다_2.json, 밉다_3.json
+배려 (3 variants): 배려.json, 배려_2.json, 배려_3.json
+봐주다 (3 variants): 봐주다.json, 봐주다_2.json, 봐주다_3.json
+빌리다 (3 variants): 빌리다.json, 빌리다_2.json, 빌리다_3.json
+사라지다 (3 variants): 사라지다.json, 사라지다_2.json, 사라지다_3.json
+순식간 (3 variants): 순식간.json, 순식간_2.json, 순식간_3.json
+아부 (3 variants): 아부.json, 아부_2.json, 아부_3.json
+아하 (3 variants): 아하.json, 아하_2.json, 아하_3.json
+야단치다 (3 variants): 야단치다.json, 야단치다_2.json, 야단치다_3.json
+욕하다 (3 variants): 욕하다.json, 욕하다_2.json, 욕하다_3.json
+의문 (3 variants): 의문.json, 의문_2.json, 의문_3.json
+자다 (3 variants): 자다.json, 자다_2.json, 자다_3.json
+주다 (3 variants): 주다.json, 주다_2.json, 주다_3.json
+지불하다 (3 variants): 지불하다.json, 지불하다_2.json, 지불하다_3.json
+째려보다 (3 variants): 째려보다.json, 째려보다_2.json, 째려보다_3.json
+초대 (3 variants): 초대.json, 초대_2.json, 초대_3.json
+판박이 (3 variants): 판박이.json, 판박이_2.json, 판박이_3.json
+폐업 (3 variants): 폐업.json, 폐업_2.json, 폐업_3.json
+포기 (3 variants): 포기.json, 포기_2.json, 포기_3.json
+가능 (2 variants): 가능.json, 가능_2.json
+갈색 (2 variants): 갈색.json, 갈색_2.json
+감옥 (2 variants): 감옥.json, 감옥_2.json
+강요 (2 variants): 강요.json, 강요_2.json
+검사 (2 variants): 검사.json, 검사_2.json
+견습 (2 variants): 견습.json, 견습_2.json
+결승전 (2 variants): 결승전.json, 결승전_2.json
+겸임 (2 variants): 겸임.json, 겸임_2.json
+경기도 (2 variants): 경기도.json, 경기도_2.json
+경남농아인협회 (2 variants): 경남농아인협회.json, 경남농아인협회_2.json
+고난이도 (2 variants): 고난이도.json, 고난이도_2.json
+공범 (2 variants): 공범.json, 공범_2.json
+공식 (2 variants): 공식.json, 공식_2.json
+교기 (2 variants): 교기.json, 교기_2.json
+구조 (2 variants): 구조.json, 구조_2.json
+군산시청 (2 variants): 군산시청.json, 군산시청_2.json
+귀엽다 (2 variants): 귀엽다.json, 귀엽다_2.json
+귀찮다 (2 variants): 귀찮다.json, 귀찮다_2.json
+급하다 (2 variants): 급하다.json, 급하다_2.json
+기피하다 (2 variants): 기피하다.json, 기피하다_2.json
+끊다 (2 variants): 끊다.json, 끊다_2.json
+난감하다 (2 variants): 난감하다.json, 난감하다_2.json
+남녀 (2 variants): 남녀.json, 남녀_2.json
+남자 (2 variants): 남자.json, 남자_2.json
+눈 (2 variants): 눈.json, 눈_2.json
+달래다 (2 variants): 달래다.json, 달래다_2.json
+달변 (2 variants): 달변.json, 달변_2.json
+담당 (2 variants): 담당.json, 담당_2.json
+당황 (2 variants): 당황.json, 당황_2.json
+대들다 (2 variants): 대들다.json, 대들다_2.json
+대물림 (2 variants): 대물림.json, 대물림_2.json
+대박 (2 variants): 대박.json, 대박_2.json
+더디다 (2 variants): 더디다.json, 더디다_2.json
+독특 (2 variants): 독특.json, 독특_2.json
+동상이몽 (2 variants): 동상이몽.json, 동상이몽_2.json
+들키다 (2 variants): 들키다.json, 들키다_2.json
+떨다 (2 variants): 떨다.json, 떨다_2.json
+똑똑하다 (2 variants): 똑똑하다.json, 똑똑하다_2.json
+뛰어나다 (2 variants): 뛰어나다.json, 뛰어나다_2.json
+뜻밖 (2 variants): 뜻밖.json, 뜻밖_2.json
+맹세 (2 variants): 맹세.json, 맹세_2.json
+모르다 (2 variants): 모르다.json, 모르다_2.json
+몸 (2 variants): 몸.json, 몸_2.json
+못하다 (2 variants): 못하다.json, 못하다_2.json
+무덤덤 (2 variants): 무덤덤.json, 무덤덤_2.json
+무시하다 (2 variants): 무시하다.json, 무시하다_2.json
+무식 (2 variants): 무식.json, 무식_2.json
+밀거래 (2 variants): 밀거래.json, 밀거래_2.json
+배고프다 (2 variants): 배고프다.json, 배고프다_2.json
+보이다 (2 variants): 보이다.json, 보이다_2.json
+복습 (2 variants): 복습.json, 복습_2.json
+불가능 (2 variants): 불가능.json, 불가능_2.json
+불경 (2 variants): 불경.json, 불경_2.json
+불신 (2 variants): 불신.json, 불신_2.json
+비상식적 (2 variants): 비상식적.json, 비상식적_2.json
+뽐내다 (2 variants): 뽐내다.json, 뽐내다_2.json
+사별 (2 variants): 사별.json, 사별_2.json
+살인 (2 variants): 살인.json, 살인_2.json
+상상 (2 variants): 상상.json, 상상_2.json
+서구수어통역센터 (2 variants): 서구수어통역센터.json, 서구수어통역센터_2.json
+서구주민지원센터 (2 variants): 서구주민지원센터.json, 서구주민지원센터_2.json
+서구지부 (2 variants): 서구지부.json, 서구지부_2.json
+서다 (2 variants): 서다.json, 서다_2.json
+세뇌 (2 variants): 세뇌.json, 세뇌_2.json
+솔직히 (2 variants): 솔직히.json, 솔직히_2.json
+순창군주민지원센터 (2 variants): 순창군주민지원센터.json, 순창군주민지원센터_2.json
+신기 (2 variants): 신기.json, 신기_2.json
+싫다 (2 variants): 싫다.json, 싫다_2.json
+십 (2 variants): 십.json, 십_2.json
+십억 (2 variants): 십억.json, 십억_2.json
+쓰러지다 (2 variants): 쓰러지다.json, 쓰러지다_2.json
+아기 (2 variants): 아기.json, 아기_2.json
+안타깝다 (2 variants): 안타깝다.json, 안타깝다_2.json
+알다 (2 variants): 알다.json, 알다_2.json
+알아서 (2 variants): 알아서.json, 알아서_2.json
+알아차리다 (2 variants): 알아차리다.json, 알아차리다_2.json
+양자택일 (2 variants): 양자택일.json, 양자택일_2.json
+어렵다 (2 variants): 어렵다.json, 어렵다_2.json
+언덕 (2 variants): 언덕.json, 언덕_2.json
+없다 (2 variants): 없다.json, 없다_2.json
+여자 (2 variants): 여자.json, 여자_2.json
+연구 (2 variants): 연구.json, 연구_2.json
+예민 (2 variants): 예민.json, 예민_2.json
+우습다 (2 variants): 우습다.json, 우습다_2.json
+우유 (2 variants): 우유.json, 우유_2.json
+위인 (2 variants): 위인.json, 위인_2.json
+유치하다 (2 variants): 유치하다.json, 유치하다_2.json
+음주운전 (2 variants): 음주운전.json, 음주운전_2.json
+의미 (2 variants): 의미.json, 의미_2.json
+의혹 (2 variants): 의혹.json, 의혹_2.json
+이천 (2 variants): 이천.json, 이천_2.json
+인색하다 (2 variants): 인색하다.json, 인색하다_2.json
+일몰 (2 variants): 일몰.json, 일몰_2.json
+일시불 (2 variants): 일시불.json, 일시불_2.json
+일어나다 (2 variants): 일어나다.json, 일어나다_2.json
+일요일 (2 variants): 일요일.json, 일요일_2.json
+일출 (2 variants): 일출.json, 일출_2.json
+잠실 (2 variants): 잠실.json, 잠실_2.json
+장마 (2 variants): 장마.json, 장마_2.json
+재량 (2 variants): 재량.json, 재량_2.json
+적격 (2 variants): 적격.json, 적격_2.json
+전문 (2 variants): 전문.json, 전문_2.json
+제발 (2 variants): 제발.json, 제발_2.json
+좋다 (2 variants): 좋다.json, 좋다_2.json
+중구수어통역센터 (2 variants): 중구수어통역센터.json, 중구수어통역센터_2.json
+중구주민지원센터 (2 variants): 중구주민지원센터.json, 중구주민지원센터_2.json
+중구지부 (2 variants): 중구지부.json, 중구지부_2.json
+중독 (2 variants): 중독.json, 중독_2.json
+직인 (2 variants): 직인.json, 직인_2.json
+집중 (2 variants): 집중.json, 집중_2.json
+찔리다 (2 variants): 찔리다.json, 찔리다_2.json
+체온 (2 variants): 체온.json, 체온_2.json
+탕진 (2 variants): 탕진.json, 탕진_2.json
+퇴사 (2 variants): 퇴사.json, 퇴사_2.json
+팔 (2 variants): 팔.json, 팔_2.json
+평가 (2 variants): 평가.json, 평가_2.json
+표리부동 (2 variants): 표리부동.json, 표리부동_2.json
+하늘 (2 variants): 하늘.json, 하늘_2.json
+한국농아인협회 (2 variants): 한국농아인협회.json, 한국농아인협회_2.json
+해하다 (2 variants): 해하다.json, 해하다_2.json
+험담 (2 variants): 험담.json, 험담_2.json
+형편없다 (2 variants): 형편없다.json, 형편없다_2.json
+황소고집 (2 variants): 황소고집.json, 황소고집_2.json
+회복 (2 variants): 회복.json, 회복_2.json
+휴학 (2 variants): 휴학.json, 휴학_2.json

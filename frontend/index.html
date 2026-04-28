@@ -607,6 +607,7 @@
 
       <!-- 컨트롤 버튼 -->
       <div class="controls">
+        <button class="btn-circle" id="btn-play-word" title="WORD0001 재생" style="background: var(--accent-cyan); color: #000;">▶</button>
         <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
         <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
       </div>
@@ -872,6 +873,14 @@
     }
 
     // 컨트롤 버튼
+    document.getElementById('btn-play-word').addEventListener('click', () => {
+      if (window.ITDAMotionV3) {
+        window.ITDAMotionV3.play('WORD0001');
+      } else {
+        console.warn('ITDAMotionV3가 아직 로드되지 않았습니다.');
+      }
+    });
+
     document.getElementById('btn-reset').addEventListener('click', () => {
       window.ITDAAvatar5?.reset();
     });
