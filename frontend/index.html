@@ -502,6 +502,18 @@
         <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
           <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
           
+          <!-- 뷰 모드 토글 버튼 -->
+          <div style="position: absolute; top: 0.6rem; right: 0.6rem; z-index: 30; display: flex; gap: 0.4rem;">
+            <button id="btn-view-avatar" title="아바타 모드" onclick="window.ITDAAvatar5?.setViewMode('avatar')"
+              style="background: rgba(124,58,237,0.85); border: 1px solid #7c3aed; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
+              🧍 아바타
+            </button>
+            <button id="btn-view-skeleton" title="스켈레톤 모드" onclick="window.ITDAAvatar5?.setViewMode('skeleton')"
+              style="background: rgba(0,230,160,0.2); border: 1px solid rgba(0,230,160,0.5); color: #00e6a0; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
+              🦴 스켈레톤
+            </button>
+          </div>
+          
           <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
           <div id="ref-pip">
             <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
@@ -577,6 +589,9 @@
   <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
   <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
   <script type="module" src="./js/motion_loader_v3.js?v=20260428"></script>
+
+  <!-- ── [NEW] 국립국어원 관절 데이터 (.npy -> .json) 로더 ─── -->
+  <script type="module" src="./js/motion_loader_npy.js?v=20260429"></script>
 
   <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
   <script type="module" src="./js/education.js"></script>

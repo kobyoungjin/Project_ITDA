@@ -82,6 +82,16 @@ async function sendMessage(text) {
     }
   }
 
+  // [JointCache Priority] V3가 없으면 국립국어원 관절 데이터 시도
+  if (window.ITDAMotionNPY) {
+    const sldict = await window.ITDAMotionNPY.load(text);
+    if (sldict && sldict.frames?.length) {
+      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${text}</span><br/><span style="font-size:0.75rem; color:var(--text-muted)">국립국어원 관절 데이터(75 pts) 재생</span>`;
+      animateAvatar([], text);
+      return;
+    }
+  }
+
   try {
     const res = await fetch('http://localhost:8000/api/sign-language/search', {
       method: 'POST',
@@ -859,6 +869,19 @@ const EMOTION_MORPH_MAP = {
   "정보전달": { Surprised: 0.1, mouthSmile: 0.1 }
 };
 
+// 감정 morph 적용 헬퍼 추출
+function _applyEmotions(emotions, avatar) {
+  if (!emotions?.length) return;
+  for (const emName of emotions) {
+    const effect = EMOTION_MORPH_MAP[emName];
+    if (effect) {
+      for (const [m, v] of Object.entries(effect)) {
+        if (typeof v === 'number') avatar.setMorphTarget(m, v);
+      }
+    }
+  }
+}
+
 /**
  * 3D 수어 애니메이션 엔진 (Quaternion Slerp 기반)
  */
@@ -870,26 +893,32 @@ async function animateAvatar(emotions, keyword) {
   avatar.stopIdle?.();
 
   // [Option A / V3] MediaPipe 로 추출된 keyframe JSON 이 있으면 우선 재생
-  // 감정 morph 는 V2 EMOTION_MORPH_MAP 을 그대로 적용 (선처리)
   if (window.ITDAMotionV3 && window.ITDAMotion?.version !== 'v1') {
     try {
       const motion = await window.ITDAMotionV3.load(keyword);
       if (motion && motion.keyframes?.length) {
-        // 감정 선처리 (V2 와 동일 방식)
-        if (emotions?.length) {
-          for (const emName of emotions) {
-            const effect = EMOTION_MORPH_MAP[emName];
-            if (effect) for (const [m, v] of Object.entries(effect)) {
-              if (typeof v === 'number') avatar.setMorphTarget(m, v);
-            }
-          }
-        }
+        _applyEmotions(emotions, avatar);
         window.translationModeActive = true;
         await window.ITDAMotionV3.play(keyword);
-        return;  // V3 재생 완료 — V2 경로 건너뜀
+        return;
       }
     } catch (e) {
       console.warn('[Motion] V3 로드 실패, V2 폴백:', e.message);
+    }
+  }
+
+  // [NEW] 국립국어원 관절 데이터 (75 pts) 재생 시도
+  if (window.ITDAMotionNPY) {
+    try {
+      const joints = await window.ITDAMotionNPY.load(keyword);
+      if (joints && joints.frames?.length) {
+        _applyEmotions(emotions, avatar);
+        window.translationModeActive = true;
+        await window.ITDAMotionNPY.play(keyword);
+        return; 
+      }
+    } catch (e) {
+      console.warn('[Motion] NPY 로드 실패:', e.message);
     }
   }
 

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from pathlib import Path
 from api.services.rag_engine import rag_engine
 from api.services.data_pipeline import data_pipeline
+from api.services.motion_extractor import motion_extractor
 
 router = APIRouter()
 
@@ -52,3 +54,27 @@ async def refresh_pipeline(force: bool = True):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/resolve-motion")
+async def resolve_motion(request: dict):
+    """
+    단어에 해당하는 관절 데이터가 로컬에 있는지 확인하고, 
+    없으면 국립국어원 영상을 통해 생성합니다.
+    """
+    word = request.get("word")
+    if not word:
+        raise HTTPException(status_code=400, detail="Word is required")
+        
+    # 1. 이미 존재하는지 확인
+    target_path = Path("frontend/data/ksl_motions") / f"{word}.json"
+    if target_path.exists():
+        return {"status": "exists", "word": word, "message": "Motion already exists"}
+        
+    # 2. 실시간 추출 시도
+    success = motion_extractor.extract_and_save(word)
+    if success:
+        return {"status": "created", "word": word, "message": "Motion extracted successfully"}
+    else:
+        # 3. 폴백 (Fuzzy Match 시도 - 이미 추출된 파일 중 이름에 포함된 게 있는지)
+        # (이 부분은 추후 고도화 가능)
+        raise HTTPException(status_code=404, detail=f"Motion for '{word}' could not be resolved")

@@ -41,23 +41,39 @@ const HAND_BONE_MAP = {
   // 오른손 (MediaPipe 's label: "Right" = 화면 왼쪽 = 실제 오른손)
   Right: {
     wrist: { bonePrefix: 'RightHand', idx: 0 },
-    thumb0: { bonePrefix: 'RightHandThumb1', idx: 2 },
-    thumb1: { bonePrefix: 'RightHandThumb2', idx: 3 },
-    index0: { bonePrefix: 'RightHandIndex1', idx: 5 },
-    index1: { bonePrefix: 'RightHandIndex2', idx: 6 },
-    middle0: { bonePrefix: 'RightHandMiddle1', idx: 9 },
-    ring0: { bonePrefix: 'RightHandRing1', idx: 13 },
-    pinky0: { bonePrefix: 'RightHandPinky1', idx: 17 },
+    thumb1: { bonePrefix: 'RightHandThumb1', idx: 1 },
+    thumb2: { bonePrefix: 'RightHandThumb2', idx: 2 },
+    thumb3: { bonePrefix: 'RightHandThumb3', idx: 3 },
+    index1: { bonePrefix: 'RightHandIndex1', idx: 5 },
+    index2: { bonePrefix: 'RightHandIndex2', idx: 6 },
+    index3: { bonePrefix: 'RightHandIndex3', idx: 7 },
+    middle1: { bonePrefix: 'RightHandMiddle1', idx: 9 },
+    middle2: { bonePrefix: 'RightHandMiddle2', idx: 10 },
+    middle3: { bonePrefix: 'RightHandMiddle3', idx: 11 },
+    ring1: { bonePrefix: 'RightHandRing1', idx: 13 },
+    ring2: { bonePrefix: 'RightHandRing2', idx: 14 },
+    ring3: { bonePrefix: 'RightHandRing3', idx: 15 },
+    pinky1: { bonePrefix: 'RightHandPinky1', idx: 17 },
+    pinky2: { bonePrefix: 'RightHandPinky2', idx: 18 },
+    pinky3: { bonePrefix: 'RightHandPinky3', idx: 19 },
   },
   Left: {
     wrist: { bonePrefix: 'LeftHand', idx: 0 },
-    thumb0: { bonePrefix: 'LeftHandThumb1', idx: 2 },
-    thumb1: { bonePrefix: 'LeftHandThumb2', idx: 3 },
-    index0: { bonePrefix: 'LeftHandIndex1', idx: 5 },
-    index1: { bonePrefix: 'LeftHandIndex2', idx: 6 },
-    middle0: { bonePrefix: 'LeftHandMiddle1', idx: 9 },
-    ring0: { bonePrefix: 'LeftHandRing1', idx: 13 },
-    pinky0: { bonePrefix: 'LeftHandPinky1', idx: 17 },
+    thumb1: { bonePrefix: 'LeftHandThumb1', idx: 1 },
+    thumb2: { bonePrefix: 'LeftHandThumb2', idx: 2 },
+    thumb3: { bonePrefix: 'LeftHandThumb3', idx: 3 },
+    index1: { bonePrefix: 'LeftHandIndex1', idx: 5 },
+    index2: { bonePrefix: 'LeftHandIndex2', idx: 6 },
+    index3: { bonePrefix: 'LeftHandIndex3', idx: 7 },
+    middle1: { bonePrefix: 'LeftHandMiddle1', idx: 9 },
+    middle2: { bonePrefix: 'LeftHandMiddle2', idx: 10 },
+    middle3: { bonePrefix: 'LeftHandMiddle3', idx: 11 },
+    ring1: { bonePrefix: 'LeftHandRing1', idx: 13 },
+    ring2: { bonePrefix: 'LeftHandRing2', idx: 14 },
+    ring3: { bonePrefix: 'LeftHandRing3', idx: 15 },
+    pinky1: { bonePrefix: 'LeftHandPinky1', idx: 17 },
+    pinky2: { bonePrefix: 'LeftHandPinky2', idx: 18 },
+    pinky3: { bonePrefix: 'LeftHandPinky3', idx: 19 },
   },
 };
 
@@ -322,10 +338,93 @@ window.addEventListener('itda:face:results', (e) => applyFaceBlendshapes(e.detai
 window.addEventListener('itda:hands:results', (e) => applyHandLandmarks(e.detail.hands));
 window.addEventListener('itda:pose:results', (e) => applyPoseLandmarks(e.detail.landmarks));
 
+// ── 75개 관절 데이터 (LH 21 + RH 21 + POSE 33) 통합 적용 ──────
+function apply75Landmarks(landmarks75) {
+  if (!landmarks75 || landmarks75.length < 75 * 3) return;
+  const avatar = window.ITDAAvatar5;
+  if (!avatar) return;
+
+  // 1. 데이터 분리
+  const points = [];
+  let allZero = true;
+  for (let i = 0; i < 75; i++) {
+    const x = landmarks75[i * 3];
+    const y = landmarks75[i * 3 + 1];
+    const z = landmarks75[i * 3 + 2];
+    if (x !== 0 || y !== 0) allZero = false;
+    points.push({ x, y, z });
+  }
+
+  // 무효 프레임 (전부 0) 건너뛰기
+  if (allZero) return;
+
+  const lh = points.slice(0, 21);
+  const rh = points.slice(21, 42);
+  const pose = points.slice(42, 75);
+
+  // 2. 몸통(Pose) 리타겟팅
+  // 어깨 관절이 (0,0)이면 데이터가 유효하지 않은 것으로 간주
+  if (pose[11].x !== 0 || pose[12].x !== 0) {
+    _applyPoseDirect(pose, avatar);
+  }
+
+  // 3. 손(Hands) 리타겟팅
+  _applyHandDirect('Left', lh, avatar);
+  _applyHandDirect('Right', rh, avatar);
+}
+
+function _applyPoseDirect(lms, avatar) {
+  // Mirror 모드: 데이터 Left -> 아바타 Right
+  applySingleArm('Right', lms, avatar, 'Left');
+  applySingleArm('Left', lms, avatar, 'Right');
+  
+  // Hips/Root 보정 (Pose 23, 24 기반)
+  if (lms[23] && lms[24]) {
+    const midX = (lms[23].x + lms[24].x) / 2;
+    const midY = (lms[23].y + lms[24].y) / 2;
+    // 아바타 위치 미세 조정 (선택 사항)
+    // avatar.updateBone('Hips', { x: (0.5 - midX) * 0.5, y: (0.5 - midY) * 0.5, z: 0 });
+  }
+}
+
+function _applyHandDirect(side, lms, avatar) {
+  const boneMap = HAND_BONE_MAP[side];
+  if (!boneMap) return;
+
+  // 손목 데이터가 없으면 중단
+  if (lms[0].x === 0 && lms[0].y === 0) return;
+
+  for (const [key, { bonePrefix, idx }] of Object.entries(boneMap)) {
+    const lm = lms[idx];
+    if (!lm || (idx > 0 && lm.x === 0 && lm.y === 0)) continue;
+
+    let rotX = 0, rotY = 0, rotZ = 0;
+
+    if (key === 'wrist') {
+        // 손목은 Pose 엔진이 처리하므로 미세 조정만 수행 (옵션)
+        continue;
+    } else if (key.includes('thumb')) {
+        // 엄지: MediaPipe 좌표 차이를 이용한 굽힘 근사
+        // 엄지는 Y축 회전이 큼
+        rotX = (0.5 - lm.y) * Math.PI * 0.4;
+        rotY = (side === 'Right' ? (0.5 - lm.x) : (lm.x - 0.5)) * Math.PI * 0.8;
+    } else {
+        // 검지~소지: 손목 대비 Y좌표 차이로 굽힘 각도 계산
+        // lm.y가 lms[0].y보다 크면(아래쪽) 굽혀진 상태
+        const bend = Math.max(0, (lm.y - lms[0].y) * 2.0);
+        rotX = bend * Math.PI * 0.6;
+    }
+
+    avatar.updateBone(bonePrefix, { x: rotX, y: rotY, z: rotZ }, 0.25);
+  }
+}
+
 // ── 전역 노출 ─────────────────────────────────────────────────
 window.ITDARetargeting5 = {
   applyFaceBlendshapes,
   applyHandLandmarks,
+  applyPoseLandmarks,
+  apply75Landmarks, // 신규 추가
   emotionState,
   EMOTION_MAP,
 };
