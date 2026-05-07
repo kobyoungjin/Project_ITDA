@@ -464,6 +464,8 @@
         ITDA <em>SIGN</em>
       </div>
       <div class="header-right">
+        <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: rgba(100, 116, 139, 0.15); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; min-width: 95px; text-align: center;">🔇 음성: OFF</button>
+        <div class="hud-item" id="backend-status" style="color: #ff4757; border-color: rgba(255, 71, 87, 0.4);">Backend: OFFLINE</div>
         <div class="hud-item" id="fps-display">FPS: 0</div>
         <div class="hud-item" id="joint-status">Joints: ACTIVE</div>
       </div>
@@ -486,12 +488,39 @@
 
           <video id="vision-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
           <canvas id="vision-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none;"></canvas>
+          
+          <!-- [NEW] 실시간 번역 결과 오버레이 (HandTalker 스타일) -->
+          <div id="live-translation-overlay" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); 
+               background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); padding: 0.8rem 1.5rem; border-radius: 99px;
+               border: 1px solid rgba(0, 242, 254, 0.5); color: #fff; font-size: 1.4rem; font-weight: 800; text-align: center;
+               white-space: nowrap; z-index: 25; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+               opacity: 0; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+            <span id="live-translation-text">...</span>
+          </div>
         </div>
         
-        <!-- 수어 예측 결과 영역 (레이블 제거 및 높이 축소) -->
-        <div id="prediction-area" style="background: var(--bg-card); padding: 0.6rem 1.2rem; border-top: 1px solid var(--border); min-height: 50px; display: flex; align-items: center;">
-          <div class="t-output" id="slm-output" style="font-size: 1.1rem; width: 100%;">
-            <em style="color:var(--text-muted)">수어 동작을 하면 분석 결과가 나타납니다.</em>
+        <!-- 수어 예측 결과 영역 -->
+        <div id="prediction-area" style="background: var(--bg-card); padding: 0.6rem 1.2rem; border-top: 1px solid var(--border); min-height: 60px; display: flex; flex-direction: column; justify-content: center; position: relative;">
+          <div class="t-label" style="font-size: 0.6rem; color: var(--accent-cyan); margin-bottom: 2px;">LIVE TRANSLATION</div>
+          <div class="t-output" id="slm-output" style="font-size: 1.15rem; width: 100%; font-weight: 700;">
+            <em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">수어 동작을 하면 분석 결과가 나타납니다.</em>
+          </div>
+          
+          <!-- [NEW] 통역 로그 열기 버튼 -->
+          <button id="btn-toggle-log" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; transition: all 0.2s;">
+            📜 이력 보기
+          </button>
+        </div>
+        
+        <!-- [NEW] 수어 통역 로그 패널 (슬라이드 애니메이션) -->
+        <div id="translation-log-panel" style="position: absolute; top: 100%; left: 0; width: 100%; height: 200px; background: var(--bg-card); 
+             border-top: 1px solid var(--border); z-index: 40; padding: 1rem; overflow-y: auto; display: none; transition: all 0.3s ease;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-cyan);">📋 통역 이력 (Sign-to-Text)</span>
+            <button id="btn-clear-log" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.7rem;">지우기</button>
+          </div>
+          <div id="translation-log-list" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+            <!-- 로그 아이템들이 여기에 추가됨 -->
           </div>
         </div>
       </div>
@@ -543,6 +572,11 @@
 
         <!-- 컨트롤 버튼 (아바타 영역 하단 플로팅) -->
         <div class="controls" style="bottom: 5rem; right: 1rem;">
+          <div id="mode-toggle" style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+            <button class="mode-btn active" data-mode="translate">번역</button>
+            <button class="mode-btn" data-mode="learn">학습</button>
+            <button class="mode-btn" data-mode="collect">수집</button>
+          </div>
           <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
           <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
         </div>
@@ -595,6 +629,9 @@
 
   <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
   <script type="module" src="./js/education.js"></script>
+
+  <!-- ── [ML] 데이터 수집 및 훈련 제어 ────────────────── -->
+  <script type="module" src="./js/collect_ui.js"></script>
 
   <!-- ── UI 제어 스크립트 ────────────────────────────── -->
   <script type="module">
@@ -707,24 +744,36 @@
       window.ITDAEducation.start(words[lessonIndex]);
     }
 
+    modeBtns.forEach(b => b.addEventListener('click', () => _setMode(b.dataset.mode)));
+
     function _setMode(mode) {
       currentMode = mode;
       modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      
+      const collectCard = document.getElementById('collect-card');
+      
       if (mode === 'learn') {
         lessonCard.style.display = 'block';
+        if (collectCard) collectCard.style.display = 'none';
         _activateWord(lessonIndex);
+        window.ITDACollect?.stop();
+      } else if (mode === 'collect') {
+        lessonCard.style.display = 'none';
+        if (collectCard) collectCard.style.display = 'block';
+        window.ITDAEducation?.stop();
       } else {
         lessonCard.style.display = 'none';
+        if (collectCard) collectCard.style.display = 'none';
         window.ITDAEducation?.stop();
+        window.ITDACollect?.stop();
       }
     }
 
-    /*
-    modeBtns.forEach(b => b.addEventListener('click', () => _setMode(b.dataset.mode)));
-    document.getElementById('lesson-prev').addEventListener('click', () => _activateWord(lessonIndex - 1));
-    document.getElementById('lesson-next').addEventListener('click', () => _activateWord(lessonIndex + 1));
-    document.getElementById('lesson-stop').addEventListener('click', () => _setMode('translate'));
-    */
+    document.getElementById('lesson-prev')?.addEventListener('click', () => _activateWord(lessonIndex - 1));
+    document.getElementById('lesson-next')?.addEventListener('click', () => _activateWord(lessonIndex + 1));
+    document.getElementById('lesson-stop')?.addEventListener('click', () => _setMode('translate'));
+
+
 
     // 학습 피드백 이벤트 → 카드 UI 갱신
     window.addEventListener('itda:lesson:feedback', (e) => {
@@ -785,19 +834,141 @@
     window.addEventListener('itda:stt:state', (e) => _updateSttBadge(e.detail));
 
     // ── 백엔드 RAG + SLM 결과 수신 및 UI 렌더링 ──
+    const translationLogList = document.getElementById('translation-log-list');
+    const logPanel = document.getElementById('translation-log-panel');
+    let lastFinalText = "";
+
     window.addEventListener('itda:rag:result', (e) => {
       const result = e.detail.rag_result;
       if (!result) return;
       const emotionsHtml = result.emotions ? result.emotions.map(em => `<span class="t-emotion-badge" style="background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">${em}</span>`).join(' ') : '';
       
       const outputEl = document.getElementById('slm-output');
+      const liveOverlay = document.getElementById('live-translation-overlay');
+      const liveText = document.getElementById('live-translation-text');
+
       if (outputEl) {
         if (result.type === 'draft') {
+          // '대기 중'이거나 '미인식'인 경우 카메라 오버레이 숨김
+          if (result.text === '대기 중' || result.text.includes('미인식')) {
+            if (liveOverlay) liveOverlay.style.opacity = "0";
+            outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">동작 분석 중...</em>`;
+            return;
+          }
+
           outputEl.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 예측 중: ${result.text}</span>`;
+          if (liveText) {
+            liveText.innerHTML = `<span style="color:var(--text-muted); opacity:0.8">${result.text}</span>`;
+            liveOverlay.style.opacity = "1";
+            liveOverlay.style.transform = "translateX(-50%) scale(1)";
+          }
         } else if (result.type === 'final') {
-          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${result.text}</span> ${emotionsHtml}`;
+          // '분석 중이에요' 등의 안내 메시지는 제외
+          if (result.text.includes('분석 중이에요')) return;
+
+          // 인식 실패 시 완료 상태 명확히 표시
+          if (result.text === '대기 중' || result.text.includes('미인식')) {
+            if (liveOverlay) liveOverlay.style.opacity = "0";
+            outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">✅ 분석 완료 (인식된 수어 없음)</em>`;
+            // 중복 출력 방지 초기화
+            lastFinalText = "";
+            return;
+          }
+
+          // [중복 방지 강화] 동일 문장 연속 출력 방지 (4초 이내 동일 결과 무시)
+          if (result.text === lastFinalText) return;
+          lastFinalText = result.text;
+          // 4초 후 마지막 텍스트 초기화 (다른 동작 인식 준비)
+          setTimeout(() => { if(lastFinalText === result.text) lastFinalText = ""; }, 4000); 
+
+          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${emotionsHtml}`;
+          
+          // [NEW] TTS 음성 출력 (Voice Toggle 반영)
+          if (window.speechSynthesis && window._isVoiceOn) {
+            const utterance = new SpeechSynthesisUtterance(result.text);
+            utterance.lang = 'ko-KR';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+          }
+
+          // [NEW] 통역 로그 추가
+          if (translationLogList) {
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const item = document.createElement('div');
+            item.style.padding = "0.5rem";
+            item.style.background = "rgba(255,255,255,0.03)";
+            item.style.borderRadius = "6px";
+            item.innerHTML = `<span style="color:var(--text-muted); font-size:0.7rem; margin-right:8px;">${time}</span> 
+                              <span style="color:var(--accent-cyan); font-weight:700;">${result.text}</span>`;
+            translationLogList.prepend(item);
+            if (translationLogList.children.length > 50) translationLogList.lastChild.remove();
+          }
+
+          if (liveText) {
+            liveText.innerHTML = `<span style="color:var(--accent-cyan); text-shadow: 0 0 10px rgba(0,242,254,0.5)">✨ ${result.text}</span>`;
+            liveOverlay.style.opacity = "1";
+            liveOverlay.style.transform = "translateX(-50%) scale(1.1)";
+            
+            setTimeout(() => {
+                liveOverlay.style.opacity = "0";
+                liveOverlay.style.transform = "translateX(-50%) scale(0.9)";
+            }, 3000);
+          }
         }
       }
+    });
+
+    // 로그 패널 토글 제어
+    document.getElementById('btn-toggle-log')?.addEventListener('click', () => {
+      const isVisible = logPanel.style.display === 'block';
+      logPanel.style.display = isVisible ? 'none' : 'block';
+      document.getElementById('btn-toggle-log').textContent = isVisible ? '📜 이력 보기' : '✖ 닫기';
+    });
+
+    document.getElementById('btn-clear-log')?.addEventListener('click', () => {
+      if (translationLogList) translationLogList.innerHTML = '';
+      lastFinalText = "";
+    });
+
+    // [NEW] 음성 토글 제어
+    window._isVoiceOn = false;
+    document.getElementById('btn-toggle-voice')?.addEventListener('click', (e) => {
+      window._isVoiceOn = !window._isVoiceOn;
+      const btn = e.currentTarget;
+      btn.textContent = window._isVoiceOn ? '🔊 음성: ON' : '🔇 음성: OFF';
+      btn.style.background = window._isVoiceOn ? 'rgba(124, 58, 237, 0.15)' : 'rgba(100, 116, 139, 0.15)';
+      btn.style.borderColor = window._isVoiceOn ? 'var(--accent-purple)' : 'var(--border)';
+      btn.style.color = window._isVoiceOn ? '#c4b5fd' : 'var(--text-muted)';
+    });
+
+    // 백엔드 연결 상태 모니터링
+    function _updateBackendStatus(status, detail = {}) {
+      const el = document.getElementById('backend-status');
+      if (!el) return;
+      if (status === 'connected') {
+        el.textContent = 'Backend: ONLINE';
+        el.style.color = 'var(--accent-green)';
+        el.style.borderColor = 'rgba(0, 230, 160, 0.4)';
+        el.title = "Connected to 127.0.0.1:8000";
+      } else if (status === 'connecting') {
+        el.textContent = 'Backend: CONNECTING...';
+        el.style.color = 'var(--accent-orange)';
+        el.style.borderColor = 'rgba(255, 159, 67, 0.4)';
+      } else if (status === 'error') {
+        el.textContent = 'Backend: ERROR';
+        el.style.color = '#ff4757';
+        el.style.borderColor = 'rgba(255, 71, 87, 0.6)';
+        el.title = detail.message || "Connection error";
+      } else {
+        el.textContent = `Backend: OFFLINE (${detail.code || '?'})`;
+        el.style.color = '#ff4757';
+        el.style.borderColor = 'rgba(255, 71, 87, 0.4)';
+        el.title = detail.reason || "Server is not reachable";
+      }
+    }
+
+    window.addEventListener('itda:vision:ws_state', (e) => {
+      _updateBackendStatus(e.detail.state, e.detail);
     });
 
     // FPS HUD

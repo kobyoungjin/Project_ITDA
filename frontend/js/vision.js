@@ -111,7 +111,7 @@ async function init() {
     drawingUtils = new DrawingUtils(canvasCtx);
     
     setStatus('✅ 실행 중');
-    // connectWebSocket(); // [비활성화] 사용자 요청에 따라 백엔드 비전 소켓 연결 시도 원천 차단
+    connectWebSocket(); // [활성화] 실시간 수어 번역을 위해 백엔드 웹소켓 연결 시작
     window.dispatchEvent(new CustomEvent('itda:vision:ready'));
 
   } catch (err) {
@@ -134,7 +134,7 @@ async function startCamera() {
 }
 
 // ── WebSocket 연동 상태 ───────────────────────────────────────
-const WS_URL = `ws://${location.hostname}:8000/api/ws/vision`;
+const WS_URL = `ws://127.0.0.1:8000/api/ws/vision`; // localhost 대신 127.0.0.1 사용하여 IPv6/IPv4 혼선 방지
 let ws = null;
 let sessionId = crypto.randomUUID();
 let frameCounter = 0;
@@ -163,7 +163,7 @@ const POSE_KEYS = {
 const MOTION_THRESHOLDS = {
   MOVING_SPEED: 0.015,  // 정규화 좌표/프레임 (약 1.5% 화면 이동)
   STABLE_SPEED: 0.004,
-  STABLE_HOLD_MS: 500,  // 정지 상태가 이 시간 이상 유지되면 stable 로 승급
+  STABLE_HOLD_MS: 1200, // 정지 상태가 1.2초 이상 유지되어야 동작 완료(stable)로 판정
 };
 const motionState = {
   phase: 'idle',         // idle | moving | settling | stable
@@ -233,6 +233,7 @@ function connectWebSocket() {
   ws.onopen = () => {
     console.info("[ITDA WebSocket] 백엔드 RAG 연동 완료");
     wsRetryCount = 0;
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { detail: { state: 'connected' } }));
   };
   ws.onmessage = (evt) => {
     try {
@@ -250,11 +251,21 @@ function connectWebSocket() {
       }
     } catch(e) {}
   };
-  ws.onclose = () => {
+  ws.onerror = (err) => {
+    console.error("[ITDA WebSocket] 에러 발생:", err);
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { 
+        detail: { state: 'error', message: 'Connection Refused (Check Backend)' } 
+    }));
+  };
+  ws.onclose = (evt) => {
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { 
+        detail: { state: 'disconnected', code: evt.code, reason: evt.reason } 
+    }));
     if (wsRetryCount < 3) {
-      console.warn(`[ITDA] 백엔드 연결 실패. 재연결 시도 중... (${wsRetryCount + 1}/3)`);
+      console.warn(`[ITDA] 백엔드 연결 실패 (코드: ${evt.code}). 재연결 시도 중... (${wsRetryCount + 1}/3)`);
       wsRetryCount++;
       setTimeout(connectWebSocket, 2000);
+      window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { detail: { state: 'connecting' } }));
     } else if (wsRetryCount === 3) {
       console.info("💡 [ITDA] 백엔드(8000) 서버 오프라인으로 확인됨. 단독 모드로 전환합니다.");
       wsRetryCount++;
@@ -270,10 +281,9 @@ function sendFrameWS(hands) {
 
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-  // [과제 3] 0.5초(500ms) 단위로 버퍼링/제한 (기존 33fps 무한 호출 방지)
-  // 단, motion_phase === 'stable' 프레임은 최종 판정 트리거이므로 throttle 예외 적용
+  // [과제 3] 0.3초(300ms) 단위로 버퍼링/제한 (기존 500ms에서 속도 상향)
   const isFinalTrigger = motionState.phase === 'stable';
-  if (!isFinalTrigger && now - lastSendTime < 500) return;
+  if (!isFinalTrigger && now - lastSendTime < 300) return;
   lastSendTime = now;
 
   // [P0] 손 관절 Handshape 분류기: 21개 전체 랜드마크 전송 (MCP/PIP/DIP 굴곡 각도 계산 필수)
@@ -294,9 +304,9 @@ function sendFrameWS(hands) {
     const currentWristY = hands[0].landmarks[0].y; // 0은 맨 위(이마쪽), 1은 맨 아래(가슴쪽)
     if (prevWristY !== null) {
       const deltaY = currentWristY - prevWristY;
-      if (deltaY > 0.05) {
+      if (deltaY > 0.005) {
         movement_desc = "손목이 위에서 아래로 부드럽게 내려옵니다."; // 예: 감사합니다 등
-      } else if (deltaY < -0.05) {
+      } else if (deltaY < -0.005) {
         movement_desc = "손목이 아래에서 위로 올라갑니다.";
       }
     }
@@ -382,6 +392,7 @@ async function processFrame(timestamp) {
     window.dispatchEvent(new CustomEvent('itda:hands:results', {
       detail: { hands },
     }));
+
     // 백엔드 파이프라인으로 실시간 전송
     sendFrameWS(hands);
   } else {

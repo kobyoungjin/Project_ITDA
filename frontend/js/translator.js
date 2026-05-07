@@ -107,7 +107,7 @@ async function sendMessage(text) {
     if (data) {
       // 화면 출력 업데이트
       const emotionsHtml = data.emotions ? data.emotions.map(em => `<span class="t-emotion-badge" style="background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">${em}</span>`).join(' ') : '';
-      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${data.keyword}</span><br/><span style="font-size:0.8rem; color:var(--text-muted)">${data.warm_translation}</span> ${emotionsHtml}`;
+      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${data.keyword}</span> ${emotionsHtml}`;
 
       // [참고 영상 PIP 제어]
       const refPip = document.getElementById('ref-pip');

@@ -99,15 +99,35 @@ async def _handle(session_id: str, raw: dict):
 
         # ──────── [3단계: 하이브리드 번역 파이프라인] ────────
 
-        # Track 1: 기기 내 SLM (Ollama) 초고속 1차 예측 진행 (Latency Hiding)
-        from api.services.slm_agent import slm_agent
-        fast_pred = await slm_agent.predict_fast(raw)
-
         # [P2] 모션 phase 기반 게이팅:
-        #   moving / settling → Draft 만 송출하고 RAG+Track3 생략 (서버 부하 및 UI 깜빡임 방지)
-        #   stable / idle    → 풀 파이프라인 실행 (수어 한 단어 완성 시점)
+        #   moving / settling → 무거운 AI 호출 생략하고 빠른 Draft만 송출
+        #   stable / idle    → 풀 파이프라인 실행
         motion_phase = meta.get("motion_phase", "stable")
         run_full_pipeline = motion_phase in ("stable", "idle")
+
+        # ── [KNN 초고속 판정] ──────────────────────────────────
+        # 훈련된 KNN 모델이 있으면 Gemini 호출 전에 먼저 시도
+        # → 신뢰도 60% 이상이면 AI 없이 0.001초만에 번역 확정
+        knn_result = None
+        knn_confidence = 0.0
+        if run_full_pipeline:
+            from api.services import knn_classifier
+            hands_raw = raw.get("hands") or []
+            if hands_raw and knn_classifier.is_model_ready():
+                first_hand = hands_raw[0]
+                kps = first_hand.get("keypoints") or []
+                # keypoints를 landmarks 형식으로 변환
+                lms = [{"x": kp["x"], "y": kp["y"], "z": kp.get("z", 0)} for kp in kps]
+                knn_result, knn_confidence = knn_classifier.predict(lms)
+                if knn_result:
+                    print(f"[KNN] ✅ {knn_result} (신뢰도 {knn_confidence:.1%}) — Gemini 생략")
+
+        from api.services.slm_agent import slm_agent
+        # KNN이 확실하게 맞추면 Gemini 건너뜀, 아니면 AI 분석
+        if knn_result:
+            fast_pred = knn_result
+        else:
+            fast_pred = await slm_agent.predict_fast(raw, skip_ollama=not run_full_pipeline)
 
         # Draft 중간 송출은 공통
         await manager.send_ack(
@@ -115,7 +135,8 @@ async def _handle(session_id: str, raw: dict):
             VisionAck(
                 frame_id=frame.frame_id,
                 status="processing",
-                rag_result={"type": "draft", "text": fast_pred, "motion_phase": motion_phase},
+                rag_result={"type": "draft", "text": fast_pred, "motion_phase": motion_phase,
+                            "knn_confidence": round(knn_confidence, 3)},
                 message=f"1차 예측 완료 ({motion_phase})",
                 hand_analyses=hand_analyses or None,
                 pose_analysis=pose_analysis_obj,

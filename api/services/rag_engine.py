@@ -36,10 +36,12 @@ class RagEngine:
             
             # 의미 기반 검색(RAG)이더라도, 너무 동떨어진 쓰레기값이 매칭되는 것을 막기 위한 최소한의 필터
             if not q_chars.intersection(k_chars) and len(query) > 1:
-                # 겹치는 글자가 아예 없다면, 검색 실패로 간주
+                # 겹치는 글자가 아예 없다면, '대기 중'일 때는 조용히 무시, 그 외에는 안내
+                if query == "대기 중":
+                    return None
                 return {
                     "keyword": query,
-                    "warm_translation": f"'{query}'에 해당하는 정확한 수어 동작을 아직 배우지 못했어요.",
+                    "warm_translation": f"'{query}' 동작을 분석 중이에요.",
                     "video_url": "",
                     "emotions": []
                 }

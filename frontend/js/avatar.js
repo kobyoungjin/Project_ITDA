@@ -302,7 +302,8 @@ function _setViewMode(mode) {
       _setModelSilhouette(false); // 머티리얼 복원 후
       model.visible = false;      // 완전히 숨김
     }
-    skeletonGroup.visible = true;
+    skeletonGroup.visible = true; // 점과 선 형태의 원래 스켈레톤 복구
+    
     // 전신이 보이도록 카메라 후퇴
     camera.position.set(0, 1.0, 4.5);
     camera.lookAt(0, 1.0, 0);
@@ -318,6 +319,7 @@ function _setViewMode(mode) {
     _skJoints.forEach(j => { j.visible = false; });
     _skBones.forEach(b => { b.visible = false; });
     skeletonGroup.visible = false;
+    
     // 상체 중심 카메라 복귀
     camera.position.set(0, 1.35, 1.5);
     camera.lookAt(0, 1.35, 0);

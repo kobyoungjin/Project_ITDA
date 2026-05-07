@@ -5,6 +5,7 @@ from api.core.config import settings
 from api.routers import sign_language
 from api.routers import ws_vision
 from api.routers import stt as stt_adapter
+from api.routers import collect as collect_router
 from api.services.data_pipeline import data_pipeline
 
 app = FastAPI(
@@ -34,6 +35,13 @@ app.include_router(
     ws_vision.router,
     prefix="/api",
     tags=["Vision WebSocket"]
+)
+
+# [학습 데이터 수집 & KNN 훈련 라우터]
+app.include_router(
+    collect_router.router,
+    prefix="/api/collect",
+    tags=["KSL Data Collection"]
 )
 
 # [P3] 6단계 통합: STT 라우터 (step6_stt 어댑터)

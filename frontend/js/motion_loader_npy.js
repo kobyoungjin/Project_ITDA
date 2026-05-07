@@ -121,8 +121,6 @@ function playJoints(word) {
             } else {
                 console.info(`[JointLoader] '${word}' 재생 완료`);
                 stop();
-                // 아바타 모드로 복귀
-                avatar?.setViewMode?.('avatar');
                 resolve();
             }
         }

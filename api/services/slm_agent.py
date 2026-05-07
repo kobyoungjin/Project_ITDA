@@ -23,8 +23,26 @@ slm_agent.py ─ [P1] KSL(한국 수어) 통역사 SLM 에이전트
 
 from __future__ import annotations
 
+import os
 import aiohttp
 from typing import Any, Dict
+from dotenv import load_dotenv
+
+# dotenv 내부 버그(find_dotenv) 우회를 위해 경로를 명확히 지정
+load_dotenv(dotenv_path=".env")
+
+# [NEW] Gemini API 연동 설정
+try:
+    import google.generativeai as genai
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if GEMINI_API_KEY and GEMINI_API_KEY.strip() and GEMINI_API_KEY != "your_gemini_api_key_here":
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel("gemini-flash-latest")
+        print("[SlmAgent] Gemini Flash 최신 모델이 활성화되었습니다 (초고속 모드).")
+    else:
+        gemini_model = None
+except ImportError:
+    gemini_model = None
 
 
 # ── Rule-based fallback 사전 ─────────────────────────────────
@@ -52,20 +70,14 @@ def _rule_based_predict(meta: Dict[str, Any]) -> str:
     right_region = regions[0] if regions else ""
     movement = (meta.get("movement") or "").lower()
 
-    for req_shapes, req_region, req_move, word in RULE_HINTS:
-        # 수형 매칭: 순서 무관, 개수 일치
-        if sorted(req_shapes) != sorted(shapes):
-            continue
-        if req_region and req_region not in right_region:
-            continue
-        if req_move and req_move not in movement:
-            continue
-        return word
-
+    # 사용자 요청에 의해 RULE_HINTS를 통한 임의 예측을 비활성화합니다.
+    # 이제 AI(Ollama) 분석 전까지는 무조건 미인식/대기 상태로 처리됩니다.
+    
     # 손이 감지되지 않으면 기본 유휴 상태
     if not shapes:
         return "대기 중"
-    # 어디에도 매칭 안 되면 수형 이름만 반환
+        
+    # 손이 감지되었지만 아직 AI가 분석하기 전 (임시 상태)
     return f"미인식({'+'.join(shapes)})"
 
 
@@ -85,39 +97,63 @@ class SlmAgent:
     def __init__(self, model_name: str = "gemma3:4b"):
         self.model_name = model_name
         self.api_url = "http://localhost:11434/api/generate"
+        self._circuit_breaker_until = 0
 
-    async def _call_ollama(self, prompt: str, timeout: int = 7) -> str:
+    async def _call_ai(self, prompt: str, timeout: int = 7) -> str:
+        # 1. Gemini API 키가 있으면 무조건 우선 사용 (빠르고 똑똑함)
+        if gemini_model:
+            try:
+                response = await gemini_model.generate_content_async(prompt)
+                return response.text.strip()
+            except Exception as e:
+                print(f"[SlmAgent] Gemini 호출 실패 (Ollama로 우회 시도 안 함): {e}")
+                return ""
+
+        # 2. Gemini 키가 없으면 기존 Ollama(로컬) 사용
+        import time
+        if time.time() < self._circuit_breaker_until:
+            return ""
+            
         try:
             async with aiohttp.ClientSession() as session:
                 payload = {"model": self.model_name, "prompt": prompt, "stream": False}
                 async with session.post(self.api_url, json=payload, timeout=timeout) as resp:
                     if resp.status != 200:
+                        self._circuit_breaker_until = time.time() + 30
                         return ""
                     data = await resp.json()
                     return (data.get("response") or "").strip()
         except Exception as e:
-            print(f"[SlmAgent] Ollama 호출 실패(fallback 사용): {e}")
+            print(f"[SlmAgent] Ollama 호출 실패(서킷 브레이커 작동, 30초 우회): {e}")
+            self._circuit_breaker_until = time.time() + 30
             return ""
 
-    async def predict_fast(self, raw_data: dict) -> str:
+    async def predict_fast(self, raw_data: dict, skip_ollama: bool = False) -> str:
         """
         Track 1: 손 수형 + 상체 포즈 + 이동 요약으로 KSL 단어 1개 추측.
         항상 **문자열** 을 반환 (이전 dict 반환은 계약 오류였음).
         """
         meta = raw_data.get("meta_features") or {}
 
+        if skip_ollama:
+            return _rule_based_predict(meta)
+
         prompt = (
-            "당신은 한국 수어(KSL) 통역사입니다. 아래 관찰 정보를 보고 "
-            "가장 가능성 높은 한국어 단어 **한 개** 만 출력하세요. 설명 금지.\n"
-            f"- 손 수형: {meta.get('handshape_summary', '감지 안됨')}\n"
+            "당신은 한국 수어(KSL) 통역사입니다. 아래 관찰 정보를 바탕으로, "
+            "반드시 제시된 [단어 후보군] 안에서만 정답을 하나 골라 출력하세요. "
+            "만약 후보군 중에 매칭되는 것이 전혀 없다면 '미인식'이라고 출력하세요. "
+            "절대로 부연 설명을 덧붙이거나 후보군에 없는 단어를 창작하지 마세요.\n\n"
+            f"- 손 모양: {meta.get('handshape_summary', '감지 안됨')}\n"
+            f"- 손 위치(부위): {meta.get('wrist_regions', '알 수 없음')}\n"
             f"- 상체 포즈: {meta.get('pose_summary', '감지 안됨')}\n"
-            f"- 손 이동: {meta.get('movement', '정지')}\n"
-            "예시 단어 후보: 안녕하세요, 고맙습니다, 미안합니다, 사랑합니다, "
-            "힘내세요, 또 만나요, 어디에요, 괜찮아요, 도와주세요, 이름이 뭐예요\n"
+            f"- 손 움직임: {meta.get('movement', '정지')}\n\n"
+            "[단어 후보군]\n"
+            "안녕하세요, 사랑합니다, 고맙습니다, 나, 너, 행복해요, 만나다, 가다, 반가워요, 이름, "
+            "미안합니다, 힘내세요, 어디에요, 괜찮아요, 도와주세요, 이름이 뭐예요\n\n"
             "정답:"
         )
 
-        raw_text = await self._call_ollama(prompt)
+        raw_text = await self._call_ai(prompt)
         word = _clean_single_word(raw_text)
 
         # SLM 응답이 비었거나 수상하면 규칙 기반 폴백
@@ -128,28 +164,11 @@ class SlmAgent:
 
     async def predict_with_rag(self, fast_prediction: str, rag_context: dict) -> str:
         """
-        Track 3: 1차 예측 단어 + RAG 결과(따뜻한 설명/감정)를 결합해
-        최종 한 문장으로 다듬기. Ollama 미가용 시 RAG 원문을 그대로 사용.
+        사용자 요청에 의해 장황한 해설(warm_translation)을 제거하고
+        핵심 단어(keyword)만 반환하도록 간소화합니다.
         """
         keyword = (rag_context or {}).get("keyword") or fast_prediction or ""
-        warm = (rag_context or {}).get("warm_translation") or ""
-        emotions = ", ".join((rag_context or {}).get("emotions") or [])
-
-        # RAG 설명이 충분히 길면 그 자체가 이미 따뜻한 문장 → Ollama 건너뜀
-        if warm and len(warm) >= 20:
-            return warm
-
-        prompt = (
-            "당신은 청각장애인과 비장애인을 잇는 따뜻한 통역사입니다.\n"
-            f"수어 단어: {keyword}\n"
-            f"담긴 감정: {emotions}\n"
-            f"기본 설명: {warm}\n"
-            "위 내용을 바탕으로 친근하고 자연스러운 한 문장(최대 40자)으로 다듬어 주세요.\n"
-            "문장:"
-        )
-        result = await self._call_ollama(prompt, timeout=10)
-        result = result.strip() if result else ""
-        return result or warm or keyword or "대기 중"
+        return keyword or "대기 중"
 
 
 slm_agent = SlmAgent()
