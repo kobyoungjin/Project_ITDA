@@ -17,25 +17,138 @@ const state = {
 };
 
 // UI 요소
-const labelInput = document.getElementById('collect-label');
+const labelInput = document.getElementById('collect-word-input');
 const btnStart   = document.getElementById('btn-collect-start');
 const btnStop    = document.getElementById('btn-collect-stop');
 const btnTrain   = document.getElementById('btn-collect-train');
-const countEl    = document.getElementById('collect-count');
-const msgEl      = document.getElementById('collect-msg');
+const countEl    = document.getElementById('collect-sample-count');
+const videoInput = document.getElementById('collect-video-file');
+const btnVideo   = document.getElementById('btn-collect-video');
+const urlInput   = document.getElementById('collect-url-input');
+const btnUrl     = document.getElementById('btn-collect-url');
+const btnBatch   = document.getElementById('btn-collect-batch');
 
 async function init() {
     console.info('[ITDA Collect] 데이터 수집 모듈 초기화');
 
-    btnStart.addEventListener('click', startRecording);
-    btnStop.addEventListener('click', stopRecording);
-    btnTrain.addEventListener('click', trainModel);
+    btnStart?.addEventListener('click', startRecording);
+    btnStop?.addEventListener('click', stopRecording);
+    btnTrain?.addEventListener('click', trainModel);
+    
+    // 비디오 업로드 제어
+    btnVideo?.addEventListener('click', () => videoInput.click());
+    videoInput?.addEventListener('change', handleVideoUpload);
+
+    // URL 추출 제어
+    btnUrl?.addEventListener('click', handleUrlUpload);
+
+    // 배치 학습 제어
+    btnBatch?.addEventListener('click', handleBatchUpload);
 
     // 카메라 데이터 구독
     window.addEventListener('itda:hands:results', onHandsDetected);
     
     // 초기 상태 확인
     updateStatus();
+}
+
+async function handleBatchUpload() {
+    if (!confirm('사전 영상 데이터(상위 10개)를 자동으로 학습하시겠습니까?\n이 작업은 약 1~2분 정도 소요됩니다.')) return;
+
+    btnBatch.disabled = true;
+    btnBatch.textContent = '⏳ 자동 학습 진행 중...';
+
+    try {
+        const res = await fetch(`${API_BASE}/batch?limit_words=10`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            alert(`🎉 자동 학습 완료!\n${data.message}`);
+            updateStatus();
+        } else {
+            alert('배치 학습 실패: ' + data.message);
+        }
+    } catch (err) {
+        console.error('배치 학습 실패:', err);
+    } finally {
+        btnBatch.disabled = false;
+        btnBatch.textContent = '🚀 사전 영상 자동 학습 시작';
+    }
+}
+
+async function handleUrlUpload() {
+    const url = urlInput.value.trim();
+    const label = labelInput.value.trim();
+
+    if (!url) {
+        alert('영상 URL을 입력해주세요!');
+        return;
+    }
+    if (!label) {
+        alert('단어 이름을 먼저 입력해주세요!');
+        return;
+    }
+
+    btnUrl.disabled = true;
+    btnUrl.textContent = '⏳';
+
+    try {
+        const res = await fetch(`${API_BASE}/url?label=${encodeURIComponent(label)}&url=${encodeURIComponent(url)}`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            alert(`분석 완료!\n${data.saved_samples}개의 샘플이 '${label}'로 추가되었습니다.`);
+            updateStatus();
+            urlInput.value = '';
+        } else {
+            alert('URL 분석 실패: ' + data.message);
+        }
+    } catch (err) {
+        console.error('URL 업로드 실패:', err);
+    } finally {
+        btnUrl.disabled = false;
+        btnUrl.textContent = '추출';
+    }
+}
+
+async function handleVideoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const label = labelInput.value.trim();
+    if (!label) {
+        alert('영상에 해당하는 단어 이름을 입력해주세요!');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    btnVideo.disabled = true;
+    btnVideo.textContent = '⏳ 분석 중...';
+
+    try {
+        const res = await fetch(`${API_BASE}/video?label=${encodeURIComponent(label)}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            alert(`분석 완료!\n${data.saved_samples}개의 샘플이 '${label}'로 추가되었습니다.`);
+            updateStatus();
+        } else {
+            alert('비디오 분석 실패: ' + data.message);
+        }
+    } catch (err) {
+        console.error('비디오 업로드 실패:', err);
+    } finally {
+        btnVideo.disabled = false;
+        btnVideo.textContent = '영상 업로드 및 분석';
+        videoInput.value = '';
+    }
 }
 
 async function startRecording() {
@@ -60,8 +173,6 @@ async function startRecording() {
             btnStart.style.display = 'none';
             btnStop.style.display = 'block';
             labelInput.disabled = true;
-            msgEl.textContent = `🔴 '${label}' 수집 중... 카메라 앞에서 동작을 반복하세요.`;
-            msgEl.style.color = '#ff4757';
         }
     } catch (e) {
         console.error('수집 시작 실패:', e);
@@ -77,8 +188,6 @@ async function stopRecording() {
         btnStart.style.display = 'block';
         btnStop.style.display = 'none';
         labelInput.disabled = false;
-        msgEl.textContent = `✅ 수집 완료. 총 ${data.count}개의 샘플이 저장되었습니다.`;
-        msgEl.style.color = 'var(--accent-green)';
         updateStatus();
     } catch (e) {
         console.error('수집 중지 실패:', e);
@@ -94,20 +203,34 @@ async function onHandsDetected(e) {
     const hands = e.detail.hands;
     if (hands.length === 0) return;
 
-    // 일단 첫 번째 손(주로 쓰는 손) 데이터만 전송
-    const landmarks = hands[0].landmarks;
-    const handedness = hands[0].handedness;
+    // 양손 데이터 추출
+    let right_landmarks = null;
+    let left_landmarks = null;
+
+    for (const h of hands) {
+        if (h.handedness === 'Right') {
+            right_landmarks = h.landmarks;
+        } else if (h.handedness === 'Left') {
+            left_landmarks = h.landmarks;
+        }
+    }
 
     try {
         const res = await fetch(`${API_BASE}/sample`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ landmarks, handedness })
+            body: JSON.stringify({ 
+                right_landmarks, 
+                left_landmarks,
+                // 하위 호환성을 위해 hands[0]도 보냄 (필요 시)
+                landmarks: hands[0].landmarks,
+                handedness: hands[0].handedness
+            })
         });
         const data = await res.json();
         if (data.ok) {
             state.count = data.count;
-            countEl.textContent = `${data.count}개`;
+            if (countEl) countEl.textContent = `${data.count}개`;
             state.lastSampleTime = now;
         }
     } catch (err) {
@@ -116,8 +239,8 @@ async function onHandsDetected(e) {
 }
 
 async function trainModel() {
-    msgEl.textContent = '⚙️ 모델 훈련 중... 잠시만 기다려주세요.';
     btnTrain.disabled = true;
+    btnTrain.textContent = '⏳ 훈련 중...';
 
     try {
         const res = await fetch(`${API_BASE}/train`, {
@@ -129,15 +252,14 @@ async function trainModel() {
         
         if (data.ok) {
             alert(`훈련 완료!\n정확도: ${data.accuracy}%\n단어 수: ${data.label_count}`);
-            msgEl.textContent = data.message;
         } else {
             alert(`훈련 실패: ${data.message}`);
-            msgEl.textContent = '❌ 훈련 실패';
         }
     } catch (e) {
         console.error('훈련 요청 실패:', e);
     } finally {
         btnTrain.disabled = false;
+        btnTrain.textContent = '⚙️ KNN 모델 훈련 시작';
     }
 }
 

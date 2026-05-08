@@ -163,7 +163,7 @@ const POSE_KEYS = {
 const MOTION_THRESHOLDS = {
   MOVING_SPEED: 0.015,  // 정규화 좌표/프레임 (약 1.5% 화면 이동)
   STABLE_SPEED: 0.004,
-  STABLE_HOLD_MS: 1200, // 정지 상태가 1.2초 이상 유지되어야 동작 완료(stable)로 판정
+  STABLE_HOLD_MS: 500, // 정지 상태가 0.5초 이상 유지되어야 동작 완료(stable)로 판정 (반응성 향상)
 };
 const motionState = {
   phase: 'idle',         // idle | moving | settling | stable
@@ -286,16 +286,15 @@ function sendFrameWS(hands) {
   if (!isFinalTrigger && now - lastSendTime < 300) return;
   lastSendTime = now;
 
-  // [P0] 손 관절 Handshape 분류기: 21개 전체 랜드마크 전송 (MCP/PIP/DIP 굴곡 각도 계산 필수)
-  // 손목(0)을 원점으로 하여 상대좌표로 정규화 → 카메라 거리 변화에 강건한 분류
+  // [P0] 손 관절 랜드마크 전송: 21개 전체 랜드마크 전송
+  // 백엔드 ml_utils에서 직접 정규화(wrist 기준) 및 거리 계산을 수행하므로 절대좌표로 전송
   const handDataList = hands.map(h => {
-    const wrist = h.landmarks[0];
     const keypoints = h.landmarks.map(lm => ({
-      x: +(lm.x - wrist.x).toFixed(4),
-      y: +(lm.y - wrist.y).toFixed(4),
-      z: +((lm.z ?? 0) - (wrist.z ?? 0)).toFixed(4),
+      x: +lm.x.toFixed(4),
+      y: +lm.y.toFixed(4),
+      z: +(lm.z ?? 0).toFixed(4),
     }));
-    return { handedness: h.handedness, keypoints: keypoints, normalized: true };
+    return { handedness: h.handedness, keypoints: keypoints, normalized: false };
   });
 
   // [과제 1] 원시 좌표(x,y,z) 대신 백엔드가 이해하기 쉬운 메타데이터 추출

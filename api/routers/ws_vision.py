@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import json
 import logging
 import time
+from collections import deque, Counter
 
 from api.core.websockets_schema import VisionFrame, VisionAck, HandAnalysis, PoseAnalysis
 from api.services.rag_engine import rag_engine
@@ -15,6 +16,47 @@ class ConnectionManager:
     def __init__(self):
         self.active: dict[str, WebSocket] = {}
         self.processing: dict[str, bool] = {} # [과제 3] 세션별 처리 상태(Lock) 추적
+        # 세션별 시계열 상태 저장소
+        self.smoothed_states: dict[str, dict] = {} # {session_id: {'R': lms, 'L': lms}}
+        self.prediction_windows: dict[str, deque] = {} # {session_id: deque}
+        self.ema_alpha = 0.4 # 필터 강도 (0~1, 낮을수록 부드러움)
+
+    def _smooth_landmarks(self, session_id, side, new_lms):
+        if not new_lms: return None
+        
+        if session_id not in self.smoothed_states:
+            self.smoothed_states[session_id] = {'R': None, 'L': None}
+        
+        prev_lms = self.smoothed_states[session_id].get(side)
+        if not prev_lms:
+            self.smoothed_states[session_id][side] = new_lms
+            return new_lms
+        
+        smoothed = []
+        for n, p in zip(new_lms, prev_lms):
+            smoothed.append({
+                "x": p["x"] * (1 - self.ema_alpha) + n["x"] * self.ema_alpha,
+                "y": p["y"] * (1 - self.ema_alpha) + n["y"] * self.ema_alpha,
+                "z": p.get("z", 0) * (1 - self.ema_alpha) + n.get("z", 0) * self.ema_alpha
+            })
+        self.smoothed_states[session_id][side] = smoothed
+        return smoothed
+
+    def _get_voted_result(self, session_id, current_pred):
+        if session_id not in self.prediction_windows:
+            self.prediction_windows[session_id] = deque(maxlen=10)
+            
+        if current_pred:
+            self.prediction_windows[session_id].append(current_pred)
+        
+        window = self.prediction_windows[session_id]
+        if not window: return None
+            
+        counts = Counter(window)
+        most_common = counts.most_common(1)
+        if most_common and most_common[0][1] >= 3: 
+            return most_common[0][0]
+        return None
 
     async def connect(self, session_id: str, ws: WebSocket):
         self.active[session_id] = ws
@@ -23,6 +65,8 @@ class ConnectionManager:
     def disconnect(self, session_id: str):
         self.active.pop(session_id, None)
         self.processing.pop(session_id, None)
+        self.smoothed_states.pop(session_id, None)
+        self.prediction_windows.pop(session_id, None)
 
     async def send_ack(self, session_id: str, ack: VisionAck):
         ws = self.active.get(session_id)
@@ -67,8 +111,6 @@ async def _handle(session_id: str, raw: dict):
             return
 
         # ──────── [P0] Handshape 분류 (21 keypoint 기반) ────────
-        # 각 손을 독립적으로 분석해 KSL 수형(FIST/PALM/POINT/V/L/OK)으로 분류,
-        # SLM 프롬프트에 주입 가능한 자연어 요약도 함께 준비.
         hand_analyses: list[HandAnalysis] = []
         for h in raw.get("hands", []):
             result = analyze_hand(h)
@@ -87,7 +129,6 @@ async def _handle(session_id: str, raw: dict):
                 pose_analysis_obj = PoseAnalysis(**pose_res)
                 pose_summary = pose_res["summary"]
 
-        # meta_features 에 통합 주입 — SLM 프롬프트가 이 값들을 소비
         meta = dict(raw.get("meta_features") or {})
         meta["handshapes"] = [a.handshape for a in hand_analyses]
         meta["handshape_summary"] = handshape_summary
@@ -97,33 +138,44 @@ async def _handle(session_id: str, raw: dict):
             meta["elbow_bends"] = [pose_analysis_obj.elbow_bend_R, pose_analysis_obj.elbow_bend_L]
         raw["meta_features"] = meta
 
-        # ──────── [3단계: 하이브리드 번역 파이프라인] ────────
-
-        # [P2] 모션 phase 기반 게이팅:
-        #   moving / settling → 무거운 AI 호출 생략하고 빠른 Draft만 송출
-        #   stable / idle    → 풀 파이프라인 실행
         motion_phase = meta.get("motion_phase", "stable")
         run_full_pipeline = motion_phase in ("stable", "idle")
 
-        # ── [KNN 초고속 판정] ──────────────────────────────────
-        # 훈련된 KNN 모델이 있으면 Gemini 호출 전에 먼저 시도
-        # → 신뢰도 60% 이상이면 AI 없이 0.001초만에 번역 확정
         knn_result = None
         knn_confidence = 0.0
         if run_full_pipeline:
             from api.services import knn_classifier
             hands_raw = raw.get("hands") or []
             if hands_raw and knn_classifier.is_model_ready():
-                first_hand = hands_raw[0]
-                kps = first_hand.get("keypoints") or []
-                # keypoints를 landmarks 형식으로 변환
-                lms = [{"x": kp["x"], "y": kp["y"], "z": kp.get("z", 0)} for kp in kps]
-                knn_result, knn_confidence = knn_classifier.predict(lms)
+                right_lms = None
+                left_lms = None
+
+                for h in hands_raw:
+                    label_side = h.get("handedness", "Right")
+                    kps = h.get("keypoints") or []
+                    lms = [{"x": kp["x"], "y": kp["y"], "z": kp.get("z", 0)} for kp in kps]
+                    
+                    if label_side == "Right":
+                        right_lms = lms
+                    else:
+                        left_lms = lms
+                
+                # 1. 필터 적용 (Smoothing)
+                s_right = manager._smooth_landmarks(session_id, 'R', right_lms)
+                s_left = manager._smooth_landmarks(session_id, 'L', left_lms)
+                
+                # 2. 보정된 값으로 예측
+                knn_result, knn_confidence = knn_classifier.predict(s_right, s_left)
+                
+                # 3. 다수결 투표 적용
+                voted_result = manager._get_voted_result(session_id, knn_result)
+                
+                # 최종 결과 업데이트
+                knn_result = voted_result
                 if knn_result:
                     print(f"[KNN] ✅ {knn_result} (신뢰도 {knn_confidence:.1%}) — Gemini 생략")
 
         from api.services.slm_agent import slm_agent
-        # KNN이 확실하게 맞추면 Gemini 건너뜀, 아니면 AI 분석
         if knn_result:
             fast_pred = knn_result
         else:
@@ -157,8 +209,8 @@ async def _handle(session_id: str, raw: dict):
         rag_result = {
             "type": "final",
             "text": final_text,
-            "emotions": rag_data.get('emotions', []),
-            "video_url": rag_data.get('video_url', ''),
+            "emotions": rag_data.get('emotions', []) if rag_data else [],
+            "video_url": rag_data.get('video_url', '') if rag_data else '',
             "motion_phase": motion_phase,
         }
 

@@ -257,14 +257,14 @@
     }
 
     #lesson-card {
-      position: absolute; top: 4.5rem; right: 1.2rem;
-      width: 260px;
-      background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(14px);
-      border: 1px solid var(--border); border-radius: 12px;
-      padding: 0.9rem 1rem; z-index: 35;
-      box-shadow: var(--shadow-lg);
+      position: absolute; bottom: 1.2rem; right: 1.2rem;
+      width: 280px;
+      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 1rem; z-index: 100;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
       color: var(--text-main);
-      font-size: 0.78rem;
+      display: none;
     }
     .lesson-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
     .lesson-emoji { font-size: 2rem; line-height: 1; }
@@ -300,6 +300,30 @@
       transition: all .15s;
     }
     .lesson-nav-btn:hover { background: rgba(0, 242, 254, 0.2); }
+
+    /* ── [NEW] 수집 패널 (Collect Mode) ────────────────── */
+    #collect-card {
+      position: absolute; bottom: 1.2rem; right: 1.2rem;
+      width: 280px;
+      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 1rem; z-index: 100;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      color: var(--text-main);
+      display: none;
+    }
+    .collect-label { font-size: 0.62rem; color: var(--accent-green); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 0.3rem; }
+    .collect-input {
+      width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      color: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.6rem;
+    }
+    .collect-stats { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.6rem; display: flex; justify-content: space-between; }
+    .btn-collect {
+      width: 100%; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; border: none; transition: all 0.2s;
+    }
+    .btn-collect-start { background: #ef4444; color: #fff; }
+    .btn-collect-stop  { background: #64748b; color: #fff; display: none; }
+    .btn-collect-start:hover { background: #dc2626; }
 
     /* ── [Tier1] 모션 엔진 V2/V1 토글 ───────────────────── */
     #motion-version-toggle {
@@ -571,16 +595,60 @@
         </div>
 
         <!-- 컨트롤 버튼 (아바타 영역 하단 플로팅) -->
-        <div class="controls" style="bottom: 5rem; right: 1rem;">
-          <div id="mode-toggle" style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+        <div class="controls" style="bottom: 1.2rem; right: 1.2rem;">
+          <div id="mode-toggle" style="display:flex; gap:0.4rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid var(--border);">
             <button class="mode-btn active" data-mode="translate">번역</button>
             <button class="mode-btn" data-mode="learn">학습</button>
             <button class="mode-btn" data-mode="collect">수집</button>
           </div>
-          <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
-          <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
         </div>
-      </div>
+
+        <!-- [NEW] 학습 모드 카드 -->
+        <div id="lesson-card">
+          <div class="lesson-header">
+            <div class="lesson-emoji" id="lesson-emoji">🎓</div>
+            <div>
+              <div class="lesson-label">Sign Learning</div>
+              <div class="lesson-word" id="lesson-word">준비 중</div>
+            </div>
+          </div>
+          <div class="lesson-hint" id="lesson-hint">동작을 따라해 보세요.</div>
+          <div class="lesson-status" id="lesson-status" data-state="idle">대기 중</div>
+          <div class="lesson-nav">
+            <button class="lesson-nav-btn" id="lesson-prev">◀</button>
+            <button class="lesson-nav-btn" id="lesson-stop">중지</button>
+            <button class="lesson-nav-btn" id="lesson-next">▶</button>
+          </div>
+        </div>
+
+        <!-- [NEW] 수집 모드 카드 -->
+        <div id="collect-card">
+          <div class="collect-label">Collection Mode</div>
+          <div style="font-size: 1.1rem; font-weight: 800; margin-bottom: 0.8rem; color: var(--accent-green);">샘플 수집</div>
+          
+          <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력">
+          
+          <div class="collect-stats">
+            <span>샘플 수:</span>
+            <strong id="collect-sample-count" style="color: var(--accent-cyan);">0</strong>
+          </div>
+
+          <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 수집 시작</button>
+          <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 중지</button>
+          <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.4rem;">⚙️ KNN 모델 훈련</button>
+          
+          <div style="border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <button id="btn-collect-batch" style="width: 100%; background: var(--accent-purple); color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">🚀 사전 영상 자동 학습 시작</button>
+            
+            <div style="display: flex; gap: 0.4rem; margin-top: 0.2rem;">
+              <input type="text" id="collect-url-input" class="collect-input" style="margin-bottom:0; flex:1;" placeholder="영상 URL 입력 (mp4)">
+              <button id="btn-collect-url" style="background: var(--accent-cyan); color: #000; border: none; padding: 0 10px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.7rem;">추출</button>
+            </div>
+            <input type="file" id="collect-video-file" accept="video/*" style="display: none;">
+            <button id="btn-collect-video" style="width: 100%; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan); padding: 6px; border-radius: 8px; cursor: pointer; font-size: 0.7rem;">📂 내 PC 영상 파일 학습</button>
+          </div>
+        </div>
+
 
       <!-- 비전 로딩 오버레이 -->
       <div id="vision-overlay">
@@ -850,15 +918,21 @@
       if (outputEl) {
         if (result.type === 'draft') {
           // '대기 중'이거나 '미인식'인 경우 카메라 오버레이 숨김
-          if (result.text === '대기 중' || result.text.includes('미인식')) {
+          if (result.text === '대기 중') {
             if (liveOverlay) liveOverlay.style.opacity = "0";
             outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">동작 분석 중...</em>`;
             return;
           }
 
-          outputEl.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 예측 중: ${result.text}</span>`;
+          // 미인식(POINT) 등 확신이 낮은 경우도 현재 예측 상태를 투명하게 표시
+          const conf = result.knn_confidence ? ` (${Math.round(result.knn_confidence * 100)}%)` : "";
+          const isUncertain = result.text.includes('미인식');
+          const displayColor = isUncertain ? 'var(--text-muted)' : 'var(--accent-orange)';
+          const displayText = isUncertain ? `🤔 분석 중: ${result.text}` : `🤔 예측 중: ${result.text}`;
+
+          outputEl.innerHTML = `<span style="color:${displayColor}; font-style:italic;">${displayText}${conf}</span>`;
           if (liveText) {
-            liveText.innerHTML = `<span style="color:var(--text-muted); opacity:0.8">${result.text}</span>`;
+            liveText.innerHTML = `<span style="color:${displayColor}; opacity:0.8">${result.text}${conf}</span>`;
             liveOverlay.style.opacity = "1";
             liveOverlay.style.transform = "translateX(-50%) scale(1)";
           }
@@ -881,7 +955,8 @@
           // 4초 후 마지막 텍스트 초기화 (다른 동작 인식 준비)
           setTimeout(() => { if(lastFinalText === result.text) lastFinalText = ""; }, 4000); 
 
-          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${emotionsHtml}`;
+          const conf = result.knn_confidence ? ` (${Math.round(result.knn_confidence * 100)}%)` : "";
+          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
           
           // [NEW] TTS 음성 출력 (Voice Toggle 반영)
           if (window.speechSynthesis && window._isVoiceOn) {
@@ -905,7 +980,7 @@
           }
 
           if (liveText) {
-            liveText.innerHTML = `<span style="color:var(--accent-cyan); text-shadow: 0 0 10px rgba(0,242,254,0.5)">✨ ${result.text}</span>`;
+            liveText.innerHTML = `<span style="color:var(--accent-cyan); text-shadow: 0 0 10px rgba(0,242,254,0.5)">✨ ${result.text}${conf}</span>`;
             liveOverlay.style.opacity = "1";
             liveOverlay.style.transform = "translateX(-50%) scale(1.1)";
             
@@ -996,11 +1071,11 @@
     });
     */
 
-    document.getElementById('btn-reset').addEventListener('click', () => {
+    document.getElementById('btn-reset')?.addEventListener('click', () => {
       window.ITDAAvatar5?.reset();
     });
 
-    document.getElementById('btn-cam').addEventListener('click', () => {
+    document.getElementById('btn-cam')?.addEventListener('click', () => {
       // OrbitControls target 초기화는 avatar.js 내부이므로 페이지 재로드로 대체
       window.location.reload();
     });

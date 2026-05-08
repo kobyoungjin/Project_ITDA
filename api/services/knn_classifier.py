@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
-CONFIDENCE_THRESHOLD = 0.60  # 60% 이하 신뢰도는 '미인식'으로 처리
+CONFIDENCE_THRESHOLD = 0.30  # 30% 이상이면 인식 시도 (단어 수가 늘어남에 따라 하향 조정)
 
 _model = None  # 싱글톤 캐시
 
@@ -23,71 +23,56 @@ def _load_model():
     return _model
 
 
-def extract_features(landmarks: list) -> Optional[list]:
+from api.core.ml_utils import extract_ksl_features
+
+def predict(right_lms: Optional[list], left_lms: Optional[list]) -> tuple[Optional[str], float]:
     """
-    21개 MediaPipe 랜드마크 dict 리스트 → 16차원 특징 벡터
-    """
-    if not landmarks or len(landmarks) < 21:
-        return None
-
-    wrist = landmarks[0]
-    pts = [(lm["x"] - wrist["x"], lm["y"] - wrist["y"],
-            lm.get("z", 0) - wrist.get("z", 0)) for lm in landmarks]
-
-    mid_tip = pts[12]
-    scale = math.hypot(mid_tip[0], mid_tip[1])
-    if scale < 1e-6:
-        return None
-    pts = [(p[0]/scale, p[1]/scale, p[2]/scale) for p in pts]
-
-    def angle(a, b, c):
-        ab = (b[0]-a[0], b[1]-a[1])
-        cb = (b[0]-c[0], b[1]-c[1])
-        dot = ab[0]*cb[0] + ab[1]*cb[1]
-        m = math.hypot(*ab) * math.hypot(*cb)
-        return math.acos(max(-1.0, min(1.0, dot/m))) if m > 1e-9 else 0.0
-
-    fingers = [
-        [1, 2, 3, 4],
-        [5, 6, 7, 8],
-        [9, 10, 11, 12],
-        [13, 14, 15, 16],
-        [17, 18, 19, 20],
-    ]
-
-    features = []
-    for f in fingers:
-        features.append(angle(pts[0],    pts[f[0]], pts[f[1]]))
-        features.append(angle(pts[f[0]], pts[f[1]], pts[f[2]]))
-        features.append(angle(pts[f[1]], pts[f[2]], pts[f[3]]))
-    features.append(scale)
-
-    return features
-
-
-def predict(landmarks: list) -> tuple[Optional[str], float]:
-    """
-    랜드마크 → (단어, 신뢰도) 반환.
-    모델이 없거나 신뢰도 부족 시 (None, 0.0) 반환.
+    양손 랜드마크 → (단어, 신뢰도) 반환.
+    양손 스왑(Ambidextrous) 폴백을 적용하여 좌우 반전 및 왼손잡이 대응.
     """
     model = _load_model()
     if model is None:
         return None, 0.0
 
-    features = extract_features(landmarks)
-    if features is None:
+    # 1. 정방향 시도 (오른손=R, 왼손=L)
+    feats_normal = extract_ksl_features(right_lms, left_lms)
+    if feats_normal is None:
         return None, 0.0
+    
+    proba_normal = model.predict_proba([feats_normal])[0]
+    idx_n = int(np.argmax(proba_normal))
+    conf_normal = float(proba_normal[idx_n])
+    label_normal = model.classes_[idx_n]
 
-    proba = model.predict_proba([features])[0]
-    idx = int(np.argmax(proba))
-    confidence = float(proba[idx])
-    label = model.classes_[idx]
+    # 2. 역방향 시도 (오른손=L, 왼손=R) - 좌우 반전/스왑 대응
+    feats_swap = extract_ksl_features(left_lms, right_lms)
+    conf_swap = 0.0
+    label_swap = None
+    if feats_swap:
+        proba_swap = model.predict_proba([feats_swap])[0]
+        idx_s = int(np.argmax(proba_swap))
+        conf_swap = float(proba_swap[idx_s])
+        label_swap = model.classes_[idx_s]
 
-    if confidence < CONFIDENCE_THRESHOLD:
-        return None, confidence
+    # 3. 더 높은 신뢰도 선택
+    if conf_normal >= conf_swap:
+        final_label, final_conf = label_normal, conf_normal
+    else:
+        final_label, final_conf = label_swap, conf_swap
 
-    return label, confidence
+    if final_conf < CONFIDENCE_THRESHOLD:
+        return None, final_conf
+
+    return final_label, final_conf
 
 
 def is_model_ready() -> bool:
     return _load_model() is not None
+
+
+def get_labels() -> list[str]:
+    """현재 모델이 학습한 단어 목록 반환"""
+    model = _load_model()
+    if model is not None:
+        return list(model.classes_)
+    return []

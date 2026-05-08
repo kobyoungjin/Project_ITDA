@@ -138,6 +138,13 @@ class SlmAgent:
         if skip_ollama:
             return _rule_based_predict(meta)
 
+        from api.services import knn_classifier
+        trained_labels = knn_classifier.get_labels()
+        candidate_list = ", ".join(list(dict.fromkeys(
+            ["안녕하세요", "사랑합니다", "고맙습니다", "나", "너", "행복해요", "만나다", "가다", "반가워요", "이름", 
+             "미안합니다", "힘내세요", "어디에요", "괜찮아요", "도와주세요", "이름이 뭐예요"] + trained_labels
+        )))
+
         prompt = (
             "당신은 한국 수어(KSL) 통역사입니다. 아래 관찰 정보를 바탕으로, "
             "반드시 제시된 [단어 후보군] 안에서만 정답을 하나 골라 출력하세요. "
@@ -147,9 +154,7 @@ class SlmAgent:
             f"- 손 위치(부위): {meta.get('wrist_regions', '알 수 없음')}\n"
             f"- 상체 포즈: {meta.get('pose_summary', '감지 안됨')}\n"
             f"- 손 움직임: {meta.get('movement', '정지')}\n\n"
-            "[단어 후보군]\n"
-            "안녕하세요, 사랑합니다, 고맙습니다, 나, 너, 행복해요, 만나다, 가다, 반가워요, 이름, "
-            "미안합니다, 힘내세요, 어디에요, 괜찮아요, 도와주세요, 이름이 뭐예요\n\n"
+            f"[단어 후보군]\n{candidate_list}\n\n"
             "정답:"
         )
 
