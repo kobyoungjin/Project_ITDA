@@ -70,27 +70,51 @@ def _rule_based_predict(meta: Dict[str, Any]) -> str:
     right_region = regions[0] if regions else ""
     movement = (meta.get("movement") or "").lower()
 
-    # 사용자 요청에 의해 RULE_HINTS를 통한 임의 예측을 비활성화합니다.
-    # 이제 AI(Ollama) 분석 전까지는 무조건 미인식/대기 상태로 처리됩니다.
-    
-    # 손이 감지되지 않으면 기본 유휴 상태
+    # 1. 손이 감지되지 않으면 기본 유휴 상태
     if not shapes:
         return "대기 중"
+    
+    # 2. 유효 구역 및 모션 상태 확인
+    phase = meta.get("motion_phase", "idle")
+    regions = meta.get("wrist_regions") or []
+    is_in_valid_region = any(r in ("얼굴", "얼굴 위", "가슴") for r in regions)
+
+    # 손이 'idle'(정지) 상태이면서 유효 구역(얼굴/가슴) 밖에 있으면 '대기 중' 처리
+    if phase == "idle" and not is_in_valid_region:
+        return "대기 중"
         
-    # 손이 감지되었지만 아직 AI가 분석하기 전 (임시 상태)
+    # 3. 그 외(moving, settling, 또는 유효 구역 내 정지)는 상태 표시 및 인식 진행
     return f"미인식({'+'.join(shapes)})"
 
 
 def _clean_single_word(text: str) -> str:
-    """SLM 출력에서 한 단어만 추출. 따옴표/공백/설명 제거."""
+    """SLM 출력에서 한 단어만 추출. 따옴표/공백/설명/정답: 접두어 등 제거."""
     if not text:
         return ""
+    
+    # "정답:" 접두어 제거 (Gemini 등이 프롬프트의 '정답:'을 반복 출력할 경우 대비)
+    text = text.replace("정답:", " ").replace("정답", " ")
+    
     # 마크다운 · 따옴표 · 줄바꿈 제거
     for ch in ('"', "'", "`", "*", "\n", "\r", "\t"):
         text = text.replace(ch, " ")
-    # 첫 줄의 첫 번째 토큰만
+        
+    # 공백으로 분리하고 빈 문자열 제거
     parts = [p for p in text.split() if p]
+    
+    # "미인식" 계열 예외 처리
+    if parts and parts[0].startswith("미인식"):
+        return "미인식"
+        
     return parts[0][:20] if parts else ""
+
+def _clean_sentence(text: str) -> str:
+    """SLM 출력에서 완성된 문장 추출. 특수기호만 제거."""
+    if not text:
+        return ""
+    for ch in ('"', "'", "`", "*", "\n", "\r", "\t"):
+        text = text.replace(ch, " ")
+    return text.strip()
 
 
 class SlmAgent:
@@ -140,10 +164,14 @@ class SlmAgent:
 
         from api.services import knn_classifier
         trained_labels = knn_classifier.get_labels()
-        candidate_list = ", ".join(list(dict.fromkeys(
-            ["안녕하세요", "사랑합니다", "고맙습니다", "나", "너", "행복해요", "만나다", "가다", "반가워요", "이름", 
-             "미안합니다", "힘내세요", "어디에요", "괜찮아요", "도와주세요", "이름이 뭐예요"] + trained_labels
-        )))
+        
+        # KNN이 학습한 단어만 후보로 제시 (하드코딩 제거 — Gemini 오판 방지)
+        # trained_labels가 비어있을 때만 기본 후보군 사용
+        if trained_labels:
+            candidate_list = ", ".join(trained_labels)
+        else:
+            candidate_list = "안녕하세요, 고맙습니다, 미안합니다, 반가워요, 도와주세요"
+
 
         prompt = (
             "당신은 한국 수어(KSL) 통역사입니다. 아래 관찰 정보를 바탕으로, "
@@ -174,6 +202,24 @@ class SlmAgent:
         """
         keyword = (rag_context or {}).get("keyword") or fast_prediction or ""
         return keyword or "대기 중"
+
+    async def build_sentence(self, words: list[str]) -> str:
+        """
+        [NEW] Sentence Builder (Task 1)
+        인식된 여러 단어들을 조합하여 자연스러운 하나의 문장으로 구성합니다.
+        """
+        if not words: return ""
+        prompt = (
+            "당신은 한국 수어(KSL) 번역가입니다. 사용자가 연속으로 표현한 다음 수어 단어들을 "
+            "조합하여 가장 자연스러운 하나의 한국어 문장으로 만들어주세요.\n"
+            f"입력 단어들: {', '.join(words)}\n\n"
+            "출력 규칙:\n"
+            "1. 부연 설명 없이 완성된 문장 하나만 출력하세요.\n"
+            "2. 마크다운이나 특수기호를 사용하지 마세요.\n"
+            "정답:"
+        )
+        raw_text = await self._call_ai(prompt)
+        return _clean_sentence(raw_text)
 
 
 slm_agent = SlmAgent()

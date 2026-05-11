@@ -23,7 +23,7 @@ from typing import List, Optional
 import shutil
 import cv2
 import mediapipe as mp
-from api.core.ml_utils import extract_ksl_features
+from api.core.ml_utils import extract_ksl_features, augment_landmarks
 
 router = APIRouter()
 
@@ -143,6 +143,17 @@ def train_knn_model(n_neighbors: int = 5):
     from sklearn.model_selection import cross_val_score
 
     df = pd.read_csv(CSV_PATH, encoding='utf-8')
+    
+    # [NEW] 사용자 데이터 병합 최적화 (Task 3)
+    original_len = len(df)
+    df = df.drop_duplicates() # 중복 노이즈 제거
+    # 클래스 불균형 해소: 단어당 최대 100개 샘플만 사용하여 오버피팅 방지
+    df = df.groupby('label').head(100).reset_index(drop=True)
+    
+    if len(df) < original_len:
+        print(f"[Collect] 데이터 정제: {original_len} -> {len(df)} (중복 및 초과 샘플 제거)")
+        df.to_csv(CSV_PATH, index=False, encoding='utf-8') # 정제된 데이터 덮어쓰기
+
     if len(df) < 10:
         return {"ok": False, "message": f"샘플 수 부족 ({len(df)}개). 최소 10개 이상 필요합니다."}
 
@@ -283,11 +294,14 @@ async def collect_batch(limit_words: int = 50):
     }
 
 def _process_video_file(video_path: Path, label: str):
-    """실제 비디오 분석 (CPU 집약적 작업)"""
+    """
+    실제 비디오 분석 (CPU 집약적 작업)
+    [증강 적용] 프레임 1개 -> 원본 1 + 증강 8 = 총 9배 샘플 자동 생성
+    직접 수집 없이도 손 크기/각도 개인차에 강건한 모델을 만든다.
+    """
     mp_hands = mp.solutions.hands
     saved_count = 0
     
-    # 헬퍼 함수: 영상 열기 시도
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         return 0
@@ -300,12 +314,12 @@ def _process_video_file(video_path: Path, label: str):
             min_tracking_confidence=0.5
         ) as hands:
             count = 0
-            while cap.isOpened() and saved_count < 20: # 단어당 최대 20개 샘플
+            while cap.isOpened() and saved_count < 100:  # 증강 포함 최대 100개
                 ret, frame = cap.read()
                 if not ret: break
                 
                 count += 1
-                if count % 5 != 0: continue # 샘플링 간격
+                if count % 5 != 0: continue
                 
                 image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 results = hands.process(image)
@@ -323,10 +337,24 @@ def _process_video_file(video_path: Path, label: str):
                             else:
                                 left_lms = lms
                     
+                    # 원본 저장
                     features = extract_ksl_features(right_lms, left_lms)
                     if features:
                         _save_sample(features, label)
                         saved_count += 1
+
+                    # 증강 샘플 자동 생성 (한 손이라도 있으면 증강)
+                    aug_base = right_lms or left_lms
+                    if aug_base and saved_count < 100:
+                        for aug_lms in augment_landmarks(aug_base, n=8):
+                            if saved_count >= 100:
+                                break
+                            aug_r = aug_lms if right_lms else None
+                            aug_l = aug_lms if left_lms else None
+                            aug_feats = extract_ksl_features(aug_r, aug_l)
+                            if aug_feats:
+                                _save_sample(aug_feats, label)
+                                saved_count += 1
     finally:
         cap.release()
         

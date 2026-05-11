@@ -23,6 +23,10 @@ class ConnectionManager:
         self.pending_frames: dict[str, dict | None] = {} # [개선안 1] 최신 대기 프레임
         self.last_motion_phase: dict[str, str] = {} # [개선안 2] 상태 전환 감지용
         self.ema_alpha = 0.6 # 민감도 향상 (높을수록 즉각 반응)
+        
+        # [NEW] 문장 구성기(Sentence Builder)용 상태
+        self.sentence_buffer: dict[str, list[str]] = {}
+        self.last_action_time: dict[str, float] = {}
 
     def _smooth_landmarks(self, session_id, side, new_lms):
         if not new_lms: return None
@@ -72,6 +76,8 @@ class ConnectionManager:
         self.prediction_windows.pop(session_id, None)
         self.pending_frames.pop(session_id, None)
         self.last_motion_phase.pop(session_id, None)
+        self.sentence_buffer.pop(session_id, None)
+        self.last_action_time.pop(session_id, None)
 
     async def send_ack(self, session_id: str, ack: VisionAck):
         ws = self.active.get(session_id)
@@ -108,6 +114,10 @@ async def _handle(session_id: str, raw: dict):
 
     manager.processing[session_id] = True
     manager.pending_frames[session_id] = None # 처리 시작하므로 보관함 비움
+
+    if session_id not in manager.sentence_buffer:
+        manager.sentence_buffer[session_id] = []
+        manager.last_action_time[session_id] = time.time()
 
     recv_t = time.perf_counter()
     try:
@@ -148,6 +158,10 @@ async def _handle(session_id: str, raw: dict):
 
         motion_phase = meta.get("motion_phase", "stable")
         
+        # [NEW] 모션이 감지되면 액션 타임 초기화
+        if motion_phase != "idle":
+            manager.last_action_time[session_id] = time.time()
+        
         # [개선안 2] Moving 전환 시 투표창 초기화 (잔상 제거)
         prev_phase = manager.last_motion_phase.get(session_id, "stable")
         if prev_phase in ("stable", "idle") and motion_phase == "moving":
@@ -156,7 +170,7 @@ async def _handle(session_id: str, raw: dict):
                 print(f"[Vision] 🧹 Motion detected. Clearing vote window.")
         manager.last_motion_phase[session_id] = motion_phase
 
-        run_full_pipeline = motion_phase in ("stable", "idle")
+        run_full_pipeline = motion_phase == "stable"
 
         knn_result = None
         knn_confidence = 0.0
@@ -190,7 +204,16 @@ async def _handle(session_id: str, raw: dict):
                 # 최종 결과 업데이트
                 knn_result = voted_result
                 if knn_result:
-                    print(f"[KNN] ✅ {knn_result} (신뢰도 {knn_confidence:.1%}) — Gemini 생략")
+                    print(f"[KNN] OK {knn_result} ({knn_confidence:.1%})")
+                    # [NEW] 문장 버퍼에 단어 추가 (중속 방지)
+                    buf = manager.sentence_buffer[session_id]
+                    if not buf or buf[-1] != knn_result:
+                        buf.append(knn_result)
+                        manager.last_action_time[session_id] = time.time()
+                        print(f"[SentenceBuilder] 단어 추가: {knn_result} (현재 버퍼: {buf})")
+                else:
+                    # 임계값 미달 상세 로그 - 어느 단어를 예측했고 신뢰도가 얼마인지 출력
+                    print(f"[KNN] MISS conf={knn_confidence:.3f} (threshold=0.50) - 최고 후보 신뢰도 부족")
 
         from api.services.slm_agent import slm_agent
         if knn_result:
@@ -243,6 +266,35 @@ async def _handle(session_id: str, raw: dict):
                 pose_analysis=pose_analysis_obj,
             ),
         )
+        
+        # [NEW] 문장 구성 트리거: idle 상태가 2초 유지되고 버퍼에 단어가 2개 이상일 때
+        now = time.time()
+        buf = manager.sentence_buffer[session_id]
+        if motion_phase == "idle" and len(buf) > 1 and (now - manager.last_action_time[session_id]) > 2.0:
+            print(f"[SentenceBuilder] 🚀 문장 구성 시작: {buf}")
+            sentence = await slm_agent.build_sentence(buf)
+            manager.sentence_buffer[session_id] = [] # 버퍼 초기화
+            manager.last_action_time[session_id] = now
+            
+            sent_result = {
+                "type": "final",
+                "text": f"💬 {sentence}",
+                "emotions": [],
+                "video_url": "",
+                "motion_phase": "idle",
+            }
+            await manager.send_ack(
+                session_id,
+                VisionAck(
+                    frame_id=frame.frame_id,
+                    status="ok",
+                    rag_result=sent_result,
+                    message="문장 완성",
+                    hand_analyses=hand_analyses or None,
+                    pose_analysis=pose_analysis_obj,
+                )
+            )
+
     except Exception as e:
         print(f"[Vision] Critical error in handle: {e}")
     finally:

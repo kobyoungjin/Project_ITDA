@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
-CONFIDENCE_THRESHOLD = 0.55  # [개선안 3] 신뢰도 임계값 상향 (불확실한 예측 차단)
+CONFIDENCE_THRESHOLD = 0.45  # 신뢰도 임계값을 0.45로 조정 (유효 구역 필터링 도입으로 감도 향상)
 
 _model = None  # 싱글톤 캐시
 
@@ -20,7 +20,7 @@ def reload_model():
     global _model
     if MODEL_PATH.exists():
         _model = joblib.load(MODEL_PATH)
-        print(f"[KNN] 모델 리로드 완료 (실시간 갱신) — 인식 단어: {list(_model.classes_)}")
+        print(f"[KNN] 모델 리로드 완료 (실시간 갱신) - 인식 단어: {list(_model.classes_)}")
     else:
         _model = None
     return _model

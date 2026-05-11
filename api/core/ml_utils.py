@@ -1,6 +1,7 @@
 import math
 from typing import Optional
 
+
 def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Optional[list]) -> Optional[list]:
     """
     양손의 MediaPipe 랜드마크 (각 21개) -> 35차원 통합 특징 벡터
@@ -54,7 +55,6 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
     if right_landmarks and left_landmarks:
         rw = right_landmarks[0]
         lw = left_landmarks[0]
-        # 거리 불변성을 위해 원본 landmarks에서 직접 계산한 scale 사용
         def get_scale(lms):
             w = lms[0]
             m = lms[12]
@@ -71,8 +71,73 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
     # 3. 통합 (35차원: 16 + 16 + 3)
     combined = right_feats + left_feats + rel_pos
     
-    # 둘 다 감지 안 된 경우(스케일이 0인 경우) 무시
+    # 둘 다 감지 안 된 경우 무시
     if right_feats[-1] == 0.0 and left_feats[-1] == 0.0:
         return None
         
     return combined
+
+
+# ── 데이터 증강 (Augmentation) ────────────────────────────────────────────
+import random
+
+def augment_landmarks(landmarks: list, n: int = 8) -> list[list]:
+    """
+    MediaPipe 손 랜드마크 1세트 -> 증강된 N세트 자동 생성.
+    영상 속 한 명의 데이터만으로도 개인별 손 크기·각도 차이에
+    강건한 모델을 만들기 위해 다음 변형을 적용합니다:
+      1) XY 미세 2D 회전  (-15도 ~ +15도)
+      2) 스케일 변동      (+-15%)
+      3) XY 가우시안 노이즈  (sigma = 0.01)
+      4) Z축 깊이 노이즈  (sigma = 0.005, 2D 카메라 Z 불확실성 반영)
+    """
+    def _rotate_xy(pts, angle_deg):
+        rad = math.radians(angle_deg)
+        cos_a, sin_a = math.cos(rad), math.sin(rad)
+        return [
+            {**lm,
+             "x": lm["x"] * cos_a - lm["y"] * sin_a,
+             "y": lm["x"] * sin_a + lm["y"] * cos_a}
+            for lm in pts
+        ]
+
+    def _scale(pts, factor):
+        return [{**lm,
+                 "x": lm["x"] * factor,
+                 "y": lm["y"] * factor,
+                 "z": lm.get("z", 0) * factor} for lm in pts]
+
+    def _jitter(pts, sigma_xy=0.01, sigma_z=0.005):
+        return [
+            {**lm,
+             "x": lm["x"] + random.gauss(0, sigma_xy),
+             "y": lm["y"] + random.gauss(0, sigma_xy),
+             "z": lm.get("z", 0) + random.gauss(0, sigma_z)}
+            for lm in pts
+        ]
+
+    if not landmarks or len(landmarks) < 21:
+        return []
+
+    # 손목을 원점으로 이동 후 변형 → 복원
+    wrist = landmarks[0]
+    centered = [
+        {"x": lm["x"] - wrist["x"],
+         "y": lm["y"] - wrist["y"],
+         "z": lm.get("z", 0) - wrist.get("z", 0)}
+        for lm in landmarks
+    ]
+
+    augmented = []
+    for _ in range(n):
+        pts = list(centered)
+        pts = _rotate_xy(pts, random.uniform(-15, 15))
+        pts = _scale(pts, random.uniform(0.85, 1.15))
+        pts = _jitter(pts)
+        # 손목 위치 복원
+        pts = [{"x": p["x"] + wrist["x"],
+                "y": p["y"] + wrist["y"],
+                "z": p["z"] + wrist.get("z", 0)} for p in pts]
+        augmented.append(pts)
+
+    return augmented
