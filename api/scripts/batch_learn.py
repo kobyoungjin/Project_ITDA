@@ -1,64 +1,63 @@
-import os
 import cv2
-import json
-import csv
-import requests
-import tempfile
 import mediapipe as mp
-from pathlib import Path
 import pandas as pd
-import joblib
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+import numpy as np
+import os
+import json
+import requests
+from pathlib import Path
 from api.core.ml_utils import extract_ksl_features
+import joblib
+import csv
+from sklearn.neighbors import KNeighborsClassifier
+
+# 경로 설정
+BASE_DIR = Path("api/data/ksl_training")
+CSV_PATH = BASE_DIR / "ksl_dataset.csv"
+MODEL_PATH = BASE_DIR / "knn_model.pkl"
+URLS_PATH = Path("api/data/sign_video_urls.json")
 
 # MediaPipe 초기화
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
 
-DATA_DIR = Path("api/data/ksl_training")
-CSV_PATH = DATA_DIR / "ksl_dataset.csv"
-URLS_PATH = Path("api/data/sign_video_urls.json")
-MODEL_PATH = DATA_DIR / "knn_model.pkl"
+# 세션 객체 생성 (쿠키 유지)
+session = requests.Session()
 
-def process_video_url(label: str, url: str, limit_frames: int = 20):
-    """
-    URL에서 영상을 다운로드하여 특징점을 추출하고 CSV에 저장합니다.
-    """
-    # sldict.korean.go.kr은 http 접속이 불안정할 수 있으므로 https로 전환
-    if url.startswith("http://sldict.korean.go.kr"):
-        url = url.replace("http://", "https://")
+import subprocess
 
-    # 임시 파일로 영상 다운로드
+def process_video_url(label, url, limit_frames=30):
+    """URL에서 비디오 다운로드 후 특징 추출 (curl 사용 버전)"""
+    tmp_path = "tmp_video.mp4"
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+        
     try:
-        print(f"  - 다운로드 중...", end="", flush=True)
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code != 200:
-            print(f" 실패 (상태 코드: {response.status_code})")
-            return 0
-        print(" 완료")
+        # 시스템 curl 명령어로 다운로드 시도
+        cmd = [
+            "curl", "-L", "-s",
+            "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "-H", "Referer: http://sldict.korean.go.kr/",
+            "--connect-timeout", "15",
+            "--max-time", "60",
+            "-o", tmp_path,
+            url
+        ]
+        subprocess.run(cmd, check=True)
     except Exception as e:
-        print(f" 에러: {e}")
-        return 0
+        print(f"  [Error] curl 다운로드 실패: {e}")
+        return []
 
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-        tmp.write(response.content)
-        tmp_path = tmp.name
+
 
     cap = cv2.VideoCapture(tmp_path)
-    count = 0
-    saved_count = 0
-    
-    while cap.isOpened() and saved_count < limit_frames:
+    extracted_features = []
+    frame_count = 0
+
+    while cap.isOpened() and frame_count < limit_frames:
         ret, frame = cap.read()
         if not ret:
             break
-        
-        count += 1
-        if count % 5 != 0: # 5프레임마다 1개씩 샘플링 (중복 방지)
-            continue
 
         # BGR to RGB
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -67,13 +66,10 @@ def process_video_url(label: str, url: str, limit_frames: int = 20):
         if results.multi_hand_landmarks:
             right_lms = None
             left_lms = None
-
-            # 각 손의 위치(handedness) 파악
-            for idx, hand_handedness in enumerate(results.multi_handedness):
-                # MediaPipe의 label은 이미지 기준이므로 실제와 반대일 수 있으나,
-                # 일관성 있게 'Right', 'Left'로 분류
-                label_side = hand_handedness.classification[0].label
-                hlm = results.multi_hand_landmarks[idx]
+            
+            for i, res in enumerate(results.multi_handedness):
+                label_side = res.classification[0].label # "Right" or "Left"
+                hlm = results.multi_hand_landmarks[i]
                 lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hlm.landmark]
                 
                 if label_side == "Right":
@@ -81,80 +77,107 @@ def process_video_url(label: str, url: str, limit_frames: int = 20):
                 else:
                     left_lms = lms
             
-            # 양손 정보를 ml_utils에 전달
             features = extract_ksl_features(right_lms, left_lms)
             if features:
-                save_to_csv(features, label)
-                saved_count += 1
+                extracted_features.append(features + [label])
+                frame_count += 1
 
     cap.release()
-    os.remove(tmp_path)
-    print(f"  - {saved_count}개 샘플 추출 완료")
-    return saved_count
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+    return extracted_features
 
-def save_to_csv(features, label):
-    is_new = not CSV_PATH.exists()
-    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if is_new:
-            header = [f"f{i}" for i in range(len(features))] + ["label"]
-            writer.writerow(header)
-        writer.writerow(features + [label])
-
-def batch_learn(limit_words: int = 10, frames_per_word: int = 10):
-    if not URLS_PATH.exists():
-        print("Error: sign_video_urls.json 파일을 찾을 수 없습니다.")
-        return
-
-    with open(URLS_PATH, "r", encoding="utf-8") as f:
-        urls_data = json.load(f)
-
-    total_saved = 0
-    words_processed = 0
+def batch_learn(limit: int = 50):
+    TARGET_SAMPLES = 25  # 단어별 최소 목표 샘플 수
     
-    for label, info in urls_data.items():
-        if words_processed >= limit_words:
-            break
+    # 1. 기존 데이터셋 분석
+    existing_counts = {}
+    all_data = []
+    if CSV_PATH.exists():
+        try:
+            df_old = pd.read_csv(CSV_PATH, encoding='utf-8')
+            existing_counts = df_old['label'].value_counts().to_dict()
+            all_data = df_old.values.tolist()
+            print(f"[Batch] 기존 데이터셋 로드됨. 총 {len(df_old)} 샘플.")
+        except Exception as e:
+            print(f"[Batch] 데이터셋 로드 실패: {e}")
+
+    # 2. 사전 데이터 로드
+    if not URLS_PATH.exists():
+        print(f"[Error] {URLS_PATH}이 없습니다.")
+        return
+    with open(URLS_PATH, "r", encoding="utf-8") as f:
+        urls = json.load(f)
+
+    labels = list(urls.keys())[:limit]
+    print(f"[Batch] {len(labels)}개 단어에 대해 지능적 수집 시작 (Target: {TARGET_SAMPLES})")
+
+    # 3. 선별적 특징 추출
+    new_samples_added = False
+    for i, label in enumerate(labels):
+        current_count = existing_counts.get(label, 0)
         
-        url = info.get("video_url")
-        if not url:
+        # 이미 충분하면 건너뜀
+        if current_count >= TARGET_SAMPLES:
+            print(f"  - {i+1}/{len(labels)} [{label}] 이미 충분함 ({current_count}개) - 건너뜀")
             continue
             
-        saved = process_video_url(label, url, limit_frames=frames_per_word)
-        if saved > 0:
-            total_saved += saved
-            words_processed += 1
+        print(f"  - {i+1}/{len(labels)} [{label}] 수집 시작 (현재: {current_count}개)...")
+        v_url = urls[label].get("video_url")
+        if not v_url: continue
 
-    print(f"\n[Batch] 완료! 총 {words_processed}개 단어에서 {total_saved}개 샘플을 추출했습니다.")
+        # 부족한 만큼만 더 추출
+        new_features = process_video_url(label, v_url, limit_frames=TARGET_SAMPLES - current_count)
+        if new_features:
+            all_data.extend(new_features)
+            new_samples_added = True
+            print(f"    -> {len(new_features)}개 샘플 추가됨.")
+        
+        # [과제 5] 서버 부하 방지 및 차단 회피를 위한 지연 시간
+        import time
+        time.sleep(3)
+
+
+    if not all_data:
+        print("[Batch] 학습할 데이터가 없습니다.")
+        return
+
+    # 4. 데이터 저장 및 균형 조정 (다운샘플링)
+    # 컬럼명 생성 (f0, f1, ... f34, label)
+    feat_dim = len(all_data[0]) - 1
+    columns = [f"f{i}" for i in range(feat_dim)] + ["label"]
+    df_total = pd.DataFrame(all_data, columns=columns)
+    
+    balanced_groups = []
+    for l in df_total['label'].unique():
+        group = df_total[df_total['label'] == l]
+        if len(group) > 50:
+            group = group.sample(n=50, random_state=42)
+        balanced_groups.append(group)
+    
+    df_final = pd.concat(balanced_groups, ignore_index=True)
+    df_final.to_csv(CSV_PATH, index=False, encoding='utf-8')
+    print(f"[Batch] 저장 완료! 최종 데이터셋 크기: {len(df_final)} 샘플")
+    
+    # 5. 모델 훈련
+    train_knn_model()
 
 def train_knn_model():
-    print("\n[Train] 모델 훈련 시작...")
     if not CSV_PATH.exists():
-        print("Error: 학습 데이터셋(CSV)이 없습니다.")
         return
-
+    
+    print("\n[Train] KNN 모델 훈련 시작...")
     df = pd.read_csv(CSV_PATH, encoding='utf-8')
-    if len(df) < 5:
-        print("Error: 데이터가 너무 적어 훈련할 수 없습니다. (최소 5개 필요)")
-        return
-
-    X = df.drop("label", axis=1)
-    y = df["label"]
-
-    # 라벨 인코딩 (필요 시)
-    model = KNeighborsClassifier(n_neighbors=min(5, len(df)))
+    X = df.drop("label", axis=1).values
+    y = df["label"].values
+    
+    model = KNeighborsClassifier(n_neighbors=3, weights='distance')
     model.fit(X, y)
-
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    
     joblib.dump(model, MODEL_PATH)
-    print(f"[Success] model saved: {MODEL_PATH}")
-    print(f"   - labels: {len(model.classes_)}")
-    print(f"   - samples: {len(df)}")
+    print(f"[Success] 모델 저장 완료: {MODEL_PATH}")
+    print(f"   - 학습된 단어 수: {len(np.unique(y))}")
+    print(f"   - 총 샘플 수: {len(y)}")
 
 if __name__ == "__main__":
-    # 상위 10개 단어 학습 진행
-    # 상위 50개 단어 학습 진행 (사용자 요청으로 확장)
-    batch_learn(limit_words=50, frames_per_word=15)
-    
-    # 훈련 시작
-    train_knn_model()
+    batch_learn(limit=50)

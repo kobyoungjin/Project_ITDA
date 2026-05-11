@@ -10,16 +10,25 @@ from pathlib import Path
 from typing import Optional
 
 MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
-CONFIDENCE_THRESHOLD = 0.30  # 30% 이상이면 인식 시도 (단어 수가 늘어남에 따라 하향 조정)
+CONFIDENCE_THRESHOLD = 0.55  # [개선안 3] 신뢰도 임계값 상향 (불확실한 예측 차단)
 
 _model = None  # 싱글톤 캐시
 
 
+def reload_model():
+    """모델을 강제로 다시 로드하여 메모리를 갱신합니다 (핫-리로딩)"""
+    global _model
+    if MODEL_PATH.exists():
+        _model = joblib.load(MODEL_PATH)
+        print(f"[KNN] 모델 리로드 완료 (실시간 갱신) — 인식 단어: {list(_model.classes_)}")
+    else:
+        _model = None
+    return _model
+
 def _load_model():
     global _model
     if _model is None and MODEL_PATH.exists():
-        _model = joblib.load(MODEL_PATH)
-        print(f"[KNN] 모델 로드 완료 — 인식 단어: {list(_model.classes_)}")
+        return reload_model()
     return _model
 
 

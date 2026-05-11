@@ -15,11 +15,14 @@ router = APIRouter()
 class ConnectionManager:
     def __init__(self):
         self.active: dict[str, WebSocket] = {}
-        self.processing: dict[str, bool] = {} # [과제 3] 세션별 처리 상태(Lock) 추적
+        self.processing: dict[str, bool] = {} # 세션별 처리 중 상태
+        
         # 세션별 시계열 상태 저장소
         self.smoothed_states: dict[str, dict] = {} # {session_id: {'R': lms, 'L': lms}}
         self.prediction_windows: dict[str, deque] = {} # {session_id: deque}
-        self.ema_alpha = 0.4 # 필터 강도 (0~1, 낮을수록 부드러움)
+        self.pending_frames: dict[str, dict | None] = {} # [개선안 1] 최신 대기 프레임
+        self.last_motion_phase: dict[str, str] = {} # [개선안 2] 상태 전환 감지용
+        self.ema_alpha = 0.6 # 민감도 향상 (높을수록 즉각 반응)
 
     def _smooth_landmarks(self, session_id, side, new_lms):
         if not new_lms: return None
@@ -44,7 +47,7 @@ class ConnectionManager:
 
     def _get_voted_result(self, session_id, current_pred):
         if session_id not in self.prediction_windows:
-            self.prediction_windows[session_id] = deque(maxlen=10)
+            self.prediction_windows[session_id] = deque(maxlen=5) # 5프레임으로 단축
             
         if current_pred:
             self.prediction_windows[session_id].append(current_pred)
@@ -54,7 +57,7 @@ class ConnectionManager:
             
         counts = Counter(window)
         most_common = counts.most_common(1)
-        if most_common and most_common[0][1] >= 3: 
+        if most_common and most_common[0][1] >= 2: # 2회만 일치해도 인정 (빠른 반응)
             return most_common[0][0]
         return None
 
@@ -67,6 +70,8 @@ class ConnectionManager:
         self.processing.pop(session_id, None)
         self.smoothed_states.pop(session_id, None)
         self.prediction_windows.pop(session_id, None)
+        self.pending_frames.pop(session_id, None)
+        self.last_motion_phase.pop(session_id, None)
 
     async def send_ack(self, session_id: str, ack: VisionAck):
         ws = self.active.get(session_id)
@@ -96,10 +101,13 @@ async def vision_socket(ws: WebSocket):
         manager.disconnect(session_id)
 
 async def _handle(session_id: str, raw: dict):
-    # [과제 3] Lock 기반 호출 제어 (충돌 및 서버 과부하 방지)
+    # [개선안 1] 처리 중이면 최신 프레임을 보관만 하고 리턴 (Drop 방지)
     if manager.processing.get(session_id, False):
+        manager.pending_frames[session_id] = raw
         return
+
     manager.processing[session_id] = True
+    manager.pending_frames[session_id] = None # 처리 시작하므로 보관함 비움
 
     recv_t = time.perf_counter()
     try:
@@ -139,6 +147,15 @@ async def _handle(session_id: str, raw: dict):
         raw["meta_features"] = meta
 
         motion_phase = meta.get("motion_phase", "stable")
+        
+        # [개선안 2] Moving 전환 시 투표창 초기화 (잔상 제거)
+        prev_phase = manager.last_motion_phase.get(session_id, "stable")
+        if prev_phase in ("stable", "idle") and motion_phase == "moving":
+            if session_id in manager.prediction_windows:
+                manager.prediction_windows[session_id].clear()
+                print(f"[Vision] 🧹 Motion detected. Clearing vote window.")
+        manager.last_motion_phase[session_id] = motion_phase
+
         run_full_pipeline = motion_phase in ("stable", "idle")
 
         knn_result = None
@@ -226,6 +243,13 @@ async def _handle(session_id: str, raw: dict):
                 pose_analysis=pose_analysis_obj,
             ),
         )
+    except Exception as e:
+        print(f"[Vision] Critical error in handle: {e}")
     finally:
-        # 정상/에러 관계없이 작업이 끝나면 Lock 해제
         manager.processing[session_id] = False
+        
+        # [개선안 1] 보류된 최신 프레임이 있으면 즉시 연달아 처리 (비동기 루프)
+        import asyncio
+        next_raw = manager.pending_frames.get(session_id)
+        if next_raw and session_id in manager.active:
+            asyncio.create_task(_handle(session_id, next_raw))

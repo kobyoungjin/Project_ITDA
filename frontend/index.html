@@ -917,37 +917,44 @@
 
       if (outputEl) {
         if (result.type === 'draft') {
-          // '대기 중'이거나 '미인식'인 경우 카메라 오버레이 숨김
           if (result.text === '대기 중') {
             if (liveOverlay) liveOverlay.style.opacity = "0";
             outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">동작 분석 중...</em>`;
             return;
           }
 
-          // 미인식(POINT) 등 확신이 낮은 경우도 현재 예측 상태를 투명하게 표시
           const conf = result.knn_confidence ? ` (${Math.round(result.knn_confidence * 100)}%)` : "";
-          const isUncertain = result.text.includes('미인식');
-          const displayColor = isUncertain ? 'var(--text-muted)' : 'var(--accent-orange)';
-          const displayText = isUncertain ? `🤔 분석 중: ${result.text}` : `🤔 예측 중: ${result.text}`;
+          const isUncertain = result.text.includes('미인식') || result.text === 'None';
+          
+          if (isUncertain) {
+            outputEl.innerHTML = `<span style="color:#94a3b8; font-style:italic;">🤔 미확정: 다시 보여주세요</span>`;
+          } else {
+            outputEl.innerHTML = `<span style="color:var(--accent-orange); font-style:italic;">🔍 예측 중: ${result.text}${conf}</span>`;
+          }
 
-          outputEl.innerHTML = `<span style="color:${displayColor}; font-style:italic;">${displayText}${conf}</span>`;
-          if (liveText) {
-            liveText.innerHTML = `<span style="color:${displayColor}; opacity:0.8">${result.text}${conf}</span>`;
+          if (liveText && !isUncertain) {
+            liveText.innerHTML = `<span style="color:var(--accent-orange); opacity:0.8">${result.text}${conf}</span>`;
             liveOverlay.style.opacity = "1";
             liveOverlay.style.transform = "translateX(-50%) scale(1)";
           }
         } else if (result.type === 'final') {
-          // '분석 중이에요' 등의 안내 메시지는 제외
           if (result.text.includes('분석 중이에요')) return;
 
-          // 인식 실패 시 완료 상태 명확히 표시
-          if (result.text === '대기 중' || result.text.includes('미인식')) {
+          if (result.text === '대기 중' || result.text.includes('미인식') || result.text === 'None') {
             if (liveOverlay) liveOverlay.style.opacity = "0";
-            outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">✅ 분석 완료 (인식된 수어 없음)</em>`;
-            // 중복 출력 방지 초기화
+            outputEl.innerHTML = `<span style="color:#94a3b8; font-weight: 500;">🤔 미확정: 다시 보여주세요</span>`;
             lastFinalText = "";
             return;
           }
+
+          // 최종 확정 출력
+          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✅ 확정: ${result.text}</span> ${emotionsHtml}`;
+          if (liveText) {
+            liveText.innerHTML = `<span style="color:var(--accent-cyan); font-weight:bold;">${result.text}</span>`;
+            liveOverlay.style.opacity = "1";
+            liveOverlay.style.transform = "translateX(-50%) scale(1.1)";
+          }
+
 
           // [중복 방지 강화] 동일 문장 연속 출력 방지 (4초 이내 동일 결과 무시)
           if (result.text === lastFinalText) return;

@@ -162,6 +162,10 @@ def train_knn_model(n_neighbors: int = 5):
     model.fit(X, y)
     joblib.dump(model, MODEL_PATH)
 
+    # [핵심] 저장 후 메모리의 모델을 강제로 갱신 (서버 재시작 불필요)
+    from api.services.knn_classifier import reload_model
+    reload_model()
+
     return {
         "ok": True,
         "samples": int(len(df)),
