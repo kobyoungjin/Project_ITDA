@@ -49,6 +49,8 @@ class SampleRequest(BaseModel):
     # 양손 랜드마크 (각 21개)
     right_landmarks: Optional[List[dict]] = None
     left_landmarks: Optional[List[dict]] = None
+    # [NEW] 팔 관절 랜드마크
+    pose_landmarks: Optional[dict] = None
     # 하위 호환성을 위해 유지
     landmarks: Optional[List[dict]] = None
     handedness: Optional[str] = "Right"
@@ -103,6 +105,7 @@ def add_sample(req: SampleRequest):
     # 양손 데이터 우선 사용, 없으면 기존 단일 손 데이터 사용
     r_lms = req.right_landmarks
     l_lms = req.left_landmarks
+    pose_lms = req.pose_landmarks
     
     if r_lms is None and l_lms is None and req.landmarks:
         if req.handedness == "Right":
@@ -110,7 +113,8 @@ def add_sample(req: SampleRequest):
         else:
             l_lms = req.landmarks
 
-    features = extract_ksl_features(r_lms, l_lms)
+    # [개선] 팔 관절 데이터 포함
+    features = extract_ksl_features(r_lms, l_lms, pose_lms)
     if features is None:
         return {"ok": False, "message": "랜드마크 데이터 불충분"}
 
@@ -161,7 +165,12 @@ def train_knn_model(n_neighbors: int = 5):
     y = df["label"].values
     labels = sorted(set(y))
 
-    model = KNeighborsClassifier(n_neighbors=n_neighbors, metric="euclidean", weights="distance")
+    # [개선] n_neighbors 를 데이터 크기에 맞춰 동적으로 조정
+    final_n = min(n_neighbors, len(df) // 2)
+    if final_n < 1: final_n = 1
+
+    # [개선] 동작의 '형태'를 중시하는 코사인 유사도(Cosine) 메트릭 적용 및 가중치 강화
+    model = KNeighborsClassifier(n_neighbors=final_n, metric="cosine", weights="distance")
     
     # 교차 검증으로 정확도 측정
     if len(df) >= 20:
@@ -297,24 +306,27 @@ def _process_video_file(video_path: Path, label: str):
     """
     실제 비디오 분석 (CPU 집약적 작업)
     [증강 적용] 프레임 1개 -> 원본 1 + 증강 8 = 총 9배 샘플 자동 생성
-    직접 수집 없이도 손 크기/각도 개인차에 강건한 모델을 만든다.
     """
     mp_hands = mp.solutions.hands
+    mp_pose = mp.solutions.pose
     saved_count = 0
     
+    POSE_KEYS = {
+        "left_shoulder": 11, "right_shoulder": 12,
+        "left_elbow": 13,    "right_elbow": 14,
+        "left_wrist": 15,    "right_wrist": 16,
+    }
+
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         return 0
 
     try:
-        with mp_hands.Hands(
-            static_image_mode=False, 
-            max_num_hands=2, 
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
-        ) as hands:
+        with mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, \
+             mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5) as pose:
+            
             count = 0
-            while cap.isOpened() and saved_count < 100:  # 증강 포함 최대 100개
+            while cap.isOpened() and saved_count < 100:
                 ret, frame = cap.read()
                 if not ret: break
                 
@@ -322,39 +334,46 @@ def _process_video_file(video_path: Path, label: str):
                 if count % 5 != 0: continue
                 
                 image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = hands.process(image)
+                res_hands = hands.process(image)
+                res_pose = pose.process(image)
                 
-                if results.multi_hand_landmarks:
+                pose_res = None
+                if res_pose.pose_landmarks:
+                    lm_dict = {}
+                    for k, idx in POSE_KEYS.items():
+                        lm = res_pose.pose_landmarks.landmark[idx]
+                        lm_dict[k] = {"x": lm.x, "y": lm.y, "z": lm.z, "visibility": lm.visibility}
+                    pose_res = {"landmarks": lm_dict}
+
+                if res_hands.multi_hand_landmarks:
                     right_lms = None
                     left_lms = None
-                    if results.multi_handedness:
-                        for idx, hand_handedness in enumerate(results.multi_handedness):
+                    if res_hands.multi_handedness:
+                        for idx, hand_handedness in enumerate(res_hands.multi_handedness):
                             label_side = hand_handedness.classification[0].label
-                            hlm = results.multi_hand_landmarks[idx]
+                            hlm = res_hands.multi_hand_landmarks[idx]
                             lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hlm.landmark]
-                            if label_side == "Right":
-                                right_lms = lms
-                            else:
-                                left_lms = lms
+                            if label_side == "Right": right_lms = lms
+                            else: left_lms = lms
                     
                     # 원본 저장
-                    features = extract_ksl_features(right_lms, left_lms)
+                    features = extract_ksl_features(right_lms, left_lms, pose_res)
                     if features:
                         _save_sample(features, label)
                         saved_count += 1
 
-                    # 증강 샘플 자동 생성 (한 손이라도 있으면 증강)
+                    # 증강 샘플 (팔 관절은 원본 유지)
                     aug_base = right_lms or left_lms
                     if aug_base and saved_count < 100:
                         for aug_lms in augment_landmarks(aug_base, n=8):
-                            if saved_count >= 100:
-                                break
+                            if saved_count >= 100: break
                             aug_r = aug_lms if right_lms else None
                             aug_l = aug_lms if left_lms else None
-                            aug_feats = extract_ksl_features(aug_r, aug_l)
+                            aug_feats = extract_ksl_features(aug_r, aug_l, pose_res)
                             if aug_feats:
                                 _save_sample(aug_feats, label)
                                 saved_count += 1
+
     finally:
         cap.release()
         

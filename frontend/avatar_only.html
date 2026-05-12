@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITDA - 아바타 전용 뷰 (학습 단어 목록)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #050810;
+      --accent-cyan: #00f2fe;
+      --accent-purple: #7c3aed;
+      --text-main: #f8fafc;
+      --border: rgba(255, 255, 255, 0.1);
+      --card-bg: rgba(30, 41, 59, 0.5);
+    }
+    body {
+      margin: 0; padding: 0; background: var(--bg-deep); color: var(--text-main);
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      overflow: hidden; height: 100vh; display: flex; flex-direction: column;
+    }
+    header {
+      padding: 0.8rem 1.5rem; background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;
+      z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .status-badge {
+      padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700;
+      background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan);
+    }
+    .control-btn {
+      padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--text-main); cursor: pointer;
+      font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .control-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-cyan); transform: translateY(-1px); }
+    .control-btn.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+
+    main { flex: 1; position: relative; display: flex; overflow: hidden; }
+    
+    /* 사이드바 개선 (스크린샷 세로 정렬 문제 해결) */
+    #sidebar {
+      width: 280px; 
+      min-width: 280px; /* 찌그러짐 방지 */
+      flex-shrink: 0; 
+      background: rgba(10, 15, 30, 0.98);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      backdrop-filter: blur(20px);
+      z-index: 10;
+    }
+    
+    .sidebar-header {
+      padding: 1.5rem 1rem 1rem 1rem;
+      position: sticky; top: 0; background: rgba(10, 15, 30, 1);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .sidebar-header h3 { 
+      font-size: 1rem; color: var(--accent-cyan); margin: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    
+    .word-list { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 0.5rem; 
+      padding: 0 1rem 2rem 1rem;
+    }
+    
+    .word-item {
+      padding: 14px 16px; 
+      border-radius: 12px; 
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05); 
+      cursor: pointer; 
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 0.95rem; 
+      font-weight: 500;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .word-item:hover { 
+      background: rgba(0, 242, 254, 0.08); 
+      border-color: rgba(0, 242, 254, 0.4); 
+      color: var(--accent-cyan);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .word-item.playing { 
+      background: linear-gradient(90deg, var(--accent-cyan), #00d2ff); 
+      color: #000; 
+      font-weight: 700; 
+      border-color: transparent;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+    }
+
+    #three-container { flex: 1; position: relative; background: radial-gradient(circle at center, #0f172a 0%, #050810 100%); }
+    #three-canvas { width: 100%; height: 100%; display: block; }
+    
+    /* Custom Scrollbar */
+    #sidebar::-webkit-scrollbar { width: 6px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #sidebar::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="font-weight: 900; font-size: 1.3rem; letter-spacing: -0.5px;">ITDA <span style="color:var(--accent-cyan)">MOTION STUDIO</span></div>
+    <div style="display: flex; gap: 0.8rem; align-items: center;">
+      <button id="btn-toggle-guide" class="control-btn"><span>🔄</span> 동작 가이드: OFF</button>
+      <button id="btn-toggle-skeleton" class="control-btn"><span>💀</span> 스켈레톤 모델: OFF</button>
+      <div id="ws-status" class="status-badge">대기 중</div>
+    </div>
+  </header>
+  <main>
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <h3><span>📚</span> 학습된 단어 목록</h3>
+      </div>
+      <div id="learned-words-list" class="word-list">
+        <div style="color: #64748b; font-size: 0.85rem; padding: 1rem; text-align: center;">데이터를 불러오고 있습니다...</div>
+      </div>
+    </div>
+    <div id="three-container">
+      <canvas id="three-canvas"></canvas>
+    </div>
+  </main>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="./js/avatar.js"></script>
+  <script type="module" src="./js/retargeting.js"></script>
+  <script type="module" src="./js/motion_loader_npy.js"></script>
+  <script type="module" src="./js/handshape_loader.js"></script>
+
+  <script type="module">
+    const statusEl = document.getElementById('ws-status');
+    const overlay = document.getElementById('overlay');
+    const wordText = document.getElementById('word-text');
+    const wordListEl = document.getElementById('learned-words-list');
+    const skeletonBtn = document.getElementById('btn-toggle-skeleton');
+    const guideBtn = document.getElementById('btn-toggle-guide');
+    
+    let isSkeletonMode = false;
+    let isGuideMode = false;
+
+    async function loadWordList() {
+      try {
+        const resp = await fetch('http://localhost:8000/api/sign-language/list-motions');
+        const data = await resp.json();
+        
+        if (data.words && data.words.length > 0) {
+          wordListEl.innerHTML = '';
+          data.words.forEach(word => {
+            const item = document.createElement('div');
+            item.className = 'word-item';
+            item.textContent = word;
+            item.onclick = () => playMotion(word, item);
+            wordListEl.appendChild(item);
+          });
+        } else {
+          wordListEl.innerHTML = '<div style="color: #475569; font-size: 0.85rem; padding: 2rem; text-align: center;">학습된 단어가 없습니다.<br><small style="opacity:0.6">훈련을 먼저 진행해 주세요.</small></div>';
+        }
+      } catch(e) {
+        wordListEl.innerHTML = '<div style="color: #f43f5e; font-size: 0.85rem; padding: 2rem; text-align: center;">서버 연결 실패</div>';
+      }
+    }
+
+    async function playMotion(word, element = null) {
+      if (!window.ITDAMotionNPY) return;
+      
+      const allItems = document.querySelectorAll('.word-item');
+      allItems.forEach(el => el.classList.remove('playing'));
+      
+      // 만약 외부 인식(WS)으로 호출된 경우 목록에서 해당 단어를 찾아 하이라이트
+      if (!element) {
+        element = Array.from(allItems).find(el => el.textContent === word);
+      }
+      
+      if (element) {
+        element.classList.add('playing');
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      
+      // showWord(word);  <-- 삭제됨
+      await window.ITDAMotionNPY.play(word, { loop: isGuideMode });
+      
+      if (element) element.classList.remove('playing');
+    }
+
+    function connect() {
+      const ws = new WebSocket('ws://127.0.0.1:8000/api/ws/vision');
+      ws.onopen = () => {
+        statusEl.textContent = '● LIVE CONNECTED';
+        statusEl.style.color = '#00f2fe';
+      };
+      ws.onmessage = (evt) => {
+        try {
+          const ack = JSON.parse(evt.data);
+          if (ack.rag_result && ack.rag_result.type === 'final') {
+            const word = ack.rag_result.text;
+            if (word === '대기 중' || word.includes('미인식')) return;
+            playMotion(word);
+          }
+        } catch(e) {}
+      };
+      ws.onclose = () => {
+        statusEl.textContent = '○ DISCONNECTED';
+        statusEl.style.color = '#f43f5e';
+        setTimeout(connect, 3000);
+      };
+    }
+
+
+    skeletonBtn.addEventListener('click', () => {
+      isSkeletonMode = !isSkeletonMode;
+      const avatar = window.ITDAAvatar5;
+      if (!avatar) return;
+      
+      if (isSkeletonMode) {
+        avatar.setViewMode('skeleton');
+        skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: ON';
+        skeletonBtn.classList.add('active');
+      } else {
+        avatar.setViewMode('normal');
+        skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: OFF';
+        skeletonBtn.classList.remove('active');
+      }
+    });
+
+    // 5. 가이드 모드 토글 (반복 재생)
+    guideBtn.addEventListener('click', () => {
+      isGuideMode = !isGuideMode;
+      if (isGuideMode) {
+        guideBtn.innerHTML = '<span>🔄</span> 동작 가이드: ON';
+        guideBtn.classList.add('active');
+      } else {
+        guideBtn.innerHTML = '<span>🔄</span> 동작 가이드: OFF';
+        guideBtn.classList.remove('active');
+        // 가이드 모드 해제 시 루프 중단
+        window.ITDAMotionNPY?.stop();
+      }
+    });
+
+    window.addEventListener('itda:avatar:ready', () => {
+      loadWordList();
+      connect();
+    });
+  </script>
+</body>
+</html>

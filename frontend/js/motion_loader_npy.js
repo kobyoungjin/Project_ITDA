@@ -67,14 +67,17 @@ async function loadJoints(word) {
 }
 
 let currentAnimationId = null;
+let isPlaying = false;
 
 /**
  * 관절 데이터 기반 아바타 재생
  */
-function playJoints(word) {
+function playJoints(word, options = { loop: false }) {
     return new Promise(async (resolve) => {
+        isPlaying = true;
         const data = await loadJoints(word);
         if (!data || !data.frames || data.frames.length === 0) {
+            isPlaying = false;
             resolve();
             return;
         }
@@ -84,6 +87,7 @@ function playJoints(word) {
 
         // 기존 재생 중인 애니메이션 중단
         stop();
+        isPlaying = true;
 
         // 스켈레톤 뷰 모드 전환
         avatar?.setViewMode?.('skeleton');
@@ -101,27 +105,37 @@ function playJoints(word) {
         console.info(`[JointLoader] '${word}' 재생 시작 (${data.frames.length} 프레임, 원본 ${fps}fps → skip=${frameSkip} → ${effectiveFps.toFixed(1)}fps)`);
 
         function animate(time) {
+            if (!isPlaying) {
+                resolve();
+                return;
+            }
+            
             if (!lastTime) lastTime = time;
             const delta = time - lastTime;
 
             if (delta >= interval) {
                 const frameData = data.frames[frameIdx];
                 if (frameData) {
-                    // 스켈레톤 뷰 업데이트 (리타겟팅 병행)
                     avatar?.updateSkeleton?.(frameData);
                     retargeting?.apply75Landmarks?.(frameData);
                 }
                 
-                frameIdx += frameSkip; // 여러 프레임 한 번에 건너뜀
+                frameIdx += frameSkip;
                 lastTime = time;
             }
 
             if (frameIdx < data.frames.length) {
                 currentAnimationId = requestAnimationFrame(animate);
             } else {
-                console.info(`[JointLoader] '${word}' 재생 완료`);
-                stop();
-                resolve();
+                if (options.loop && isPlaying) {
+                    // 반복 재생 (Loop)
+                    frameIdx = 0;
+                    currentAnimationId = requestAnimationFrame(animate);
+                } else {
+                    console.info(`[JointLoader] '${word}' 재생 완료`);
+                    stop();
+                    resolve();
+                }
             }
         }
         
@@ -135,6 +149,7 @@ function playJoints(word) {
 }
 
 function stop() {
+    isPlaying = false;
     if (currentAnimationId) {
         cancelAnimationFrame(currentAnimationId);
         currentAnimationId = null;

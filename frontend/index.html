@@ -489,6 +489,7 @@
       </div>
       <div class="header-right">
         <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: rgba(100, 116, 139, 0.15); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; min-width: 95px; text-align: center;">🔇 음성: OFF</button>
+        <button id="btn-open-avatar-window" class="hud-item" style="cursor:pointer; background: var(--accent-purple); border: 1px solid rgba(124, 58, 237, 0.5); color: #fff; font-weight: 800;">🪟 새 창에서 보기</button>
         <div class="hud-item" id="backend-status" style="color: #ff4757; border-color: rgba(255, 71, 87, 0.4);">Backend: OFFLINE</div>
         <div class="hud-item" id="fps-display">FPS: 0</div>
         <div class="hud-item" id="joint-status">Joints: ACTIVE</div>
@@ -512,15 +513,6 @@
 
           <video id="vision-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
           <canvas id="vision-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none;"></canvas>
-          
-          <!-- [NEW] 실시간 번역 결과 오버레이 (HandTalker 스타일) -->
-          <div id="live-translation-overlay" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); 
-               background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); padding: 0.8rem 1.5rem; border-radius: 99px;
-               border: 1px solid rgba(0, 242, 254, 0.5); color: #fff; font-size: 1.4rem; font-weight: 800; text-align: center;
-               white-space: nowrap; z-index: 25; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-               opacity: 0; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
-            <span id="live-translation-text">...</span>
-          </div>
         </div>
         
         <!-- 수어 예측 결과 영역 -->
@@ -918,7 +910,6 @@
       if (outputEl) {
         if (result.type === 'draft') {
           if (result.text === '대기 중') {
-            if (liveOverlay) liveOverlay.style.opacity = "0";
             outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">동작 분석 중...</em>`;
             return;
           }
@@ -931,17 +922,10 @@
           } else {
             outputEl.innerHTML = `<span style="color:var(--accent-orange); font-style:italic;">🔍 예측 중: ${result.text}${conf}</span>`;
           }
-
-          if (liveText && !isUncertain) {
-            liveText.innerHTML = `<span style="color:var(--accent-orange); opacity:0.8">${result.text}${conf}</span>`;
-            liveOverlay.style.opacity = "1";
-            liveOverlay.style.transform = "translateX(-50%) scale(1)";
-          }
         } else if (result.type === 'final') {
           if (result.text.includes('분석 중이에요')) return;
 
           if (result.text === '대기 중' || result.text.includes('미인식') || result.text === 'None') {
-            if (liveOverlay) liveOverlay.style.opacity = "0";
             outputEl.innerHTML = `<span style="color:#94a3b8; font-weight: 500;">🤔 미확정: 다시 보여주세요</span>`;
             lastFinalText = "";
             return;
@@ -949,11 +933,6 @@
 
           // 최종 확정 출력
           outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✅ 확정: ${result.text}</span> ${emotionsHtml}`;
-          if (liveText) {
-            liveText.innerHTML = `<span style="color:var(--accent-cyan); font-weight:bold;">${result.text}</span>`;
-            liveOverlay.style.opacity = "1";
-            liveOverlay.style.transform = "translateX(-50%) scale(1.1)";
-          }
 
 
           // [중복 방지 강화] 동일 문장 연속 출력 방지 (4초 이내 동일 결과 무시)
@@ -962,8 +941,12 @@
           // 4초 후 마지막 텍스트 초기화 (다른 동작 인식 준비)
           setTimeout(() => { if(lastFinalText === result.text) lastFinalText = ""; }, 4000); 
 
-          const conf = result.knn_confidence ? ` (${Math.round(result.knn_confidence * 100)}%)` : "";
           outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
+          
+          // [NEW] 인식 성공 시 아바타 동작 연동 (Sign-to-Motion)
+          if (window.ITDAMotionNPY) {
+            window.ITDAMotionNPY.play(result.text);
+          }
           
           // [NEW] TTS 음성 출력 (Voice Toggle 반영)
           if (window.speechSynthesis && window._isVoiceOn) {
@@ -986,16 +969,6 @@
             if (translationLogList.children.length > 50) translationLogList.lastChild.remove();
           }
 
-          if (liveText) {
-            liveText.innerHTML = `<span style="color:var(--accent-cyan); text-shadow: 0 0 10px rgba(0,242,254,0.5)">✨ ${result.text}${conf}</span>`;
-            liveOverlay.style.opacity = "1";
-            liveOverlay.style.transform = "translateX(-50%) scale(1.1)";
-            
-            setTimeout(() => {
-                liveOverlay.style.opacity = "0";
-                liveOverlay.style.transform = "translateX(-50%) scale(0.9)";
-            }, 3000);
-          }
         }
       }
     });
@@ -1093,6 +1066,11 @@
       const v = document.getElementById('ref-video');
       v.pause();
       v.src = "";
+    });
+
+    // 아바타 전용 창 열기
+    document.getElementById('btn-open-avatar-window')?.addEventListener('click', () => {
+      window.open('./avatar_only.html', 'AvatarViewer', 'width=800,height=800,menubar=no,toolbar=no,location=no,status=no');
     });
 
     // 자동 시작

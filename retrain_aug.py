@@ -29,31 +29,54 @@ def _save(features, label):
 
 def process(video_path, label, max_samples=100):
     mp_hands = mp.solutions.hands
+    mp_pose = mp.solutions.pose
     saved = 0
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened(): return 0
+    
+    POSE_KEYS = {
+        "left_shoulder": 11, "right_shoulder": 12,
+        "left_elbow": 13,    "right_elbow": 14,
+        "left_wrist": 15,    "right_wrist": 16,
+    }
+
     try:
         with mp_hands.Hands(static_image_mode=False, max_num_hands=2,
-                            min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
+                            min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, \
+             mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5) as pose:
+            
             count = 0
             while cap.isOpened() and saved < max_samples:
                 ret, frame = cap.read()
                 if not ret: break
                 count += 1
                 if count % 5 != 0: continue
+                
                 image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                res = hands.process(image)
-                if res.multi_hand_landmarks:
+                res_hands = hands.process(image)
+                res_pose = pose.process(image)
+                
+                pose_res = None
+                if res_pose.pose_landmarks:
+                    lm_dict = {}
+                    for k, idx in POSE_KEYS.items():
+                        lm = res_pose.pose_landmarks.landmark[idx]
+                        lm_dict[k] = {"x": lm.x, "y": lm.y, "z": lm.z, "visibility": lm.visibility}
+                    pose_res = {"landmarks": lm_dict}
+
+                if res_hands.multi_hand_landmarks:
                     r_lms = l_lms = None
-                    for i, hh in enumerate(res.multi_handedness or []):
+                    for i, hh in enumerate(res_hands.multi_handedness or []):
                         side = hh.classification[0].label
-                        lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in res.multi_hand_landmarks[i].landmark]
+                        lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in res_hands.multi_hand_landmarks[i].landmark]
                         if side == "Right": r_lms = lms
                         else: l_lms = lms
-                    # 원본
-                    feats = extract_ksl_features(r_lms, l_lms)
+                    
+                    # 원본 (팔 관절 포함)
+                    feats = extract_ksl_features(r_lms, l_lms, pose_res)
                     if feats:
                         _save(feats, label); saved += 1
+                    
                     # 증강 (8배)
                     base = r_lms or l_lms
                     if base:
@@ -61,9 +84,11 @@ def process(video_path, label, max_samples=100):
                             if saved >= max_samples: break
                             aug_r = aug if r_lms else None
                             aug_l = aug if l_lms else None
-                            aug_f = extract_ksl_features(aug_r, aug_l)
+                            # 증강 시에는 팔 관절 데이터는 원본을 유지 (또는 노이즈 추가 가능하나 일단 유지)
+                            aug_f = extract_ksl_features(aug_r, aug_l, pose_res)
                             if aug_f:
                                 _save(aug_f, label); saved += 1
+
     finally:
         cap.release()
     return saved

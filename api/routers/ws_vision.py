@@ -80,9 +80,17 @@ class ConnectionManager:
         self.last_action_time.pop(session_id, None)
 
     async def send_ack(self, session_id: str, ack: VisionAck):
-        ws = self.active.get(session_id)
-        if ws:
-            await ws.send_text(ack.model_dump_json())
+        """[수정] 모든 활성 클라이언트에게 브로드캐스트 (다른 창 연동용)"""
+        json_data = ack.model_dump_json()
+        disconnected = []
+        for sid, ws in self.active.items():
+            try:
+                await ws.send_text(json_data)
+            except Exception:
+                disconnected.append(sid)
+        
+        for sid in disconnected:
+            self.disconnect(sid)
 
 manager = ConnectionManager()
 
@@ -170,7 +178,8 @@ async def _handle(session_id: str, raw: dict):
                 print(f"[Vision] 🧹 Motion detected. Clearing vote window.")
         manager.last_motion_phase[session_id] = motion_phase
 
-        run_full_pipeline = motion_phase == "stable"
+        # [개선] stable(정지) 단계뿐만 아니라 settling(감속) 단계에서도 인식을 시도하여 반응성 대폭 향상
+        run_full_pipeline = motion_phase in ("stable", "settling")
 
         knn_result = None
         knn_confidence = 0.0
@@ -195,8 +204,8 @@ async def _handle(session_id: str, raw: dict):
                 s_right = manager._smooth_landmarks(session_id, 'R', right_lms)
                 s_left = manager._smooth_landmarks(session_id, 'L', left_lms)
                 
-                # 2. 보정된 값으로 예측
-                knn_result, knn_confidence = knn_classifier.predict(s_right, s_left)
+                # 2. 보정된 값으로 예측 (Pose 데이터 추가 전달)
+                knn_result, knn_confidence = knn_classifier.predict(s_right, s_left, pose_res)
                 
                 # 3. 다수결 투표 적용
                 voted_result = manager._get_voted_result(session_id, knn_result)
@@ -211,9 +220,8 @@ async def _handle(session_id: str, raw: dict):
                         buf.append(knn_result)
                         manager.last_action_time[session_id] = time.time()
                         print(f"[SentenceBuilder] 단어 추가: {knn_result} (현재 버퍼: {buf})")
-                else:
                     # 임계값 미달 상세 로그 - 어느 단어를 예측했고 신뢰도가 얼마인지 출력
-                    print(f"[KNN] MISS conf={knn_confidence:.3f} (threshold=0.50) - 최고 후보 신뢰도 부족")
+                    print(f"[KNN] MISS conf={knn_confidence:.3f} (threshold={knn_classifier.CONFIDENCE_THRESHOLD:.2f}) - 최고 후보 신뢰도 부족")
 
         from api.services.slm_agent import slm_agent
         if knn_result:
