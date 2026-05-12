@@ -2,12 +2,13 @@ import math
 from typing import Optional
 
 
-def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Optional[list]) -> Optional[list]:
+def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Optional[list], pose_landmarks: Optional[dict] = None) -> Optional[list]:
     """
-    양손의 MediaPipe 랜드마크 (각 21개) -> 35차원 통합 특징 벡터
+    양손의 MediaPipe 랜드마크 + 팔 관절 -> 37차원 통합 특징 벡터
     - 오른손 (16차원): 15개 각도 + 1개 스케일
     - 왼손 (16차원): 15개 각도 + 1개 스케일
     - 양손 상대 위치 (3차원): 오른손 손목 기준 왼손 손목의 (dx, dy, dz)
+    - 팔 관절 (2차원): 좌우 팔꿈치 굴곡 각도 (도 단위, 0~180 -> 0~1 정규화)
     """
     
     def _extract_single_hand_features(landmarks: Optional[list]) -> list[float]:
@@ -38,11 +39,12 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
         fingers = [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]
         feats = []
         for f in fingers:
-            feats.append(angle(pts[0], pts[f[0]], pts[f[1]]))
-            feats.append(angle(pts[f[0]], pts[f[1]], pts[f[2]]))
-            feats.append(angle(pts[f[1]], pts[f[2]], pts[f[3]]))
+            # 0~PI 범위를 0~1로 정규화하여 다른 특징들과 스케일을 맞춤
+            feats.append(angle(pts[0], pts[f[0]], pts[f[1]]) / math.pi)
+            feats.append(angle(pts[f[0]], pts[f[1]], pts[f[2]]) / math.pi)
+            feats.append(angle(pts[f[1]], pts[f[2]], pts[f[3]]) / math.pi)
         
-        # 마지막 scale 값은 거리 불변성을 위해 1.0으로 고정 (차원수 16 유지)
+        # 마지막 scale 값은 존재 여부 플래그로 활용 (1.0=감지됨)
         feats.append(1.0) 
         return feats
 
@@ -62,14 +64,39 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
         
         r_scale = get_scale(right_landmarks)
         if r_scale > 1e-6:
+            # 양손 거리가 너무 멀어질 경우 특징값이 튀지 않도록 tanh로 -1~1 범위로 압축
+            # 보통 손 크기의 5~10배 정도가 최대 범위이므로 0.2를 곱해 완만하게 만듦
             rel_pos = [
-                (lw["x"] - rw["x"]) / r_scale,
-                (lw["y"] - rw["y"]) / r_scale,
-                (lw.get("z", 0) - rw.get("z", 0)) / r_scale
+                math.tanh((lw["x"] - rw["x"]) / (r_scale * 5)),
+                math.tanh((lw["y"] - rw["y"]) / (r_scale * 5)),
+                math.tanh((lw.get("z", 0) - rw.get("z", 0)) / (r_scale * 5))
             ]
 
-    # 3. 통합 (35차원: 16 + 16 + 3)
-    combined = right_feats + left_feats + rel_pos
+    # 3. 팔 관절 특징 (2차원: 팔꿈치 각도)
+    arm_feats = [0.5, 0.5] # 기본값 (직각 정도)
+    if pose_landmarks:
+        # pose_landmarks 는 {'landmarks': {'left_shoulder':...}} 형태라고 가정 (pose_analyzer 규격)
+        lms = pose_landmarks.get("landmarks", {})
+        
+        def _get_elbow_angle(side):
+            s = lms.get(f"{side}_shoulder")
+            e = lms.get(f"{side}_elbow")
+            w = lms.get(f"{side}_wrist")
+            if s and e and w:
+                # 벡터 계산
+                ba = (s['x']-e['x'], s['y']-e['y'], (s.get('z',0)-e.get('z',0)))
+                bc = (w['x']-e['x'], w['y']-e['y'], (w.get('z',0)-e.get('z',0)))
+                dot = ba[0]*bc[0] + ba[1]*bc[1] + ba[2]*bc[2]
+                m = math.sqrt(ba[0]**2 + ba[1]**2 + ba[2]**2) * math.sqrt(bc[0]**2 + bc[1]**2 + bc[2]**2)
+                if m > 1e-9:
+                    ang = math.acos(max(-1.0, min(1.0, dot/m)))
+                    return ang / math.pi # 0~1 정규화 (0=접힘, 1=펴짐)
+            return 0.5
+
+        arm_feats = [_get_elbow_angle("right"), _get_elbow_angle("left")]
+
+    # 4. 통합 (37차원: 16 + 16 + 3 + 2)
+    combined = right_feats + left_feats + rel_pos + arm_feats
     
     # 둘 다 감지 안 된 경우 무시
     if right_feats[-1] == 0.0 and left_feats[-1] == 0.0:
@@ -84,12 +111,7 @@ import random
 def augment_landmarks(landmarks: list, n: int = 8) -> list[list]:
     """
     MediaPipe 손 랜드마크 1세트 -> 증강된 N세트 자동 생성.
-    영상 속 한 명의 데이터만으로도 개인별 손 크기·각도 차이에
-    강건한 모델을 만들기 위해 다음 변형을 적용합니다:
-      1) XY 미세 2D 회전  (-15도 ~ +15도)
-      2) 스케일 변동      (+-15%)
-      3) XY 가우시안 노이즈  (sigma = 0.01)
-      4) Z축 깊이 노이즈  (sigma = 0.005, 2D 카메라 Z 불확실성 반영)
+    개인별 차이에 강건하도록 회전, 스케일, 노이즈를 적용합니다.
     """
     def _rotate_xy(pts, angle_deg):
         rad = math.radians(angle_deg)
@@ -131,9 +153,9 @@ def augment_landmarks(landmarks: list, n: int = 8) -> list[list]:
     augmented = []
     for _ in range(n):
         pts = list(centered)
-        pts = _rotate_xy(pts, random.uniform(-15, 15))
-        pts = _scale(pts, random.uniform(0.85, 1.15))
-        pts = _jitter(pts)
+        pts = _rotate_xy(pts, random.uniform(-20, 20)) # 회전 범위 확대
+        pts = _scale(pts, random.uniform(0.75, 1.25)) # 스케일 범위 확대
+        pts = _jitter(pts, sigma_xy=0.02)             # 노이즈 범위 확대
         # 손목 위치 복원
         pts = [{"x": p["x"] + wrist["x"],
                 "y": p["y"] + wrist["y"],
@@ -141,3 +163,4 @@ def augment_landmarks(landmarks: list, n: int = 8) -> list[list]:
         augmented.append(pts)
 
     return augmented
+

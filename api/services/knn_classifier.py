@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
-CONFIDENCE_THRESHOLD = 0.45  # 신뢰도 임계값을 0.45로 조정 (유효 구역 필터링 도입으로 감도 향상)
+CONFIDENCE_THRESHOLD = 0.35  # 신뢰도 임계값을 0.35로 하향 (80-90% 유사도 대응 및 인식률 향상)
 
 _model = None  # 싱글톤 캐시
 
@@ -34,9 +34,9 @@ def _load_model():
 
 from api.core.ml_utils import extract_ksl_features
 
-def predict(right_lms: Optional[list], left_lms: Optional[list]) -> tuple[Optional[str], float]:
+def predict(right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optional[dict] = None) -> tuple[Optional[str], float]:
     """
-    양손 랜드마크 → (단어, 신뢰도) 반환.
+    양손 랜드마크 + 팔 관절 → (단어, 신뢰도) 반환.
     양손 스왑(Ambidextrous) 폴백을 적용하여 좌우 반전 및 왼손잡이 대응.
     """
     model = _load_model()
@@ -44,7 +44,7 @@ def predict(right_lms: Optional[list], left_lms: Optional[list]) -> tuple[Option
         return None, 0.0
 
     # 1. 정방향 시도 (오른손=R, 왼손=L)
-    feats_normal = extract_ksl_features(right_lms, left_lms)
+    feats_normal = extract_ksl_features(right_lms, left_lms, pose_lms)
     if feats_normal is None:
         return None, 0.0
     
@@ -54,7 +54,7 @@ def predict(right_lms: Optional[list], left_lms: Optional[list]) -> tuple[Option
     label_normal = model.classes_[idx_n]
 
     # 2. 역방향 시도 (오른손=L, 왼손=R) - 좌우 반전/스왑 대응
-    feats_swap = extract_ksl_features(left_lms, right_lms)
+    feats_swap = extract_ksl_features(left_lms, right_lms, pose_lms)
     conf_swap = 0.0
     label_swap = None
     if feats_swap:
@@ -73,6 +73,7 @@ def predict(right_lms: Optional[list], left_lms: Optional[list]) -> tuple[Option
         return None, final_conf
 
     return final_label, final_conf
+
 
 
 def is_model_ready() -> bool:

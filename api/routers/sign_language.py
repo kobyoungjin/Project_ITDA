@@ -65,10 +65,11 @@ async def resolve_motion(request: dict):
     if not word:
         raise HTTPException(status_code=400, detail="Word is required")
         
-    # 1. 이미 존재하는지 확인
-    target_path = Path("frontend/data/ksl_motions") / f"{word}.json"
+    # 1. 이미 존재하는지 확인 (안전한 파일명으로 변환)
+    safe_word = word.replace("/", "_").replace(",", "_")
+    target_path = Path("frontend/data/ksl_motions") / f"{safe_word}.json"
     if target_path.exists():
-        return {"status": "exists", "word": word, "message": "Motion already exists"}
+        return {"status": "exists", "word": word, "safe_word": safe_word, "message": "Motion already exists"}
         
     # 2. 실시간 추출 시도
     success = motion_extractor.extract_and_save(word)
@@ -78,3 +79,22 @@ async def resolve_motion(request: dict):
         # 3. 폴백 (Fuzzy Match 시도 - 이미 추출된 파일 중 이름에 포함된 게 있는지)
         # (이 부분은 추후 고도화 가능)
         raise HTTPException(status_code=404, detail=f"Motion for '{word}' could not be resolved")
+@router.get("/list-motions")
+async def list_motions():
+    """학습 데이터셋(CSV)에서 실제 학습된 단어 목록을 추출하여 반환합니다."""
+    csv_path = Path("api/data/ksl_training/ksl_dataset.csv")
+    if not csv_path.exists():
+        return {"count": 0, "words": []}
+    
+    try:
+        import pandas as pd
+        df = pd.read_csv(csv_path, encoding='utf-8')
+        if 'label' not in df.columns:
+            return {"count": 0, "words": []}
+        
+        # 중복 제거 및 정렬
+        words = sorted(df['label'].unique().tolist())
+        return {"count": len(words), "words": words}
+    except Exception as e:
+        print(f"[API] Error reading dataset: {e}")
+        return {"count": 0, "words": []}

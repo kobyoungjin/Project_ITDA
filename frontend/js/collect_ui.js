@@ -14,6 +14,7 @@ const state = {
     count: 0,
     lastSampleTime: 0,
     sampleInterval: 200, // 200ms 마다 1샘플 수집 (너무 많으면 오버피팅/데이터 비대)
+    latestPoseLandmarks: null, // [NEW] 실시간 Pose 데이터 캐시
 };
 
 // UI 요소
@@ -47,6 +48,22 @@ async function init() {
 
     // 카메라 데이터 구독
     window.addEventListener('itda:hands:results', onHandsDetected);
+    window.addEventListener('itda:pose:results', (e) => {
+        // [NEW] Pose 데이터 수신 및 가공 (백엔드 포맷: {landmarks: {label: {x,y,z}}})
+        if (e.detail.landmarks) {
+            const POSE_KEYS = {
+                left_shoulder: 11, right_shoulder: 12,
+                left_elbow: 13,    right_elbow: 14,
+                left_wrist: 15,    right_wrist: 16,
+            };
+            const lmDict = {};
+            for (const [label, idx] of Object.entries(POSE_KEYS)) {
+                const lm = e.detail.landmarks[idx];
+                if (lm) lmDict[label] = lm;
+            }
+            state.latestPoseLandmarks = { landmarks: lmDict };
+        }
+    });
     
     // 초기 상태 확인
     updateStatus();
@@ -222,6 +239,7 @@ async function onHandsDetected(e) {
             body: JSON.stringify({ 
                 right_landmarks, 
                 left_landmarks,
+                pose_landmarks: state.latestPoseLandmarks, // [NEW] Pose 데이터 동봉
                 // 하위 호환성을 위해 hands[0]도 보냄 (필요 시)
                 landmarks: hands[0].landmarks,
                 handedness: hands[0].handedness
@@ -237,6 +255,7 @@ async function onHandsDetected(e) {
         console.warn('샘플 전송 실패:', err);
     }
 }
+
 
 async function trainModel() {
     btnTrain.disabled = true;

@@ -35,16 +35,26 @@ class MotionExtractor:
         if not self.video_map:
             self.load_video_map()
             
-        # 1. 정확한 매칭
-        if word in self.video_map:
-            return self.video_map[word]["video_url"]
+        # 0. 입력어 자체의 콤마 처리 (복합어인 경우 첫 번째 단어 우선 시도)
+        sub_words = [w.strip() for w in word.split(",")]
         
-        # 2. 포함 관계 매칭 (콤마 구분자 등 처리)
+        # 1. 정확한 매칭 (입력어 전체 또는 개별 단어)
+        search_candidates = [word] + sub_words
+        for cand in search_candidates:
+            if cand in self.video_map:
+                return self.video_map[cand]["video_url"]
+        
+        # 2. 포함 관계 매칭 (사전의 키를 콤마로 분리해서 검색)
         for key, info in self.video_map.items():
             parts = [p.strip() for p in key.split(",")]
-            if word in parts:
-                return info["video_url"]
+            for cand in search_candidates:
+                if cand in parts:
+                    return info["video_url"]
         return None
+
+    def get_safe_name(self, word: str) -> str:
+        """프론트엔드와 동일하게 파일명에서 특수문자 제거"""
+        return word.replace("/", "_").replace(",", "_")
 
     def extract_and_save(self, word: str) -> bool:
         video_url = self.find_video_url(word)
@@ -53,7 +63,8 @@ class MotionExtractor:
             return False
             
         video_url = video_url.replace("http://", "https://")
-        output_path = OUTPUT_DIR / f"{word}.json"
+        safe_name = self.get_safe_name(word)
+        output_path = OUTPUT_DIR / f"{safe_name}.json"
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
         print(f"[Extractor] '{word}' 처리 시작: {video_url}")
