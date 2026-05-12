@@ -34,7 +34,7 @@ POSE = {
     "right_hip": 24,
 }
 
-VISIBILITY_THRESHOLD = 0.5
+VISIBILITY_THRESHOLD = 0.3 # 관절이 겹칠 때(Occlusion)의 인식률 보완을 위해 0.5 -> 0.3으로 하향
 
 
 def _to_np(p: dict) -> np.ndarray:

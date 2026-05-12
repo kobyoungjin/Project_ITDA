@@ -10,12 +10,20 @@ import os
 import csv
 import math
 import time
+import uuid
+import json
+import httpx
+import anyio
 import joblib
 import numpy as np
 from pathlib import Path
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List, Optional
+import shutil
+import cv2
+import mediapipe as mp
+from api.core.ml_utils import extract_ksl_features, augment_landmarks
 
 router = APIRouter()
 
@@ -38,66 +46,18 @@ class StartRequest(BaseModel):
     label: str  # 예: "안녕하세요"
 
 class SampleRequest(BaseModel):
-    # MediaPipe 21개 랜드마크 [{"x":..,"y":..,"z":..}, ...]
-    landmarks: List[dict]
+    # 양손 랜드마크 (각 21개)
+    right_landmarks: Optional[List[dict]] = None
+    left_landmarks: Optional[List[dict]] = None
+    # 하위 호환성을 위해 유지
+    landmarks: Optional[List[dict]] = None
     handedness: Optional[str] = "Right"
 
 class TrainRequest(BaseModel):
     n_neighbors: int = 5
 
 
-# ── 특징 추출 함수 ────────────────────────────────────────────
-def _extract_features(landmarks: List[dict]) -> Optional[List[float]]:
-    """
-    21개 MediaPipe 랜드마크 → 손목 기준 정규화 후 각도 15개 + 거리 1개 추출
-    총 16차원 특징 벡터 반환
-    """
-    if not landmarks or len(landmarks) < 21:
-        return None
-
-    # 손목(0번)을 원점으로 정규화
-    wrist = landmarks[0]
-    pts = [(lm["x"] - wrist["x"], lm["y"] - wrist["y"], lm.get("z", 0) - wrist.get("z", 0))
-           for lm in landmarks]
-
-    # 중지 끝(12번)까지 거리로 스케일 정규화
-    mid_tip = pts[12]
-    scale = math.hypot(mid_tip[0], mid_tip[1])
-    if scale < 1e-6:
-        return None
-    pts = [(p[0]/scale, p[1]/scale, p[2]/scale) for p in pts]
-
-    def angle(a, b, c):
-        """세 점 사이의 각도(라디안) 계산"""
-        ab = (b[0]-a[0], b[1]-a[1])
-        cb = (b[0]-c[0], b[1]-c[1])
-        dot = ab[0]*cb[0] + ab[1]*cb[1]
-        mag_ab = math.hypot(*ab)
-        mag_cb = math.hypot(*cb)
-        if mag_ab * mag_cb < 1e-9:
-            return 0.0
-        return math.acos(max(-1.0, min(1.0, dot / (mag_ab * mag_cb))))
-
-    # 손가락 마디 인덱스: [MCP, PIP, DIP, TIP]
-    fingers = [
-        [1, 2, 3, 4],    # 엄지
-        [5, 6, 7, 8],    # 검지
-        [9, 10, 11, 12], # 중지
-        [13, 14, 15, 16],# 약지
-        [17, 18, 19, 20],# 소지
-    ]
-
-    features = []
-    for f in fingers:
-        # 각 손가락의 3개 관절 각도
-        features.append(angle(pts[0], pts[f[0]], pts[f[1]]))   # 손목-MCP-PIP
-        features.append(angle(pts[f[0]], pts[f[1]], pts[f[2]])) # MCP-PIP-DIP
-        features.append(angle(pts[f[1]], pts[f[2]], pts[f[3]])) # PIP-DIP-TIP
-
-    # 스케일(중지 끝 거리) 자체도 특징으로
-    features.append(scale)
-
-    return features  # 16차원
+from api.core.ml_utils import extract_ksl_features
 
 
 # ── API 엔드포인트 ────────────────────────────────────────────
@@ -140,9 +100,19 @@ def add_sample(req: SampleRequest):
     if not _collect_state["active"]:
         return {"ok": False, "message": "수집 모드가 비활성화 상태입니다. /start 먼저 호출하세요."}
 
-    features = _extract_features(req.landmarks)
+    # 양손 데이터 우선 사용, 없으면 기존 단일 손 데이터 사용
+    r_lms = req.right_landmarks
+    l_lms = req.left_landmarks
+    
+    if r_lms is None and l_lms is None and req.landmarks:
+        if req.handedness == "Right":
+            r_lms = req.landmarks
+        else:
+            l_lms = req.landmarks
+
+    features = extract_ksl_features(r_lms, l_lms)
     if features is None:
-        return {"ok": False, "message": "랜드마크 데이터 불충분 (21개 필요)"}
+        return {"ok": False, "message": "랜드마크 데이터 불충분"}
 
     label = _collect_state["label"]
     is_new = not CSV_PATH.exists()
@@ -161,6 +131,10 @@ def add_sample(req: SampleRequest):
 @router.post("/train")
 def train_knn(req: TrainRequest):
     """수집된 CSV 데이터로 KNN 모델 훈련"""
+    return train_knn_model(req.n_neighbors)
+
+def train_knn_model(n_neighbors: int = 5):
+    """내부 학습 로직"""
     if not CSV_PATH.exists():
         return {"ok": False, "message": "학습 데이터가 없습니다. 먼저 샘플을 수집하세요."}
 
@@ -168,7 +142,18 @@ def train_knn(req: TrainRequest):
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.model_selection import cross_val_score
 
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(CSV_PATH, encoding='utf-8')
+    
+    # [NEW] 사용자 데이터 병합 최적화 (Task 3)
+    original_len = len(df)
+    df = df.drop_duplicates() # 중복 노이즈 제거
+    # 클래스 불균형 해소: 단어당 최대 100개 샘플만 사용하여 오버피팅 방지
+    df = df.groupby('label').head(100).reset_index(drop=True)
+    
+    if len(df) < original_len:
+        print(f"[Collect] 데이터 정제: {original_len} -> {len(df)} (중복 및 초과 샘플 제거)")
+        df.to_csv(CSV_PATH, index=False, encoding='utf-8') # 정제된 데이터 덮어쓰기
+
     if len(df) < 10:
         return {"ok": False, "message": f"샘플 수 부족 ({len(df)}개). 최소 10개 이상 필요합니다."}
 
@@ -176,7 +161,7 @@ def train_knn(req: TrainRequest):
     y = df["label"].values
     labels = sorted(set(y))
 
-    model = KNeighborsClassifier(n_neighbors=req.n_neighbors, metric="euclidean", weights="distance")
+    model = KNeighborsClassifier(n_neighbors=n_neighbors, metric="euclidean", weights="distance")
     
     # 교차 검증으로 정확도 측정
     if len(df) >= 20:
@@ -187,6 +172,10 @@ def train_knn(req: TrainRequest):
 
     model.fit(X, y)
     joblib.dump(model, MODEL_PATH)
+
+    # [핵심] 저장 후 메모리의 모델을 강제로 갱신 (서버 재시작 불필요)
+    from api.services.knn_classifier import reload_model
+    reload_model()
 
     return {
         "ok": True,
@@ -199,14 +188,183 @@ def train_knn(req: TrainRequest):
     }
 
 
-@router.get("/predict-test")
-def predict_test(handedness: str = "Right"):
-    """KNN 모델 로드 및 예측 가능 여부 확인"""
-    if not MODEL_PATH.exists():
-        return {"ok": False, "message": "훈련된 모델이 없습니다. /train 먼저 실행하세요."}
-    model = joblib.load(MODEL_PATH)
+@router.post("/video")
+async def collect_from_video(label: str, file: UploadFile = File(...)):
+    """
+    업로드된 비디오 파일에서 랜드마크를 추출하여 학습 데이터에 추가합니다.
+    """
+    temp_path = DATA_DIR / f"temp_{uuid.uuid4()}_{file.filename}"
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    saved_count = _process_video_file(temp_path, label)
+    
+    if temp_path.exists():
+        os.remove(temp_path)
+
     return {
         "ok": True,
-        "labels": list(model.classes_),
-        "message": "KNN 모델 로드 성공! 예측 준비 완료."
+        "label": label,
+        "saved_samples": saved_count,
+        "message": f"비디오 분석 완료: {saved_count}개의 샘플이 '{label}'로 저장되었습니다."
     }
+
+@router.post("/url")
+async def collect_from_url(label: str, url: str):
+    """
+    영상 URL에서 직접 랜드마크를 추출하여 학습 데이터에 추가합니다.
+    """
+    # sldict.korean.go.kr은 최근 http 접속이 막히는 경우가 있으므로 https로 전환
+    if url.startswith("http://sldict.korean.go.kr"):
+        url = url.replace("http://", "https://")
+
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        async with httpx.AsyncClient(timeout=30.0, headers=headers, follow_redirects=True) as client:
+            response = await client.get(url)
+            if response.status_code != 200:
+                return {"ok": False, "message": f"URL 접근 실패 (상태코드: {response.status_code})"}
+            
+            # 파일이 너무 작으면 실패로 간주
+            if len(response.content) < 1000:
+                return {"ok": False, "message": "유효하지 않은 영상 파일 (크기 너무 작음)"}
+            
+            temp_path = DATA_DIR / f"temp_download_{uuid.uuid4()}.mp4"
+            with open(temp_path, "wb") as f:
+                f.write(response.content)
+            
+        # CPU 집약적인 작업은 별도 스레드에서 실행하여 이벤트 루프를 보호
+        saved_count = await anyio.to_thread.run_sync(_process_video_file, temp_path, label)
+        
+        if temp_path.exists():
+            os.remove(temp_path)
+            
+        return {
+            "ok": True, 
+            "label": label, 
+            "saved_samples": saved_count,
+            "message": f"URL 분석 완료: {saved_count}개의 샘플이 저장되었습니다."
+        }
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
+
+@router.post("/batch")
+async def collect_batch(limit_words: int = 50):
+    """
+    sign_video_urls.json 파일에서 상위 N개 단어를 자동으로 학습합니다.
+    """
+    print(f"\n[Batch] 자동 학습 시작 (대상: 상위 {limit_words}개 단어)")
+    urls_path = Path("api/data/sign_video_urls.json")
+    if not urls_path.exists():
+        return {"ok": False, "message": "사전 영상 데이터(json)가 없습니다."}
+    
+    with open(urls_path, "r", encoding="utf-8") as f:
+        urls_data = json.load(f)
+    
+    items = list(urls_data.items())[:limit_words]
+    results = []
+    total_samples = 0
+    
+    for i, (label, info) in enumerate(items):
+        url = info.get("video_url")
+        if not url: continue
+        
+        print(f"[Batch] ({i+1}/{limit_words}) '{label}' 분석 시도 중... ", end="", flush=True)
+        try:
+            # 개별 URL 분석 (기존 로직 재사용)
+            res = await collect_from_url(label, url)
+            if res["ok"]:
+                total_samples += res["saved_samples"]
+                results.append(f"{label}: {res['saved_samples']}개")
+                print(f"성공 ({res['saved_samples']}개 추출)")
+            else:
+                print(f"실패 ({res.get('message')})")
+        except Exception as e:
+            print(f"에러 발생: {e}")
+            continue
+            
+    print(f"[Batch] 모든 영상 처리 완료. 모델 훈련을 시작합니다.")
+    train_res = await anyio.to_thread.run_sync(train_knn_model)
+    
+    return {
+        "ok": True,
+        "message": f"{len(results)}개 단어 학습 완료 (총 {total_samples} 샘플)",
+        "details": results,
+        "train_result": train_res
+    }
+
+def _process_video_file(video_path: Path, label: str):
+    """
+    실제 비디오 분석 (CPU 집약적 작업)
+    [증강 적용] 프레임 1개 -> 원본 1 + 증강 8 = 총 9배 샘플 자동 생성
+    직접 수집 없이도 손 크기/각도 개인차에 강건한 모델을 만든다.
+    """
+    mp_hands = mp.solutions.hands
+    saved_count = 0
+    
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        return 0
+
+    try:
+        with mp_hands.Hands(
+            static_image_mode=False, 
+            max_num_hands=2, 
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        ) as hands:
+            count = 0
+            while cap.isOpened() and saved_count < 100:  # 증강 포함 최대 100개
+                ret, frame = cap.read()
+                if not ret: break
+                
+                count += 1
+                if count % 5 != 0: continue
+                
+                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = hands.process(image)
+                
+                if results.multi_hand_landmarks:
+                    right_lms = None
+                    left_lms = None
+                    if results.multi_handedness:
+                        for idx, hand_handedness in enumerate(results.multi_handedness):
+                            label_side = hand_handedness.classification[0].label
+                            hlm = results.multi_hand_landmarks[idx]
+                            lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hlm.landmark]
+                            if label_side == "Right":
+                                right_lms = lms
+                            else:
+                                left_lms = lms
+                    
+                    # 원본 저장
+                    features = extract_ksl_features(right_lms, left_lms)
+                    if features:
+                        _save_sample(features, label)
+                        saved_count += 1
+
+                    # 증강 샘플 자동 생성 (한 손이라도 있으면 증강)
+                    aug_base = right_lms or left_lms
+                    if aug_base and saved_count < 100:
+                        for aug_lms in augment_landmarks(aug_base, n=8):
+                            if saved_count >= 100:
+                                break
+                            aug_r = aug_lms if right_lms else None
+                            aug_l = aug_lms if left_lms else None
+                            aug_feats = extract_ksl_features(aug_r, aug_l)
+                            if aug_feats:
+                                _save_sample(aug_feats, label)
+                                saved_count += 1
+    finally:
+        cap.release()
+        
+    return saved_count
+
+def _save_sample(features, label):
+    is_new = not CSV_PATH.exists()
+    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if is_new:
+            header = [f"f{i}" for i in range(len(features))] + ["label"]
+            writer.writerow(header)
+        writer.writerow(features + [label])

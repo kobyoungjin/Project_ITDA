@@ -21,7 +21,14 @@ import {
   DrawingUtils,
 } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/vision_bundle.mjs';
 
-const HAND_CONNECTIONS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+const HAND_CONNECTIONS = [
+  { start: 0, end: 1 }, { start: 1, end: 2 }, { start: 2, end: 3 }, { start: 3, end: 4 }, // 엄지
+  { start: 0, end: 5 }, { start: 5, end: 6 }, { start: 6, end: 7 }, { start: 7, end: 8 }, // 검지
+  { start: 5, end: 9 }, { start: 9, end: 10 }, { start: 10, end: 11 }, { start: 11, end: 12 }, // 중지
+  { start: 9, end: 13 }, { start: 13, end: 14 }, { start: 14, end: 15 }, { start: 15, end: 16 }, // 약지
+  { start: 13, end: 17 }, { start: 17, end: 18 }, { start: 18, end: 19 }, { start: 19, end: 20 }, // 소지
+  { start: 0, end: 17 } // 손바닥 밑부분
+];
 // Simplified FaceMesh connections for performance
 const FACEMESH_TESSELATION = [[10, 338], [338, 297], [297, 332], [332, 284], [284, 251], [251, 389], [389, 356], [356, 454], [454, 323], [323, 361], [361, 288], [288, 397], [397, 365], [365, 379], [379, 378], [378, 400], [400, 377], [377, 152], [152, 148], [148, 176], [176, 149], [149, 150], [150, 136], [136, 172], [172, 58], [58, 132], [132, 93], [93, 234], [234, 127], [127, 162], [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10]];
 
@@ -90,17 +97,17 @@ async function init() {
       minTrackingConfidence:      CONFIG.HAND_TRACKING_CONFIDENCE,
     });
 
-    // ③ PoseLandmarker (팔·어깨·몸통 33개 관절)
+    // ③ PoseLandmarker (팔·어깨·몸통 33개 관절) - 교차/겹침 상황 정확도 향상을 위해 full 모델 사용
     poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
         delegate: 'GPU',
       },
       runningMode:  'VIDEO',
       numPoses:     1,
-      minPoseDetectionConfidence: 0.5,
-      minPosePresenceConfidence:  0.5,
-      minTrackingConfidence:      0.5,
+      minPoseDetectionConfidence: 0.6,
+      minPosePresenceConfidence:  0.6,
+      minTrackingConfidence:      0.6,
       outputSegmentationMasks:    false,
     });
 
@@ -163,7 +170,7 @@ const POSE_KEYS = {
 const MOTION_THRESHOLDS = {
   MOVING_SPEED: 0.015,  // 정규화 좌표/프레임 (약 1.5% 화면 이동)
   STABLE_SPEED: 0.004,
-  STABLE_HOLD_MS: 1200, // 정지 상태가 1.2초 이상 유지되어야 동작 완료(stable)로 판정
+  STABLE_HOLD_MS: 500, // 정지 상태가 0.5초 이상 유지되어야 동작 완료(stable)로 판정 (반응성 향상)
 };
 const motionState = {
   phase: 'idle',         // idle | moving | settling | stable
@@ -286,16 +293,15 @@ function sendFrameWS(hands) {
   if (!isFinalTrigger && now - lastSendTime < 300) return;
   lastSendTime = now;
 
-  // [P0] 손 관절 Handshape 분류기: 21개 전체 랜드마크 전송 (MCP/PIP/DIP 굴곡 각도 계산 필수)
-  // 손목(0)을 원점으로 하여 상대좌표로 정규화 → 카메라 거리 변화에 강건한 분류
+  // [P0] 손 관절 랜드마크 전송: 21개 전체 랜드마크 전송
+  // 백엔드 ml_utils에서 직접 정규화(wrist 기준) 및 거리 계산을 수행하므로 절대좌표로 전송
   const handDataList = hands.map(h => {
-    const wrist = h.landmarks[0];
     const keypoints = h.landmarks.map(lm => ({
-      x: +(lm.x - wrist.x).toFixed(4),
-      y: +(lm.y - wrist.y).toFixed(4),
-      z: +((lm.z ?? 0) - (wrist.z ?? 0)).toFixed(4),
+      x: +lm.x.toFixed(4),
+      y: +lm.y.toFixed(4),
+      z: +(lm.z ?? 0).toFixed(4),
     }));
-    return { handedness: h.handedness, keypoints: keypoints, normalized: true };
+    return { handedness: h.handedness, keypoints: keypoints, normalized: false };
   });
 
   // [과제 1] 원시 좌표(x,y,z) 대신 백엔드가 이해하기 쉬운 메타데이터 추출
@@ -432,14 +438,14 @@ function drawResults(faceResult, handResult, poseResult) {
   // 3. 손 랜드마크 그리기
   if (handResult.landmarks) {
     for (const landmarks of handResult.landmarks) {
-      // 외곽선 (두껍게)
+      // 외곽선 (글로우 효과를 위한 어두운 배경)
       drawingUtils.drawConnectors(landmarks, HAND_CONNECTIONS, {
-        color: "#000000",
-        lineWidth: 4
+        color: "rgba(0, 0, 0, 0.5)",
+        lineWidth: 5
       });
-      // 실제 선 (조금 더 얇게)
+      // 실제 관절 선 (네온 느낌의 마젠타/핑크)
       drawingUtils.drawConnectors(landmarks, HAND_CONNECTIONS, {
-        color: "#00F2FE",
+        color: "#FF00FF",
         lineWidth: 2
       });
       // 관절 포인트
