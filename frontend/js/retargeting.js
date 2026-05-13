@@ -74,28 +74,17 @@ function apply75Landmarks(lms) {
   const pts = [];
   for (let i = 0; i < 75; i++) pts.push({ x: lms[i*3], y: lms[i*3+1], z: lms[i*3+2] });
 
-  // 1. 위치 동기화 (어깨 중앙 기준)
+  // joint_cache 데이터는 어깨 Y ≈ 0.87~1.06 (화면 하단)으로 기록되어
+  // 위치 동기화 공식이 맞지 않아 아바타를 y≈-1.1로 밀어냄.
+  // 아바타를 중앙에 고정하고 팔/손가락 리깅만 적용.
   const lS = pts[MP.POSE.L_S], rS = pts[MP.POSE.R_S];
-  if (lS && rS && avatar.model) {
-    const cX = (lS.x + rS.x) / 2;
-    const cY = (lS.y + rS.y) / 2;
-    
-    const targetX = -(cX - 0.5) * 1.8;
-    const targetY = (0.5 - cY) * 1.8 + 1.25; 
-    
-    // 모델의 전체 위치만 이동시키고 회전은 건드리지 않음
-    avatar.model.position.lerp(new THREE.Vector3(targetX, targetY - 1.45, 0), 0.2);
-  }
 
-  // 2. 상체 관절 리깅 (머리 회전 포함)
-  // 머리가 과도하게 꺾이는 문제를 방지하기 위해 회전 영향도를 대폭 낮추거나 비활성화
+  // 2. 상체 관절 리깅
   rigUpperBody(pts, avatar);
 
   // 3. 팔 리깅
   rigSide('Right', pts, avatar, 'Left');
   rigSide('Left', pts, avatar, 'Right');
-
-  avatar.updateSkeleton?.(lms);
 }
 
 function rigUpperBody(pts, avatar) {
@@ -117,28 +106,32 @@ function rigSide(side, pts, avatar, dataSide) {
   const w = pts[isR ? MP.POSE.R_W : MP.POSE.L_W];
 
   const baseArm = (side === 'Right') ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(-1, 0, 0);
+  const isZero = p => !p || (p.x === 0 && p.y === 0 && p.z === 0);
 
-  // 팔 리깅 (Lerp 값을 조절하여 부드럽게 추종)
-  if (s && e && m.u) {
+  // 팔 리깅 - 포즈 랜드마크가 0이면 건너뜀 (NaN 쿼터니언 방지)
+  if (s && e && m.u && !isZero(s) && !isZero(e)) {
     avatar.updateBone(m.u, getRotation(s, e, baseArm), 0.3);
   }
-  if (e && w && m.f) {
+  if (e && w && m.f && !isZero(e) && !isZero(w)) {
     avatar.updateBone(m.f, getRotation(e, w, baseArm), 0.3);
   }
-  if (m.h && e && w) {
-    // 손목은 팔의 방향을 따라가되 부드럽게
+  if (m.h && e && w && !isZero(e) && !isZero(w)) {
     avatar.updateBone(m.h, getRotation(e, w, baseArm), 0.1);
   }
 
   // 손가락 리깅
   const bIdx = isR ? MP.HAND.R_B : MP.HAND.L_B;
   const basePoint = pts[bIdx];
-  if (basePoint) {
+  // 좌표계 판별: z 절댓값이 0.15 초과면 월드좌표(단위:미터) → 임계값 스케일 조정
+  const isWorldCoord = basePoint && Math.abs(basePoint.z) > 0.15;
+  const curlThreshold = isWorldCoord ? 0.08 : 0.12;
+  const curlScale     = isWorldCoord ? 20   : 15;
+  if (basePoint && !isZero(basePoint)) {
     MP.HAND.TIPS.forEach((off, i) => {
       const tip = pts[bIdx + off];
       if (tip) {
         const d = Math.sqrt(Math.pow(tip.x-basePoint.x,2)+Math.pow(tip.y-basePoint.y,2)+Math.pow(tip.z-basePoint.z,2));
-        const curl = Math.max(0, Math.min(1.2, (0.12 - d) * 15)); 
+        const curl = Math.max(0, Math.min(1.2, (curlThreshold - d) * curlScale));
         for (let j = 1; j <= 3; j++) {
           const bn = findBone(bones, [`${side}${MP.HAND.NAMES[i]}${j}`, `mixamorig:${side}Hand${MP.HAND.NAMES[i]}${j}`]);
           if (bn) avatar.updateBone(bn, { x: curl, y: 0, z: 0 }, 0.2);

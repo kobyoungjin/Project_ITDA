@@ -111,6 +111,51 @@ def quat_distance(a: np.ndarray, b: np.ndarray) -> float:
     return 2.0 * math.acos(dot)
 
 
+def rotate_vector_by_quat(q: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """벡터 v 를 단위 quaternion q [x,y,z,w] 로 회전."""
+    qx, qy, qz, qw = q
+    vx, vy, vz = v
+    tx = 2 * (qy * vz - qz * vy)
+    ty = 2 * (qz * vx - qx * vz)
+    tz = 2 * (qx * vy - qy * vx)
+    return np.array([
+        vx + qw * tx + qy * tz - qz * ty,
+        vy + qw * ty + qz * tx - qx * tz,
+        vz + qw * tz + qx * ty - qy * tx,
+    ])
+
+
+def quat_from_two_vectors(primary_rest: np.ndarray, secondary_rest: np.ndarray,
+                           primary_target: np.ndarray, secondary_target: np.ndarray) -> np.ndarray:
+    """
+    primary 축을 먼저 정렬한 뒤, primary 에 수직인 평면에서 secondary 축을 추가 정렬.
+    Three.js Object3D.lookAt() 과 동일한 방식의 2벡터 쿼터니언.
+
+    손목(Hand) 본에 사용:
+      primary  = 손가락 방향 (wrist → middle MCP)
+      secondary = 손바닥 법선 (index × pinky cross product)
+    """
+    # 1단계: primary 정렬
+    q1 = quat_from_unit_vectors(primary_rest, primary_target)
+
+    # 2단계: q1 적용 후 secondary_rest 가 어디로 갔는지 계산
+    s_rotated = rotate_vector_by_quat(q1, secondary_rest)
+
+    # 3단계: primary_target 에 수직인 평면으로 투영
+    pt = vec_normalize(primary_target)
+    s_tgt = secondary_target - np.dot(secondary_target, pt) * pt
+    s_rot = s_rotated - np.dot(s_rotated, pt) * pt
+
+    n_t = np.linalg.norm(s_tgt)
+    n_r = np.linalg.norm(s_rot)
+    if n_t < 1e-6 or n_r < 1e-6:
+        return q1
+
+    # 4단계: primary 축 주위 roll 보정
+    q2 = quat_from_unit_vectors(s_rot / n_r, s_tgt / n_t)
+    return quat_multiply(q2, q1)
+
+
 # ════════════════════════════════════════════════════════════════
 # Rig 규약 — sonyr.glb 기반 (T-pose rest)
 # ════════════════════════════════════════════════════════════════
@@ -162,6 +207,11 @@ REST_DIRECTIONS = {
     "LeftHandPinky2":  np.array([+1.0, 0.0, 0.0]),
     "LeftHandPinky3":  np.array([+1.0, 0.0, 0.0]),
 }
+
+# T-pose 에서 손바닥이 바닥(-Y) 을 향함 (Mixamo 표준 T-pose 기준)
+# Hand 본 secondary (palm normal) — quat_from_two_vectors 에 사용
+HAND_PALM_REST  = np.array([0.0, -1.0, 0.0])   # 손바닥 법선 (T-pose: 아래)
+FINGER_NAIL_REST = np.array([0.0,  1.0, 0.0])   # 손톱 방향   (T-pose: 위 = 손바닥 반대)
 
 
 # OpenPose hand 21 keypoints 인덱스 (표준)
@@ -265,29 +315,45 @@ def retarget_hand_chain(hand_kps_3d: list, side: str) -> dict:
         b = idx * 4
         return np.array([hand_kps_3d[b], -hand_kps_3d[b+1], -hand_kps_3d[b+2]], dtype=float)
 
-    wrist = pt(0)
-    # Hand 본: wrist → middle finger MCP 방향을 손목 orientation 으로
+    wrist      = pt(0)
+    index_mcp  = pt(5)
     middle_mcp = pt(9)
-    hand_dir = vec_normalize(middle_mcp - wrist)
+    pinky_mcp  = pt(17)
+
+    hand_dir   = vec_normalize(middle_mcp - wrist)
+    index_vec  = vec_normalize(index_mcp - wrist)
+    pinky_vec  = vec_normalize(pinky_mcp - wrist)
+
+    # 손바닥 법선: index × pinky (Right) 또는 pinky × index (Left)
+    # T-pose 에서 결과가 [0,-1,0] (바닥 방향) 이 되도록 부호 선택
+    if side == "Right":
+        palm_normal = vec_normalize(np.cross(index_vec, pinky_vec))
+    else:
+        palm_normal = vec_normalize(np.cross(pinky_vec, index_vec))
+
+    nail_normal = -palm_normal  # 손톱 방향 = 손바닥 반대
 
     out = {}
     hand_key = f"{side}Hand"
-    hand_world = quat_from_unit_vectors(REST_DIRECTIONS[hand_key], hand_dir)
+    # quat_from_two_vectors: primary(손가락 방향) + secondary(손바닥 법선) 모두 인코딩
+    hand_world = quat_from_two_vectors(
+        REST_DIRECTIONS[hand_key], HAND_PALM_REST,
+        hand_dir, palm_normal,
+    )
     out[hand_key] = quat_to_dict(hand_world)
 
-    # 각 손가락 3마디 세그먼트: (MCP→PIP), (PIP→DIP), (DIP→TIP)
+    # 각 손가락 3마디: 손가락 방향 + 손톱 방향(= -palm_normal) 으로 roll 포함
     for finger_name, (idx_list, bone_suffixes) in FINGER_CHAINS.items():
-        # 세그먼트 정의: mcp=idx_list[0]-1 대신 5,6,7 패턴 → (wrist|mcp, pip, dip)
-        # 실제로는 Thumb1 = wrist-mcp 방향, Thumb2 = mcp-ip, Thumb3 = ip-tip
-        # Thumb: idx_list=[1,2,3] → segs: (wrist,1), (1,2), (2,3)
-        # Index: idx_list=[5,6,7] → segs: (wrist,5), (5,6), (6,7)
         segs = [(0, idx_list[0]), (idx_list[0], idx_list[1]), (idx_list[1], idx_list[2])]
-        for i, ((a, b), suffix) in enumerate(zip(segs, bone_suffixes)):
+        for (a, b), suffix in zip(segs, bone_suffixes):
             bone_key = f"{side}Hand{suffix}"
             if bone_key not in REST_DIRECTIONS:
                 continue
             seg_dir = vec_normalize(pt(b) - pt(a))
-            world_q = quat_from_unit_vectors(REST_DIRECTIONS[bone_key], seg_dir)
+            world_q = quat_from_two_vectors(
+                REST_DIRECTIONS[bone_key], FINGER_NAIL_REST,
+                seg_dir, nail_normal,
+            )
             out[bone_key] = quat_to_dict(world_q)
 
     return out
@@ -810,6 +876,28 @@ def extract_from_openpose_dir(keypoint_dir: str | Path, word: str,
     }
 
 
+def _load_word_mapping(morpheme_root: Path) -> dict:
+    """morpheme 폴더에서 WORD#### → 한국어 단어 매핑 로드."""
+    import re as _re
+    mapping = {}
+    for fp in sorted(morpheme_root.rglob("*_F_morpheme.json")):
+        m = _re.search(r"WORD(\d+)", fp.name)
+        if not m:
+            continue
+        word_num = int(m.group(1))
+        try:
+            with open(fp, encoding="utf-8") as f:
+                d = json.load(f)
+            data = d.get("data", [])
+            if data and data[0].get("attributes"):
+                label = data[0]["attributes"][0].get("name", "").strip()
+                if label:
+                    mapping[f"WORD{word_num:04d}"] = label
+        except Exception:
+            pass
+    return mapping
+
+
 def _batch_openpose(args):
     """
     keypoint 루트 (예: [라벨]01_real_word_keypoint/01) 아래 NIA_SL_WORD####_REAL##_<angle> 폴더를
@@ -820,6 +908,16 @@ def _batch_openpose(args):
     if not root.exists():
         print(f"[Batch] 루트 없음: {root}")
         return
+
+    # 한국어 단어 매핑 로드 (--morpheme 지정 시)
+    word_mapping: dict = {}
+    if getattr(args, "morpheme", None):
+        morph_root = Path(args.morpheme)
+        if morph_root.exists():
+            word_mapping = _load_word_mapping(morph_root)
+            print(f"[Batch] 단어 매핑 로드: {len(word_mapping)}개")
+        else:
+            print(f"[Batch] 경고: morpheme 경로 없음 → WORD#### 이름으로 저장")
 
     angle = args.angle
     pattern = f"*_REAL*_{angle}"
@@ -848,8 +946,11 @@ def _batch_openpose(args):
             continue
         seen_words.add(word_id)
 
+        # 한국어 이름이 있으면 사용, 없으면 WORD#### 그대로
+        label = word_mapping.get(word_id, word_id)
+
         try:
-            motion = extract_from_openpose_dir(d, word_id, fps=30.0)
+            motion = extract_from_openpose_dir(d, label, fps=30.0)
             save_motion_json(motion, args.output)
             ok += 1
             if i % 50 == 0 or i == total:
@@ -860,11 +961,107 @@ def _batch_openpose(args):
                       f"속도 {rate:.1f}/s  ETA {eta:.0f}s")
         except Exception as e:
             fail += 1
-            print(f"[Batch] 실패 {word_id}: {e}")
+            print(f"[Batch] 실패 {word_id}({label}): {e}")
 
     elapsed = _now() - t0
     print(f"\n[Batch] 완료: 성공 {ok}, 실패 {fail}, 경과 {elapsed:.1f}s "
           f"({ok/elapsed:.1f} words/s)")
+
+
+def _fix_hand_roll_keyframe(bones: dict, side: str) -> bool:
+    """
+    하나의 keyframe bones dict 에서 Hand + 손가락 본의 roll 을 수정.
+    Index1/Pinky1 의 primary 방향에서 palm_normal 을 역산해 2벡터 쿼터니언 재계산.
+    수정이 이루어진 경우 True 반환.
+    """
+    hand_key   = f"{side}Hand"
+    index1_key = f"{side}HandIndex1"
+    pinky1_key = f"{side}HandPinky1"
+
+    if not all(k in bones for k in [hand_key, index1_key, pinky1_key]):
+        return False
+
+    def q_arr(bname: str) -> np.ndarray:
+        q = bones[bname]
+        return np.array([q["x"], q["y"], q["z"], q["w"]], dtype=float)
+
+    def primary_dir(bname: str) -> np.ndarray:
+        """저장된 world quat 을 rest 방향에 적용해 실제 primary 방향 복원."""
+        return rotate_vector_by_quat(q_arr(bname), REST_DIRECTIONS[bname])
+
+    index_dir = primary_dir(index1_key)
+    pinky_dir = primary_dir(pinky1_key)
+    hand_dir  = primary_dir(hand_key)
+
+    if side == "Right":
+        palm_normal = np.cross(index_dir, pinky_dir)
+    else:
+        palm_normal = np.cross(pinky_dir, index_dir)
+
+    n = np.linalg.norm(palm_normal)
+    if n < 1e-6:
+        return False
+    palm_normal /= n
+    nail_normal = -palm_normal
+
+    # Hand 본 수정
+    bones[hand_key] = quat_to_dict(
+        quat_from_two_vectors(REST_DIRECTIONS[hand_key], HAND_PALM_REST,
+                              hand_dir, palm_normal)
+    )
+    # 손가락 본 수정
+    for finger in ("Thumb", "Index", "Middle", "Ring", "Pinky"):
+        for num in ("1", "2", "3"):
+            bk = f"{side}Hand{finger}{num}"
+            if bk not in bones or bk not in REST_DIRECTIONS:
+                continue
+            fd = primary_dir(bk)
+            bones[bk] = quat_to_dict(
+                quat_from_two_vectors(REST_DIRECTIONS[bk], FINGER_NAIL_REST,
+                                      fd, nail_normal)
+            )
+    return True
+
+
+def fix_hand_roll_in_dir(motion_dir: str | Path):
+    """
+    motion_dir 내 openpose-aihub 소스 V3 JSON 파일의 Hand/손가락 roll 을 일괄 수정.
+    npy_converted 등 다른 소스 파일은 건너뜀.
+    """
+    from time import time as _now
+    md = Path(motion_dir)
+    files = sorted(f for f in md.glob("*.json") if f.name != "index.json")
+
+    t0 = _now()
+    fixed = skipped = errors = 0
+
+    for jf in files:
+        try:
+            with open(jf, encoding="utf-8") as f:
+                data = json.load(f)
+
+            if data.get("source") != "openpose-aihub":
+                skipped += 1
+                continue
+
+            changed = False
+            for kf in data["keyframes"]:
+                for side in ("Right", "Left"):
+                    if _fix_hand_roll_keyframe(kf["bones"], side):
+                        changed = True
+
+            if changed:
+                with open(jf, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                fixed += 1
+
+        except Exception as e:
+            errors += 1
+            print(f"[FixRoll] 오류 {jf.name}: {e}")
+
+    elapsed = _now() - t0
+    print(f"[FixRoll] 완료: 수정 {fixed}, 스킵 {skipped}, 오류 {errors}, "
+          f"경과 {elapsed:.1f}s ({fixed / max(elapsed, 0.001):.1f} files/s)")
 
 
 def _extract_from_morpheme(args):
@@ -930,8 +1127,16 @@ def main():
     sp_batch.add_argument("--output", default=default_output)
     sp_batch.add_argument("--limit", type=int, default=None,
                           help="테스트용: 최대 N개만 변환")
+    sp_batch.add_argument("--morpheme", default=None,
+                          help="morpheme 루트 경로 (WORD####→한국어 매핑). "
+                               "예: D:/project_intel/.../01_real_word_morpheme/morpheme")
 
     sub.add_parser("self-test", help="Synthetic pose 로 수학 검증")
+
+    sp_fix = sub.add_parser("fix-hand-roll",
+                            help="기존 openpose-aihub JSON 의 손 roll 일괄 수정 (배치 재변환 불필요)")
+    sp_fix.add_argument("--dir", default=default_output,
+                        help="ksl_motions 디렉터리 (기본: frontend/data/ksl_motions)")
 
     args = ap.parse_args()
 
@@ -947,6 +1152,8 @@ def main():
         _batch_openpose(args)
     elif args.cmd == "self-test":
         _self_test()
+    elif args.cmd == "fix-hand-roll":
+        fix_hand_roll_in_dir(args.dir)
     else:
         ap.print_help()
 

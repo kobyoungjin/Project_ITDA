@@ -90,6 +90,7 @@ let headMesh = null;
 let bones = {};
 let initialBoneQuats = {};
 let morphIndex = {};
+let _tposeArmWorldQuats = null; // resting 포즈 적용 전 T-포즈 world quats
 
 const clock = new THREE.Clock();
 
@@ -101,6 +102,46 @@ const MODEL_URLS = [
   'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb',
 ];
 const jstEl = document.getElementById('joint-status');
+
+// sonyr.glb 기준 T-포즈 팔 방향: RightArm = 세계 -X, LeftArm = 세계 +X
+// 목표: 팔을 자연스럽게 아래로 (약간 몸 앞쪽으로)
+function _applyRestingPose() {
+  if (!model) return;
+  model.updateMatrixWorld(true);
+
+  const targets = [
+    { arm: 'RightArm', fore: 'RightForeArm', dir: new THREE.Vector3(-0.25, -1, 0).normalize() },
+    { arm: 'LeftArm',  fore: 'LeftForeArm',  dir: new THREE.Vector3( 0.25, -1, 0).normalize() },
+  ];
+
+  for (const { arm, fore, dir } of targets) {
+    const armKey  = bones[arm]  ? arm  : bones['mixamorig:' + arm]  ? 'mixamorig:' + arm  : null;
+    const foreKey = bones[fore] ? fore : bones['mixamorig:' + fore] ? 'mixamorig:' + fore : null;
+    if (!armKey || !foreKey) continue;
+
+    const armBone  = bones[armKey];
+    const foreBone = bones[foreKey];
+
+    const armPos  = new THREE.Vector3();
+    const forePos = new THREE.Vector3();
+    armBone.getWorldPosition(armPos);
+    foreBone.getWorldPosition(forePos);
+
+    const current    = new THREE.Vector3().subVectors(forePos, armPos).normalize();
+    const worldDelta = new THREE.Quaternion().setFromUnitVectors(current, dir);
+
+    const boneWorldQ   = new THREE.Quaternion();
+    armBone.getWorldQuaternion(boneWorldQ);
+    const newWorldQ = worldDelta.clone().multiply(boneWorldQ);
+
+    const parentWorldQ = new THREE.Quaternion();
+    armBone.parent.getWorldQuaternion(parentWorldQ);
+    armBone.quaternion.copy(parentWorldQ).invert().multiply(newWorldQ);
+
+    // initialBoneQuats 를 resting 포즈로 갱신 → reset() 호출 시 이 포즈로 돌아옴
+    initialBoneQuats[armKey] = armBone.quaternion.clone();
+  }
+}
 
 function loadModelWithFallback(urls, index = 0) {
   if (index >= urls.length) {
@@ -152,6 +193,21 @@ function loadModelWithFallback(urls, index = 0) {
         statusEl.classList.add('loaded');
       }
       console.info('[ITDA Avatar] 로드 완료:', urls[index], '/ 뼈:', Object.keys(bones).length);
+
+      // T-포즈 world quats 먼저 캡처 (V3 재생 수식에 필요)
+      model.updateMatrixWorld(true);
+      _tposeArmWorldQuats = new Map();
+      for (const nm of ['RightArm','LeftArm','RightForeArm','LeftForeArm','RightHand','LeftHand']) {
+        const bone = bones[nm] || bones['mixamorig:' + nm];
+        if (!bone) continue;
+        const wq = new THREE.Quaternion();
+        bone.getWorldQuaternion(wq);
+        _tposeArmWorldQuats.set(nm, wq);
+      }
+
+      // 팔을 자연스럽게 아래로 내림
+      _applyRestingPose();
+
       window.dispatchEvent(new CustomEvent('itda:avatar:ready'));
     },
     (xhr) => {
@@ -410,4 +466,5 @@ window.ITDAAvatar5 = {
 
   get bones() { return bones; },
   get initialBoneQuats() { return initialBoneQuats; },
+  get tposeArmWorldQuats() { return _tposeArmWorldQuats; },
 };

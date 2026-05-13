@@ -497,14 +497,14 @@
 
     <!-- ── 메인 (4:6 분할 레이아웃) ─────────────────────── -->
     <main id="split-layout" style="display: flex; flex-direction: column; height: calc(100vh - 60px);">
-      
+
       <!-- [위쪽 40%] 실시간 카메라 + 수어 예측 -->
       <div id="top-section" style="flex: 4; display: flex; flex-direction: column; background: #000; border-bottom: 1px solid var(--border); overflow: hidden; position: relative;">
         <!-- 카메라 영역 -->
         <div id="camera-area" style="flex: 1; position: relative; overflow: hidden;">
           <div class="pip-label" style="position: absolute; top: 0.5rem; left: 0.5rem; z-index: 10;">📷 실시간 카메라</div>
-          
-          <!-- [NEW] 카메라 우상단 상태 표시 (손 개수 + 표정) -->
+
+          <!-- 카메라 우상단 상태 표시 -->
           <div id="cam-status-overlay" style="position: absolute; top: 0.5rem; right: 0.5rem; z-index: 20; display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;">
             <div id="mini-hand-output" style="background: rgba(0,0,0,0.6); color: var(--accent-cyan); padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(0,242,254,0.2);">0개 ✋</div>
             <div id="mini-emotion-output" style="background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">중립 😐</div>
@@ -512,9 +512,9 @@
 
           <video id="vision-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
           <canvas id="vision-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none;"></canvas>
-          
-          <!-- [NEW] 실시간 번역 결과 오버레이 (HandTalker 스타일) -->
-          <div id="live-translation-overlay" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); 
+
+          <!-- 실시간 번역 결과 오버레이 -->
+          <div id="live-translation-overlay" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
                background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); padding: 0.8rem 1.5rem; border-radius: 99px;
                border: 1px solid rgba(0, 242, 254, 0.5); color: #fff; font-size: 1.4rem; font-weight: 800; text-align: center;
                white-space: nowrap; z-index: 25; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -522,30 +522,26 @@
             <span id="live-translation-text">...</span>
           </div>
         </div>
-        
+
         <!-- 수어 예측 결과 영역 -->
         <div id="prediction-area" style="background: var(--bg-card); padding: 0.6rem 1.2rem; border-top: 1px solid var(--border); min-height: 60px; display: flex; flex-direction: column; justify-content: center; position: relative;">
           <div class="t-label" style="font-size: 0.6rem; color: var(--accent-cyan); margin-bottom: 2px;">LIVE TRANSLATION</div>
           <div class="t-output" id="slm-output" style="font-size: 1.15rem; width: 100%; font-weight: 700;">
             <em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">수어 동작을 하면 분석 결과가 나타납니다.</em>
           </div>
-          
-          <!-- [NEW] 통역 로그 열기 버튼 -->
           <button id="btn-toggle-log" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; transition: all 0.2s;">
             📜 이력 보기
           </button>
         </div>
-        
-        <!-- [NEW] 수어 통역 로그 패널 (슬라이드 애니메이션) -->
-        <div id="translation-log-panel" style="position: absolute; top: 100%; left: 0; width: 100%; height: 200px; background: var(--bg-card); 
+
+        <!-- 수어 통역 로그 패널 -->
+        <div id="translation-log-panel" style="position: absolute; top: 100%; left: 0; width: 100%; height: 200px; background: var(--bg-card);
              border-top: 1px solid var(--border); z-index: 40; padding: 1rem; overflow-y: auto; display: none; transition: all 0.3s ease;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
             <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-cyan);">📋 통역 이력 (Sign-to-Text)</span>
             <button id="btn-clear-log" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.7rem;">지우기</button>
           </div>
-          <div id="translation-log-list" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-            <!-- 로그 아이템들이 여기에 추가됨 -->
-          </div>
+          <div id="translation-log-list" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;"></div>
         </div>
       </div>
 
@@ -554,7 +550,7 @@
         <!-- 아바타 영역 -->
         <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
           <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-          
+
           <!-- 뷰 모드 토글 버튼 -->
           <div style="position: absolute; top: 0.6rem; right: 0.6rem; z-index: 30; display: flex; gap: 0.4rem;">
             <button id="btn-view-avatar" title="아바타 모드" onclick="window.ITDAAvatar5?.setViewMode('avatar')"
@@ -566,15 +562,15 @@
               🦴 스켈레톤
             </button>
           </div>
-          
-          <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
+
+          <!-- AI Hub 참조 영상 PIP -->
           <div id="ref-pip">
             <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
             <button id="btn-close-ref">✕</button>
             <video id="ref-video" controls muted></video>
           </div>
 
-          <!-- 기존 mini-status 삭제됨 (손 개수/표정은 카메라 상단으로 이동) -->
+          <!-- mini-status (숨김 - JS에서 필요시 참조용) -->
           <div id="mini-status" style="display:none;">
             <div id="mini-handshape-output"></div>
             <div id="mini-pose-output"></div>
@@ -594,7 +590,7 @@
           </div>
         </div>
 
-        <!-- 컨트롤 버튼 (아바타 영역 하단 플로팅) -->
+        <!-- 컨트롤 버튼 -->
         <div class="controls" style="bottom: 1.2rem; right: 1.2rem;">
           <div id="mode-toggle" style="display:flex; gap:0.4rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid var(--border);">
             <button class="mode-btn active" data-mode="translate">번역</button>
@@ -603,7 +599,7 @@
           </div>
         </div>
 
-        <!-- [NEW] 학습 모드 카드 -->
+        <!-- 학습 모드 카드 -->
         <div id="lesson-card">
           <div class="lesson-header">
             <div class="lesson-emoji" id="lesson-emoji">🎓</div>
@@ -621,25 +617,20 @@
           </div>
         </div>
 
-        <!-- [NEW] 수집 모드 카드 -->
+        <!-- 수집 모드 카드 -->
         <div id="collect-card">
           <div class="collect-label">Collection Mode</div>
           <div style="font-size: 1.1rem; font-weight: 800; margin-bottom: 0.8rem; color: var(--accent-green);">샘플 수집</div>
-          
           <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력">
-          
           <div class="collect-stats">
             <span>샘플 수:</span>
             <strong id="collect-sample-count" style="color: var(--accent-cyan);">0</strong>
           </div>
-
           <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 수집 시작</button>
           <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 중지</button>
           <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.4rem;">⚙️ KNN 모델 훈련</button>
-          
           <div style="border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
             <button id="btn-collect-batch" style="width: 100%; background: var(--accent-purple); color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">🚀 사전 영상 자동 학습 시작</button>
-            
             <div style="display: flex; gap: 0.4rem; margin-top: 0.2rem;">
               <input type="text" id="collect-url-input" class="collect-input" style="margin-bottom:0; flex:1;" placeholder="영상 URL 입력 (mp4)">
               <button id="btn-collect-url" style="background: var(--accent-cyan); color: #000; border: none; padding: 0 10px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.7rem;">추출</button>
@@ -649,12 +640,12 @@
           </div>
         </div>
 
-
-      <!-- 비전 로딩 오버레이 -->
-      <div id="vision-overlay">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">MediaPipe 모델 로딩 중...</div>
-        <div id="vision-status">초기화 준비 중</div>
+        <!-- 비전 로딩 오버레이 -->
+        <div id="vision-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">MediaPipe 모델 로딩 중...</div>
+          <div id="vision-status">초기화 준비 중</div>
+        </div>
       </div>
     </main>
 
@@ -672,8 +663,8 @@
 
   <!-- ── 모듈 로딩 순서: avatar → retargeting → vision ── -->
   <!-- [캐시버스팅] 모든 주요 JS 에 v 쿼리 파라미터 부여. 코드 수정 시 아래 버전만 올리면 브라우저 강제 fetch -->
-  <script type="module" src="./js/avatar.js?v=20260422c"></script>
-  <script type="module" src="./js/retargeting.js?v=20260422c"></script>
+  <script type="module" src="./js/avatar.js?v=20260513b"></script>
+  <script type="module" src="./js/retargeting.js?v=20260512c"></script>
   <script type="module" src="./js/vision.js?v=20260422c"></script>
 
   <!-- ── [③ STT] Web Speech primary + Whisper fallback ── -->
@@ -690,10 +681,10 @@
 
   <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
   <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
-  <script type="module" src="./js/motion_loader_v3.js?v=20260428"></script>
+  <script type="module" src="./js/motion_loader_v3.js?v=20260513c"></script>
 
   <!-- ── [NEW] 국립국어원 관절 데이터 (.npy -> .json) 로더 ─── -->
-  <script type="module" src="./js/motion_loader_npy.js?v=20260429"></script>
+  <script type="module" src="./js/motion_loader_npy.js?v=20260512d"></script>
 
   <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
   <script type="module" src="./js/education.js"></script>

@@ -123,10 +123,13 @@ async function playMotion(word) {
   // 손가락 rest 도 복귀 대상에 포함 (수형이 적용되면 본이 변했으므로 원복 필요)
   for (const bName of Object.keys(avatar._handshapeRest || {})) touchedBones.add(bName);
 
+  // 복귀 타겟: avatar.initialBoneQuats(resting 포즈) 우선, 없으면 현재 자세
   const initialQuats = new Map();
   for (const bName of touchedBones) {
     const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
-    if (bone) initialQuats.set(bName, bone.quaternion.clone());
+    if (!bone) continue;
+    const restQ = avatar.initialBoneQuats?.[bName] || avatar.initialBoneQuats?.['mixamorig:' + bName];
+    initialQuats.set(bName, restQ ? restQ.clone() : bone.quaternion.clone());
   }
 
   return new Promise((resolve) => {
@@ -294,6 +297,15 @@ function _captureHandRest(avatar) {
 // 매 프레임 W_new = wq * W_rest_self 로 합성, 부모-자식 순서로 local 변환.
 function _captureArmRestWorld(avatar) {
   if (avatar._armRestWorld) return;
+
+  // avatar.js 에서 resting 포즈 적용 전에 캡처한 T-포즈 quats 우선 사용
+  if (avatar.tposeArmWorldQuats?.size > 0) {
+    avatar._armRestWorld = avatar.tposeArmWorldQuats;
+    console.info(`[MotionV3] T-포즈 world quats 사용 (${avatar._armRestWorld.size}개)`);
+    return;
+  }
+
+  // fallback: 현재 포즈 world quats (T-포즈와 다를 수 있음)
   const map = new Map();
   const armBoneNames = ['RightArm','LeftArm','RightForeArm','LeftForeArm','RightHand','LeftHand'];
   for (const name of armBoneNames) {
@@ -304,7 +316,7 @@ function _captureArmRestWorld(avatar) {
     map.set(name, wq);
   }
   avatar._armRestWorld = map;
-  console.info(`[MotionV3] arm rest world quats 캐시: ${map.size}개`);
+  console.info(`[MotionV3] arm rest world quats 캐시 (fallback): ${map.size}개`);
 }
 
 // ── 초기 자세로 부드럽게 복귀 (V2 엔진과 동일 톤) ───────────
@@ -402,39 +414,3 @@ async function browseRange(start = 1, end = 10) {
 }
 window.ITDAMotionV3.browse = browseRange;
 
-// ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
-(function _setDefaultIdle() {
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
-      clearInterval(timer);
-      const params = new URLSearchParams(location.search);
-      // 만약 autoplay 중이 아니라면 기본 Idle 자세를 설정
-      if (!params.get('autoplay')) {
-        window.ITDAMotionV3.setAsIdle('감사');
-      }
-    } else if (attempts > 60) {
-      clearInterval(timer);
-    }
-  }, 500);
-})();
-
-
-// ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
-(function _setDefaultIdle() {
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
-      clearInterval(timer);
-      const params = new URLSearchParams(location.search);
-      // 만약 autoplay 중이 아니라면 기본 Idle 자세를 설정
-      if (!params.get('autoplay')) {
-        window.ITDAMotionV3.setAsIdle('감사');
-      }
-    } else if (attempts > 60) {
-      clearInterval(timer);
-    }
-  }, 500);
-})();
