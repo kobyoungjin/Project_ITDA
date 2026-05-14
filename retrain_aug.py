@@ -77,17 +77,16 @@ def process(video_path, label, max_samples=100):
                     if feats:
                         _save(feats, label); saved += 1
                     
-                    # 증강 (8배)
-                    base = r_lms or l_lms
-                    if base:
-                        for aug in augment_landmarks(base, n=8):
-                            if saved >= max_samples: break
-                            aug_r = aug if r_lms else None
-                            aug_l = aug if l_lms else None
-                            # 증강 시에는 팔 관절 데이터는 원본을 유지 (또는 노이즈 추가 가능하나 일단 유지)
-                            aug_f = extract_ksl_features(aug_r, aug_l, pose_res)
-                            if aug_f:
-                                _save(aug_f, label); saved += 1
+                    # 증강 (8배) - 양손 독립 증강으로 버그 수정
+                    for _ in range(8):
+                        if saved >= max_samples: break
+                        aug_r = augment_landmarks(r_lms, n=1)[0] if r_lms else None
+                        aug_l = augment_landmarks(l_lms, n=1)[0] if l_lms else None
+                        
+                        # 증강 시에는 팔 관절 데이터는 원본을 유지
+                        aug_f = extract_ksl_features(aug_r, aug_l, pose_res)
+                        if aug_f:
+                            _save(aug_f, label); saved += 1
 
     finally:
         cap.release()
@@ -124,7 +123,8 @@ for lbl in REPLACE_LABELS:
 X = df.drop("label", axis=1).values
 y = df["label"].values
 labels = sorted(set(y))
-model = KNeighborsClassifier(n_neighbors=5, metric="euclidean", weights="distance")
+# [개선] Cosine 유사도를 사용하여 각도 중심의 특징 매칭 정확도 향상
+model = KNeighborsClassifier(n_neighbors=5, metric="cosine", weights="distance")
 if len(df) >= 20:
     scores = cross_val_score(model, X, y, cv=min(5, len(labels)), scoring="accuracy")
     print(f"\n교차검증 정확도: {scores.mean()*100:.1f}%")

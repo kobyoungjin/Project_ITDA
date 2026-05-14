@@ -362,17 +362,16 @@ def _process_video_file(video_path: Path, label: str):
                         _save_sample(features, label)
                         saved_count += 1
 
-                    # 증강 샘플 (팔 관절은 원본 유지)
-                    aug_base = right_lms or left_lms
-                    if aug_base and saved_count < 100:
-                        for aug_lms in augment_landmarks(aug_base, n=8):
-                            if saved_count >= 100: break
-                            aug_r = aug_lms if right_lms else None
-                            aug_l = aug_lms if left_lms else None
-                            aug_feats = extract_ksl_features(aug_r, aug_l, pose_res)
-                            if aug_feats:
-                                _save_sample(aug_feats, label)
-                                saved_count += 1
+                    # 증강 샘플 (팔 관절은 원본 유지, 양손 독립 증강으로 개선)
+                    for _ in range(8):
+                        if saved_count >= 100: break
+                        aug_r = augment_landmarks(right_lms, n=1)[0] if right_lms else None
+                        aug_l = augment_landmarks(left_lms, n=1)[0] if left_lms else None
+                        
+                        aug_feats = extract_ksl_features(aug_r, aug_l, pose_res)
+                        if aug_feats:
+                            _save_sample(aug_feats, label)
+                            saved_count += 1
 
     finally:
         cap.release()

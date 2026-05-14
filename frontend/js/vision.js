@@ -35,10 +35,10 @@ const FACEMESH_TESSELATION = [[10, 338], [338, 297], [297, 332], [332, 284], [28
 // ── 설정 ──────────────────────────────────────────────────────
 const CONFIG = {
   MIN_FRAME_INTERVAL_MS: 33,        // ~30 fps
-  FACE_DETECTION_CONFIDENCE: 0.6,
+  FACE_DETECTION_CONFIDENCE: 0.5,
   FACE_TRACKING_CONFIDENCE:  0.5,
-  HAND_DETECTION_CONFIDENCE: 0.7,
-  HAND_TRACKING_CONFIDENCE:  0.6,
+  HAND_DETECTION_CONFIDENCE: 0.4,
+  HAND_TRACKING_CONFIDENCE:  0.4,
   MAX_HANDS: 2,
 };
 
@@ -75,7 +75,7 @@ async function init() {
     faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-        delegate: 'GPU',
+        delegate: 'CPU',
       },
       outputFaceBlendshapes: true,
       runningMode:           'VIDEO',
@@ -88,7 +88,7 @@ async function init() {
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-        delegate: 'GPU',
+        delegate: 'CPU',
       },
       runningMode:    'VIDEO',
       numHands:       CONFIG.MAX_HANDS,
@@ -101,7 +101,7 @@ async function init() {
     poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
-        delegate: 'GPU',
+        delegate: 'CPU',
       },
       runningMode:  'VIDEO',
       numPoses:     1,
