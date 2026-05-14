@@ -66,6 +66,8 @@ from api.core.ml_utils import extract_ksl_features
 @router.post("/start")
 def start_collection(req: StartRequest):
     """수집 모드 시작 (단어 레이블 지정)"""
+    from api.core.ml_utils import reset_prev_state
+    reset_prev_state() # 수집 시작 시 이전 모션 잔상 제거
     _collect_state["active"] = True
     _collect_state["label"] = req.label.strip()
     _collect_state["count"] = 0
@@ -165,12 +167,12 @@ def train_knn_model(n_neighbors: int = 5):
     y = df["label"].values
     labels = sorted(set(y))
 
-    # [개선] n_neighbors 를 데이터 크기에 맞춰 동적으로 조정
-    final_n = min(n_neighbors, len(df) // 2)
+    # [개선] n_neighbors 를 데이터 크기에 맞춰 동적으로 조정 (정확도 향상을 위해 7~9 권장)
+    final_n = min(max(7, n_neighbors), len(df) // 3)
     if final_n < 1: final_n = 1
 
-    # [개선] 동작의 '형태'를 중시하는 코사인 유사도(Cosine) 메트릭 적용 및 가중치 강화
-    model = KNeighborsClassifier(n_neighbors=final_n, metric="cosine", weights="distance")
+    # [개선] 고차원(64차원) 모션 데이터에서는 'minkowski'(유클리드 변형)가 더 안정적인 경우가 많음
+    model = KNeighborsClassifier(n_neighbors=final_n, metric="minkowski", p=2, weights="distance")
     
     # 교차 검증으로 정확도 측정
     if len(df) >= 20:
@@ -307,6 +309,8 @@ def _process_video_file(video_path: Path, label: str):
     실제 비디오 분석 (CPU 집약적 작업)
     [증강 적용] 프레임 1개 -> 원본 1 + 증강 8 = 총 9배 샘플 자동 생성
     """
+    from api.core.ml_utils import reset_prev_state
+    reset_prev_state() # 비디오 시작 시 모션 상태 초기화
     mp_hands = mp.solutions.hands
     mp_pose = mp.solutions.pose
     saved_count = 0
@@ -325,13 +329,23 @@ def _process_video_file(video_path: Path, label: str):
         with mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, \
              mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5) as pose:
             
-            count = 0
-            while cap.isOpened() and saved_count < 100:
+            # [품질 개선] 영상의 앞뒤 구간 제외 (준비 동작 제거)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            # '친구'처럼 오인식이 많은 단어는 더 엄격하게(가운데만) 추출
+            trim_rate = 0.35 if label == "친구" else 0.2
+            start_frame = int(total_frames * trim_rate)
+            end_frame = int(total_frames * (1.0 - trim_rate))
+            
+            cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+            count = start_frame
+            while cap.isOpened() and saved_count < 100 and count < end_frame:
                 ret, frame = cap.read()
                 if not ret: break
                 
                 count += 1
-                if count % 5 != 0: continue
+                if count % 3 != 0: continue # 추출 밀도 상향 (5 -> 3)
                 
                 image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 res_hands = hands.process(image)

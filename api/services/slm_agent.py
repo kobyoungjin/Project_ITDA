@@ -58,7 +58,8 @@ RULE_HINTS = [
     (("POINT",),      "가슴",   None,    "이름이 뭐예요"),
     (("V",),          "얼굴",   None,    "또 만나요"),
     (("L",),          "가슴",   None,    "얼마예요"),
-    (("OK",),         "가슴",   None,    "좋아하다"),
+    (("POINT",),      "가슴",   "앞으로", "너"),
+    (("POINT",),      "가슴",   "정지",   "나"),
     (("PALM", "PALM"),"얼굴",   None,    "사랑합니다"),
     (("PALM",),       "가슴",   "아래",  "괜찮아요"),
 ]
@@ -124,17 +125,19 @@ class SlmAgent:
         self._circuit_breaker_until = 0
 
     async def _call_ai(self, prompt: str, timeout: int = 7) -> str:
-        # 1. Gemini API 키가 있으면 무조건 우선 사용 (빠르고 똑똑함)
-        if gemini_model:
+        import time
+        # 1. Gemini API 키가 있으면 우선 사용 (서킷 브레이커 확인)
+        if gemini_model and time.time() > getattr(self, "_gemini_breaker", 0):
             try:
                 response = await gemini_model.generate_content_async(prompt)
                 return response.text.strip()
             except Exception as e:
-                print(f"[SlmAgent] Gemini 호출 실패 (Ollama로 우회 시도 안 함): {e}")
-                return ""
+                print(f"[SlmAgent] Gemini 호출 실패 (10분간 중단 및 Ollama/Rule-based 전환): {e}")
+                # 403/401 등 인증 오류 시 10분간 중단
+                self._gemini_breaker = time.time() + 600 
+                # 여기서 return 하지 않고 아래 Ollama 로직으로 흘러가게 함
 
-        # 2. Gemini 키가 없으면 기존 Ollama(로컬) 사용
-        import time
+        # 2. Gemini 키가 없거나 실패 시 Ollama(로컬) 사용
         if time.time() < self._circuit_breaker_until:
             return ""
             
@@ -148,7 +151,7 @@ class SlmAgent:
                     data = await resp.json()
                     return (data.get("response") or "").strip()
         except Exception as e:
-            print(f"[SlmAgent] Ollama 호출 실패(서킷 브레이커 작동, 30초 우회): {e}")
+            # Ollama도 없으면 조용히 빈 값 반환 (규칙 기반 엔진이 처리함)
             self._circuit_breaker_until = time.time() + 30
             return ""
 

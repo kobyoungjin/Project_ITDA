@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
-CONFIDENCE_THRESHOLD = 0.35  # 신뢰도 임계값을 0.35로 하향 (80-90% 유사도 대응 및 인식률 향상)
+CONFIDENCE_THRESHOLD = 0.60  # 확실한 동작(60% 이상 일치)만 인식하도록 기준 상향 (오인식 방지)
 
 _model = None  # 싱글톤 캐시
 

@@ -34,11 +34,11 @@ const FACEMESH_TESSELATION = [[10, 338], [338, 297], [297, 332], [332, 284], [28
 
 // ── 설정 ──────────────────────────────────────────────────────
 const CONFIG = {
-  MIN_FRAME_INTERVAL_MS: 33,        // ~30 fps
+  MIN_FRAME_INTERVAL_MS: 16,        // ~60 fps (기존 33ms에서 상향)
   FACE_DETECTION_CONFIDENCE: 0.5,
   FACE_TRACKING_CONFIDENCE:  0.5,
-  HAND_DETECTION_CONFIDENCE: 0.4,
-  HAND_TRACKING_CONFIDENCE:  0.4,
+  HAND_DETECTION_CONFIDENCE: 0.3,   // 감지 문턱값 하향 (빠른 움직임 대응)
+  HAND_TRACKING_CONFIDENCE:  0.3,
   MAX_HANDS: 2,
 };
 
@@ -75,7 +75,7 @@ async function init() {
     faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-        delegate: 'CPU',
+        delegate: 'GPU', // CPU -> GPU 가속
       },
       outputFaceBlendshapes: true,
       runningMode:           'VIDEO',
@@ -88,7 +88,7 @@ async function init() {
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-        delegate: 'CPU',
+        delegate: 'GPU', // CPU -> GPU 가속
       },
       runningMode:    'VIDEO',
       numHands:       CONFIG.MAX_HANDS,
@@ -100,14 +100,14 @@ async function init() {
     // ③ PoseLandmarker (팔·어깨·몸통 33개 관절) - 교차/겹침 상황 정확도 향상을 위해 full 모델 사용
     poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
-        delegate: 'CPU',
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        delegate: 'GPU', // full -> lite 모델로 경량화 및 GPU 가속
       },
       runningMode:  'VIDEO',
       numPoses:     1,
-      minPoseDetectionConfidence: 0.6,
-      minPosePresenceConfidence:  0.6,
-      minTrackingConfidence:      0.6,
+      minPoseDetectionConfidence: 0.5,
+      minPosePresenceConfidence:  0.5,
+      minTrackingConfidence:      0.5,
       outputSegmentationMasks:    false,
     });
 

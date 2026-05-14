@@ -3,14 +3,16 @@ import numpy as np
 from typing import Optional
 
 
+# ── 시계열 특징을 위한 상태 저장 (속도 계산용) ──────────────────
+_prev_state = {"right_wrist": None, "left_wrist": None}
+
+def reset_prev_state():
+    """영상 전환 시 이전 프레임 좌표 정보를 초기화합니다."""
+    global _prev_state
+    _prev_state = {"right_wrist": None, "left_wrist": None}
+
 def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Optional[list], pose_landmarks: Optional[dict] = None) -> Optional[list]:
-    """
-    양손의 MediaPipe 랜드마크 + 팔 관절 -> 37차원 통합 특징 벡터
-    - 오른손 (16차원): 15개 각도 + 1개 스케일
-    - 왼손 (16차원): 15개 각도 + 1개 스케일
-    - 양손 상대 위치 (3차원): 오른손 손목 기준 왼손 손목의 (dx, dy, dz)
-    - 팔 관절 (2차원): 좌우 팔꿈치 굴곡 각도 (도 단위, 0~180 -> 0~1 정규화)
-    """
+    global _prev_state
     
     def _extract_single_hand_features(landmarks: Optional[list]) -> list[float]:
         # 손이 감지되지 않은 경우 0으로 채움 (16차원)
@@ -21,94 +23,98 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
         wrist = landmarks[0]
         pts = np.array([[lm["x"] - wrist["x"], lm["y"] - wrist["y"], lm.get("z", 0) - wrist.get("z", 0)] for lm in landmarks])
 
-        # 관절 벡터 계산 (HandTalker 방식: 마디 벡터 간의 각도)
-        # 0: Wrist, 1-4: Thumb, 5-8: Index, 9-12: Middle, 13-16: Ring, 17-20: Pinky
-        # 각 손가락별 마디 벡터들
+        # 관절 벡터 및 각도 계산 (기존 로직 유지)
         parents = [0,1,2,3, 0,5,6,7, 0,9,10,11, 0,13,14,15, 0,17,18,19]
         children = [1,2,3,4, 5,6,7,8, 9,10,11,12, 13,14,15,16, 17,18,19,20]
-        
-        v1 = pts[parents]
-        v2 = pts[children]
-        v = v2 - v1 # [20, 3] 벡터들
-        
-        # 벡터 정규화 (Unit Vector)
+        v = pts[children] - pts[parents]
         v_norm = np.linalg.norm(v, axis=1)[:, np.newaxis]
         v_unit = np.divide(v, v_norm, out=np.zeros_like(v), where=v_norm > 1e-9)
-        
-        # 마디 간 각도 계산 (15개 각도)
-        # 엄지: (0,1)-(1,2), (1,2)-(2,3), (2,3)-(3,4) ...
         idx1 = [0,1,2, 4,5,6, 8,9,10, 12,13,14, 16,17,18]
         idx2 = [1,2,3, 5,6,7, 9,10,11, 13,14,15, 17,18,19]
-        
         dot_product = np.einsum('nt,nt->n', v_unit[idx1], v_unit[idx2])
-        angles = np.arccos(np.clip(dot_product, -1.0, 1.0)) / np.pi # 0~1 정규화
+        angles = np.arccos(np.clip(dot_product, -1.0, 1.0)) / np.pi
         
         feats = angles.tolist()
-        # 마지막 scale 값은 존재 여부 플래그 (1.0=감지됨)
-        feats.append(1.0) 
+        feats.append(1.0) # 감지 플래그
         return feats
 
     # 1. 각 손의 특징 추출
     right_feats = _extract_single_hand_features(right_landmarks)
     left_feats = _extract_single_hand_features(left_landmarks)
 
-    # 2. 상대 위치 특징 추출 (Wrist relative to shoulders & Wrist to Wrist)
-    # [개선] HandTalker 처럼 전신 맥락을 반영하기 위해 어깨 기준 손목 위치 추가
-    rel_pos = [0.0] * 9 # [rw-rs(3), lw-ls(3), rw-lw(3)]
+    # 2. [NEW] 이동 속도 및 방향 특징 (Velocity, 6차원)
+    # 이전 프레임과의 손목 좌표 차이를 계산하여 '움직임의 궤적'을 파악함
+    velocity = [0.0] * 6 # [rx, ry, rz, lx, ly, lz]
     
+    if right_landmarks:
+        rw = right_landmarks[0]
+        if _prev_state["right_wrist"]:
+            pw = _prev_state["right_wrist"]
+            velocity[0] = math.tanh((rw["x"] - pw["x"]) * 10) # 변화량 증폭
+            velocity[1] = math.tanh((rw["y"] - pw["y"]) * 10)
+            velocity[2] = math.tanh((rw.get("z",0) - pw.get("z",0)) * 10)
+        _prev_state["right_wrist"] = {"x": rw["x"], "y": rw["y"], "z": rw.get("z", 0)}
+    else:
+        _prev_state["right_wrist"] = None
+
+    if left_landmarks:
+        lw = left_landmarks[0]
+        if _prev_state["left_wrist"]:
+            pw = _prev_state["left_wrist"]
+            velocity[3] = math.tanh((lw["x"] - pw["x"]) * 10)
+            velocity[4] = math.tanh((lw["y"] - pw["y"]) * 10)
+            velocity[5] = math.tanh((lw.get("z",0) - pw.get("z",0)) * 10)
+        _prev_state["left_wrist"] = {"x": lw["x"], "y": lw["y"], "z": lw.get("z", 0)}
+    else:
+        _prev_state["left_wrist"] = None
+
+    # 3. 상대 위치 특징 (Nose, Shoulders)
+    rel_pos = [0.0] * 12
     if pose_landmarks:
         lms = pose_landmarks.get("landmarks", {})
-        rs = lms.get("right_shoulder")
-        ls = lms.get("left_shoulder")
-        
-        # 정규화 기준: 어깨 너비 (영상의 크기에 독립적)
-        shoulder_width = 0.2 # 기본값
+        rs, ls, nose = lms.get("right_shoulder"), lms.get("left_shoulder"), lms.get("nose")
+        shoulder_width = 0.2
         if rs and ls:
             shoulder_width = math.sqrt((rs['x']-ls['x'])**2 + (rs['y']-ls['y'])**2)
-        
         if shoulder_width < 0.01: shoulder_width = 0.2
 
         if rs and right_landmarks:
             rw = right_landmarks[0]
-            rel_pos[0] = math.tanh((rw["x"] - rs["x"]) / shoulder_width)
-            rel_pos[1] = math.tanh((rw["y"] - rs["y"]) / shoulder_width)
-            rel_pos[2] = math.tanh((rw.get("z", 0) - rs.get("z", 0)) / shoulder_width)
-            
+            rel_pos[0:3] = [math.tanh((rw["x"]-rs["x"])/shoulder_width), math.tanh((rw["y"]-rs["y"])/shoulder_width), math.tanh((rw.get("z",0)-rs.get("z",0))/shoulder_width)]
         if ls and left_landmarks:
             lw = left_landmarks[0]
-            rel_pos[3] = math.tanh((lw["x"] - ls["x"]) / shoulder_width)
-            rel_pos[4] = math.tanh((lw["y"] - ls["y"]) / shoulder_width)
-            rel_pos[5] = math.tanh((lw.get("z", 0) - ls.get("z", 0)) / shoulder_width)
+            rel_pos[3:6] = [math.tanh((lw["x"]-ls["x"])/shoulder_width), math.tanh((lw["y"]-ls["y"])/shoulder_width), math.tanh((lw.get("z",0)-ls.get("z",0))/shoulder_width)]
+        if nose:
+            if right_landmarks:
+                rw = right_landmarks[0]
+                rel_pos[6:9] = [math.tanh((rw["x"]-nose["x"])/shoulder_width), math.tanh((rw["y"]-nose["y"])/shoulder_width), math.tanh((rw.get("z",0)-nose.get("z",0))/shoulder_width)]
+            if left_landmarks:
+                lw = left_landmarks[0]
+                rel_pos[9:12] = [math.tanh((lw["x"]-nose["x"])/shoulder_width), math.tanh((lw["y"]-nose["y"])/shoulder_width), math.tanh((lw.get("z",0)-nose.get("z",0))/shoulder_width)]
 
-    if right_landmarks and left_landmarks:
-        rw = right_landmarks[0]
-        lw = left_landmarks[0]
-        # 양손 간 상대 위치
-        dist = math.sqrt((rw['x']-lw['x'])**2 + (rw['y']-lw['y'])**2)
-        rel_pos[6] = math.tanh((lw["x"] - rw["x"]) / 0.5)
-        rel_pos[7] = math.tanh((lw["y"] - rw["y"]) / 0.5)
-        rel_pos[8] = math.tanh((lw.get("z", 0) - rw.get("z", 0)) / 0.5)
-
-    # 3. 팔 관절 특징 (2차원: 팔꿈치 각도)
+    # 4. 팔 관절 및 통합
     arm_feats = [0.5, 0.5]
     if pose_landmarks:
         lms = pose_landmarks.get("landmarks", {})
         def _get_elbow_angle(side):
-            s = lms.get(f"{side}_shoulder")
-            e = lms.get(f"{side}_elbow")
-            w = lms.get(f"{side}_wrist")
+            s, e, w = lms.get(f"{side}_shoulder"), lms.get(f"{side}_elbow"), lms.get(f"{side}_wrist")
             if s and e and w:
-                ba = np.array([s['x']-e['x'], s['y']-e['y'], (s.get('z',0)-e.get('z',0))])
-                bc = np.array([w['x']-e['x'], w['y']-e['y'], (w.get('z',0)-e.get('z',0))])
-                dot = np.dot(ba, bc)
+                ba, bc = np.array([s['x']-e['x'], s['y']-e['y'], (s.get('z',0)-e.get('z',0))]), np.array([w['x']-e['x'], w['y']-e['y'], (w.get('z',0)-e.get('z',0))])
                 m = np.linalg.norm(ba) * np.linalg.norm(bc)
-                if m > 1e-9:
-                    return np.arccos(np.clip(dot/m, -1.0, 1.0)) / math.pi
+                if m > 1e-9: return np.arccos(np.clip(np.dot(ba, bc)/m, -1.0, 1.0)) / math.pi
             return 0.5
         arm_feats = [_get_elbow_angle("right"), _get_elbow_angle("left")]
 
-    # 4. 통합 (43차원: 16 + 16 + 9 + 2)
-    combined = right_feats + left_feats + rel_pos + arm_feats
+    # 특징 통합 (가중치 부여 전략)
+    # 1. Velocity(모션 궤적)를 3번 중첩 (움직임 방향성)
+    # 2. Y-Relative to Nose (높이 정보)를 3번 더 추가 (얼굴 vs 가슴 구분)
+    # 3. X-Relative to Nose (좌우 정보)를 3번 더 추가 (코 옆[좋다] vs 볼/입 옆[맛있다] 구분)
+    y_heights = [rel_pos[7], rel_pos[10]] * 3 
+    x_widths = [rel_pos[6], rel_pos[9]] * 3
+    combined = right_feats + left_feats + rel_pos + (velocity * 3) + y_heights + x_widths + arm_feats
+    
+    if right_feats[-1] == 0.0 and left_feats[-1] == 0.0: return None
+    return combined
     
     # 둘 다 감지 안 된 경우 무시
     if right_feats[-1] == 0.0 and left_feats[-1] == 0.0:
