@@ -161,6 +161,14 @@ class SlmAgent:
         항상 **문자열** 을 반환 (이전 dict 반환은 계약 오류였음).
         """
         meta = raw_data.get("meta_features") or {}
+        hand_count = meta.get("hand_count", 0)
+        handshapes = meta.get("handshapes") or []
+
+        # [안전 가드] 화면에 손이 전혀 감지되지 않았거나 handshape가 하나도 추출되지 않은 경우,
+        # 또는 손이 대기(idle) 상태인 경우에는 LLM을 호출하지 않고 규칙 기반 엔진으로 즉시 우회합니다.
+        # 이를 통해 아무런 손동작도 없는데 임의의 단어를 지어내는 오작동(Hallucination)을 원천 방지합니다.
+        if hand_count == 0 or not handshapes or meta.get("motion_phase", "idle") == "idle":
+            return _rule_based_predict(meta)
 
         if skip_ollama:
             return _rule_based_predict(meta)

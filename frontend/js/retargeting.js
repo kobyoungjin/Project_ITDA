@@ -74,17 +74,10 @@ function apply75Landmarks(lms) {
   const pts = [];
   for (let i = 0; i < 75; i++) pts.push({ x: lms[i*3], y: lms[i*3+1], z: lms[i*3+2] });
 
-  // 1. 위치 동기화 (어깨 중앙 기준)
-  const lS = pts[MP.POSE.L_S], rS = pts[MP.POSE.R_S];
-  if (lS && rS && avatar.model) {
-    const cX = (lS.x + rS.x) / 2;
-    const cY = (lS.y + rS.y) / 2;
-    
-    const targetX = -(cX - 0.5) * 1.8;
-    const targetY = (0.5 - cY) * 1.8 + 1.25; 
-    
-    // 모델의 전체 위치만 이동시키고 회전은 건드리지 않음
-    avatar.model.position.lerp(new THREE.Vector3(targetX, targetY - 1.45, 0), 0.2);
+  // 1. 모델 위치 고정 (항상 중앙 원점 유지)
+  // 이전에는 웹캠 어깨 위치로 모델을 이동시켰으나 아바타가 화면 밖으로 나가는 문제가 있어 제거
+  if (avatar.model) {
+    avatar.model.position.set(0, 0, 0);
   }
 
   // 2. 상체 관절 리깅 (머리 회전 포함)

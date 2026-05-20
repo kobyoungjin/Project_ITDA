@@ -82,7 +82,11 @@ async def resolve_motion(request: dict):
 @router.get("/list-motions")
 async def list_motions():
     """학습 데이터셋(CSV)에서 실제 학습된 단어 목록을 추출하여 반환합니다."""
-    csv_path = Path("api/data/ksl_training/ksl_dataset.csv")
+    from api.services.knn_classifier import get_model_type
+    m_type = get_model_type()
+    csv_file = "ksl_dataset.csv" if m_type == "main" else "ksl_dataset_dialogue.csv"
+    csv_path = Path("api/data/ksl_training") / csv_file
+    
     if not csv_path.exists():
         return {"count": 0, "words": []}
     

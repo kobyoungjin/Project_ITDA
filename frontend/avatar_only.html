@@ -110,6 +110,11 @@
     #sidebar::-webkit-scrollbar-track { background: transparent; }
     #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     #sidebar::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -146,8 +151,9 @@
 
   <script type="module" src="./js/avatar.js"></script>
   <script type="module" src="./js/retargeting.js"></script>
-  <script type="module" src="./js/motion_loader_npy.js"></script>
   <script type="module" src="./js/handshape_loader.js"></script>
+  <script type="module" src="./js/motion_loader_v3.js"></script>
+  <script type="module" src="./js/motion_loader_npy.js"></script>
 
   <script type="module">
     const statusEl = document.getElementById('ws-status');
@@ -183,25 +189,47 @@
     }
 
     async function playMotion(word, element = null) {
-      if (!window.ITDAMotionNPY) return;
-      
       const allItems = document.querySelectorAll('.word-item');
       allItems.forEach(el => el.classList.remove('playing'));
       
       // 만약 외부 인식(WS)으로 호출된 경우 목록에서 해당 단어를 찾아 하이라이트
       if (!element) {
-        element = Array.from(allItems).find(el => el.textContent === word);
+        element = Array.from(allItems).find(el => el.textContent === word || el.getAttribute('data-original') === word);
       }
       
+      const originalText = element ? (element.getAttribute('data-original') || element.textContent) : word;
       if (element) {
+        if (!element.getAttribute('data-original')) {
+          element.setAttribute('data-original', originalText);
+        }
         element.classList.add('playing');
+        element.innerHTML = `<span style="display:inline-block; animation: spin 1.5s linear infinite; margin-right: 6px;">⏳</span>생성 중...`;
         element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
       
-      // showWord(word);  <-- 삭제됨
-      await window.ITDAMotionNPY.play(word, { loop: isGuideMode });
-      
-      if (element) element.classList.remove('playing');
+      try {
+        // [NEW] V3 우선 재생, NPY 폴백
+        if (window.ITDAMotionV3) {
+          try {
+            const motion = await window.ITDAMotionV3.load(word);
+            if (motion && motion.keyframes?.length) {
+              await window.ITDAMotionV3.play(word);
+              return;
+            }
+          } catch (e) {
+            console.warn('[Motion] V3 로드 실패, NPY 폴백:', e.message);
+          }
+        }
+
+        if (window.ITDAMotionNPY) {
+          await window.ITDAMotionNPY.play(word, { loop: isGuideMode });
+        }
+      } finally {
+        if (element) {
+          element.classList.remove('playing');
+          element.textContent = originalText;
+        }
+      }
     }
 
     function connect() {
@@ -257,6 +285,15 @@
         window.ITDAMotionNPY?.stop();
       }
     });
+
+    // 모델 변경 채널 브로드캐스트 리스너
+    const modelChannel = new BroadcastChannel('itda_model_channel');
+    modelChannel.onmessage = (event) => {
+      if (event.data && event.data.type === 'model_changed') {
+        console.info('[AvatarOnly] 모델이 변경되어 단어 목록을 갱신합니다:', event.data.model_type);
+        loadWordList();
+      }
+    };
 
     window.addEventListener('itda:avatar:ready', () => {
       loadWordList();

@@ -58,11 +58,32 @@ class SampleRequest(BaseModel):
 class TrainRequest(BaseModel):
     n_neighbors: int = 5
 
+class ModelSelectRequest(BaseModel):
+    model_type: str
+
 
 from api.core.ml_utils import extract_ksl_features
 
 
 # ── API 엔드포인트 ────────────────────────────────────────────
+@router.get("/get-model-type")
+def get_current_model_type():
+    """현재 활성화된 모델 타입 조회 ('main' 또는 'dialogue')"""
+    from api.services.knn_classifier import get_model_type
+    return {"ok": True, "model_type": get_model_type()}
+
+
+@router.post("/select-model")
+def select_model(req: ModelSelectRequest):
+    """실시간으로 KNN 모델 변경 ('main' 또는 'dialogue')"""
+    from api.services.knn_classifier import set_model_type
+    try:
+        updated_type = set_model_type(req.model_type)
+        return {"ok": True, "model_type": updated_type, "message": f"모델이 '{req.model_type}'으로 변경되었습니다."}
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
+
+
 @router.post("/start")
 def start_collection(req: StartRequest):
     """수집 모드 시작 (단어 레이블 지정)"""

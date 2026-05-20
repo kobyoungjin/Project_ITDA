@@ -531,9 +531,24 @@ function setStatus(msg) {
 // ── 공개 API ──────────────────────────────────────────────────
 window.ITDAVision5 = {
   init,
+  start: async () => {
+    if (!isRunning) {
+      await startCamera();
+      setStatus('✅ 실행 중');
+    }
+  },
   stop: () => {
     isRunning = false;
     if (animationId) cancelAnimationFrame(animationId);
-    if (videoStream) videoStream.getTracks().forEach(t => t.stop());
+    if (videoStream) {
+      videoStream.getTracks().forEach(t => t.stop());
+      videoStream = null;
+    }
+    // 캔버스 잔상 제거
+    if (canvasCtx && canvasEl) {
+      canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    }
+    setStatus('⏸️ 카메라 꺼짐');
   },
+  isRunning: () => isRunning,
 };
