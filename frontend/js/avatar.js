@@ -9,25 +9,25 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // ── 해부학적 제약 조건 (BONE_CONSTRAINTS) ─────────────────────
 const BONE_CONSTRAINTS = {
   Shoulder: { y: [-0.2, 0.2], z: [-0.15, 0.15] },
-  Arm:      { z: [-Math.PI, Math.PI / 2] },
+  Arm: { z: [-Math.PI, Math.PI / 2] },
   UpperArm: { z: [-Math.PI, Math.PI / 2] },
-  ForeArm:  { x: [0, Math.PI * 0.8] },
-  Hand:     { x: [-0.5, 0.5], y: [-0.5, 0.5] },
-  Thumb1:   { x: [-0.3, 0.3], y: [-0.3, 0.6] },
-  Thumb2:   { x: [0, 0.5] },
-  Thumb3:   { x: [0, 0.5] },
-  Index1:   { x: [0, 1.5] },
-  Index2:   { x: [0, 1.5] },
-  Index3:   { x: [0, 1.5] },
-  Middle1:  { x: [0, 1.5] },
-  Middle2:  { x: [0, 1.5] },
-  Middle3:  { x: [0, 1.5] },
-  Ring1:    { x: [0, 1.5] },
-  Ring2:    { x: [0, 1.5] },
-  Ring3:    { x: [0, 1.5] },
-  Pinky1:   { x: [0, 1.5] },
-  Pinky2:   { x: [0, 1.5] },
-  Pinky3:   { x: [0, 1.5] },
+  ForeArm: { x: [0, Math.PI * 0.8] },
+  Hand: { x: [-0.5, 0.5], y: [-0.5, 0.5] },
+  Thumb1: { x: [-0.3, 0.3], y: [-0.3, 0.6] },
+  Thumb2: { x: [0, 0.5] },
+  Thumb3: { x: [0, 0.5] },
+  Index1: { x: [0, 1.5] },
+  Index2: { x: [0, 1.5] },
+  Index3: { x: [0, 1.5] },
+  Middle1: { x: [0, 1.5] },
+  Middle2: { x: [0, 1.5] },
+  Middle3: { x: [0, 1.5] },
+  Ring1: { x: [0, 1.5] },
+  Ring2: { x: [0, 1.5] },
+  Ring3: { x: [0, 1.5] },
+  Pinky1: { x: [0, 1.5] },
+  Pinky2: { x: [0, 1.5] },
+  Pinky3: { x: [0, 1.5] },
 };
 
 console.log('[ITDA Avatar] ✅ avatar.js 로드됨. THREE 버전:', THREE.REVISION);
@@ -53,7 +53,8 @@ const getAppSize = () => {
 const initialSize = getAppSize();
 
 const camera = new THREE.PerspectiveCamera(40, initialSize.width / initialSize.height, 0.1, 100);
-camera.position.set(0, 1.35, 1.5);
+// 카메라를 뒤로 당겨 전체 아바타가 보이도록 기본 거리를 늘림
+camera.position.set(0, 1.35, 3.2);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -90,21 +91,63 @@ let headMesh = null;
 let bones = {};
 let initialBoneQuats = {};
 let morphIndex = {};
+const _boneMarkers = {};
 
 const clock = new THREE.Clock();
 
+// ── 임시 벡터 (getTipPos 연산용) ────────────────────────────
+const _tmpV1 = new THREE.Vector3();
+const _tmpV2 = new THREE.Vector3();
+
 // ── 모델 URL (fallback 순서) ──────────────────────────────────
-const MODEL_URLS = [
-  './models/sonyr.glb',
-  './models/ITDAModel.glb',
-  'https://raw.githubusercontent.com/hmthanh/3d-human-model/main/TranThiNgocTham.glb',
-  'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb',
-];
+const MODEL_URLS = [];
 const jstEl = document.getElementById('joint-status');
+
+// ── 스켈레톤 뷰 — animate IIFE 이전에 선언해야 TDZ 오류 없음 ──
+const skeletonGroup = new THREE.Group();
+scene.add(skeletonGroup);
+skeletonGroup.visible = false;
+
+const _skJoints = [];
+const _skBones = [];
+const _jMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x004422 });
+const _bMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.6 });
+const _jGeo = new THREE.SphereGeometry(0.015, 12, 12);
+
+for (let i = 0; i < 75; i++) {
+  const m = new THREE.Mesh(_jGeo, _jMat);
+  m.visible = false;
+  skeletonGroup.add(m);
+  _skJoints.push(m);
+}
+
+const _HC = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
+const _PC = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28]];
+const _allC = [];
+_HC.forEach(c => _allC.push([c[0], c[1]]));
+_HC.forEach(c => _allC.push([c[0] + 21, c[1] + 21]));
+_PC.forEach(c => _allC.push([c[0] + 42, c[1] + 42]));
+_allC.push([57, 0]); _allC.push([58, 21]);
+
+_allC.forEach(() => {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1, 6), _bMat);
+  skeletonGroup.add(m);
+  _skBones.push(m);
+});
+
+window.ITDA_skeletonUpdatedThisFrame = false;
 
 function loadModelWithFallback(urls, index = 0) {
   if (index >= urls.length) {
-    console.error('[ITDA Avatar] 모든 모델 URL 로드 실패');
+    console.info('[ITDA Avatar] 3D 모델 로딩 건너뜀 (모델 제거 모드)');
+    if (jstEl) jstEl.textContent = '3D 모델 비활성화';
+    const statusEl = document.getElementById('model-status');
+    if (statusEl) {
+      statusEl.textContent = '⚠️ 3D 모델 비활성화';
+      statusEl.classList.remove('loaded');
+    }
+    _setViewMode('skeleton');
+    window.dispatchEvent(new CustomEvent('itda:avatar:ready'));
     return;
   }
   console.info(`[ITDA Avatar] 모델 로드 시도 (${index + 1}/${urls.length}):`, urls[index]);
@@ -117,6 +160,7 @@ function loadModelWithFallback(urls, index = 0) {
       // 일부 GLB 모델이 상하반전으로 로드되는 경우 보정
       ///model.rotation.x = Math.PI;
       scene.add(model);
+      model.visible = false; // 기본값: 숨김 (스켈레톤 모드 기본)
 
       mixer = new THREE.AnimationMixer(model);
       const idleClip = gltf.animations.find(a => a.name === 'Idle');
@@ -181,7 +225,6 @@ let frameCount = 0;
 const fpsEl = document.getElementById('fps-display');
 
 // ── 본 마커 (디버그 구체) ─────────────────────────────────────
-const _boneMarkers = {};
 
 // 모델 머티리얼 원본 백업 (실루엣 전환용)
 const _origMaterials = new Map();
@@ -213,38 +256,6 @@ function _setModelSilhouette(enabled) {
   });
 }
 
-// ── 스켈레톤 뷰 — animate IIFE 이전에 선언해야 TDZ 오류 없음 ──
-const skeletonGroup = new THREE.Group();
-scene.add(skeletonGroup);
-skeletonGroup.visible = false;
-
-const _skJoints = [];
-const _skBones = [];
-const _jMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x004422 });
-const _bMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.6 });
-const _jGeo = new THREE.SphereGeometry(0.015, 12, 12);
-
-for (let i = 0; i < 75; i++) {
-  const m = new THREE.Mesh(_jGeo, _jMat);
-  m.visible = false;
-  skeletonGroup.add(m);
-  _skJoints.push(m);
-}
-
-const _HC = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
-const _PC = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
-const _allC = [];
-_HC.forEach(c => _allC.push([c[0],c[1]]));
-_HC.forEach(c => _allC.push([c[0]+21,c[1]+21]));
-_PC.forEach(c => _allC.push([c[0]+42,c[1]+42]));
-_allC.push([57,0]); _allC.push([58,21]);
-
-_allC.forEach(() => {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.005,0.005,1,6), _bMat);
-  skeletonGroup.add(m);
-  _skBones.push(m);
-});
-
 window.ITDA_skeletonUpdatedThisFrame = false;
 
 (function animate() {
@@ -268,8 +279,10 @@ window.ITDA_skeletonUpdatedThisFrame = false;
   if (skeletonGroup.visible && !window.ITDA_skeletonUpdatedThisFrame) {
     _updateSkeletonFromBones();
   }
-  window.ITDA_skeletonUpdatedThisFrame = false;
 
+  // 플래그 리셋은 render() 직전에 수행 (render 이후 리셋하면 다음 프레임 시작 전에
+  // retargeting.js가 플래그를 세팅할 수 없어 타이밍 충돌 발생)
+  window.ITDA_skeletonUpdatedThisFrame = false;
   renderer.render(scene, camera);
 
   if (fpsEl && ++frameCount % 10 === 0) {
@@ -295,11 +308,11 @@ function _captureTorsoRest(getBone) {
     b.getWorldPosition(v);
     return v;
   };
-  _torsoRest.head         = getPos('Head') || getPos('Neck') || getPos('Spine2');
-  _torsoRest.leftShoulder  = getPos('LeftUpperArm') || getPos('LeftShoulder');
+  _torsoRest.head = getPos('Head') || getPos('Neck') || getPos('Spine2');
+  _torsoRest.leftShoulder = getPos('LeftUpperArm') || getPos('LeftShoulder');
   _torsoRest.rightShoulder = getPos('RightUpperArm') || getPos('RightShoulder');
-  _torsoRest.leftHip       = getPos('LeftUpLeg') || getPos('Hips');
-  _torsoRest.rightHip      = getPos('RightUpLeg') || getPos('Hips');
+  _torsoRest.leftHip = getPos('LeftUpLeg') || getPos('Hips');
+  _torsoRest.rightHip = getPos('RightUpLeg') || getPos('Hips');
   _torsoRestCaptured = true;
 }
 
@@ -341,9 +354,12 @@ function _updateSkeletonFromBones() {
     const b = getBone(boneName);
     const p = getBone(parentName);
     if (b && p) {
-      b.getWorldPosition(_tmpV1);
-      p.getWorldPosition(_tmpV2);
-      out.copy(_tmpV1).add(_tmpV1.clone().sub(_tmpV2).multiplyScalar(0.8));
+      // 로컬 임시 벡터 — 전역 _tmpV1/V2 의존성 제거 (캐시 버전 호환)
+      const lv1 = new THREE.Vector3();
+      const lv2 = new THREE.Vector3();
+      b.getWorldPosition(lv1);
+      p.getWorldPosition(lv2);
+      out.copy(lv1).add(lv1.clone().sub(lv2).multiplyScalar(0.8));
       return true;
     }
     if (b) {
@@ -369,10 +385,10 @@ function _updateSkeletonFromBones() {
   leftFingers.forEach((f, idx) => {
     const baseIdx = 1 + idx * 4;
     getJointPos(f[0], _skJoints[baseIdx].position, 'LeftHand');
-    getJointPos(f[1], _skJoints[baseIdx+1].position, f[0]);
-    getJointPos(f[2], _skJoints[baseIdx+2].position, f[1]);
-    getTipPos(f[2], f[1], _skJoints[baseIdx+3].position);
-    for (let k = 0; k < 4; k++) _skJoints[baseIdx+k].visible = true;
+    getJointPos(f[1], _skJoints[baseIdx + 1].position, f[0]);
+    getJointPos(f[2], _skJoints[baseIdx + 2].position, f[1]);
+    getTipPos(f[2], f[1], _skJoints[baseIdx + 3].position);
+    for (let k = 0; k < 4; k++) _skJoints[baseIdx + k].visible = true;
   });
 
   // 2. 오른손 관절 (21 ~ 41)
@@ -390,10 +406,10 @@ function _updateSkeletonFromBones() {
   rightFingers.forEach((f, idx) => {
     const baseIdx = 22 + idx * 4;
     getJointPos(f[0], _skJoints[baseIdx].position, 'RightHand');
-    getJointPos(f[1], _skJoints[baseIdx+1].position, f[0]);
-    getJointPos(f[2], _skJoints[baseIdx+2].position, f[1]);
-    getTipPos(f[2], f[1], _skJoints[baseIdx+3].position);
-    for (let k = 0; k < 4; k++) _skJoints[baseIdx+k].visible = true;
+    getJointPos(f[1], _skJoints[baseIdx + 1].position, f[0]);
+    getJointPos(f[2], _skJoints[baseIdx + 2].position, f[1]);
+    getTipPos(f[2], f[1], _skJoints[baseIdx + 3].position);
+    for (let k = 0; k < 4; k++) _skJoints[baseIdx + k].visible = true;
   });
 
   // 3. 상체 포즈 관절 — 머리·어깨·골반은 T-포즈 위치 고정, 팔꿈치·손목만 모션 추적
@@ -453,7 +469,7 @@ function _updateSkeletonFromBones() {
       _skBones[idx].visible = true;
       _skBones[idx].position.copy(a.position).add(b.position).multiplyScalar(0.5);
       _skBones[idx].scale.set(1, d, 1);
-      _skBones[idx].quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.position.clone().sub(a.position).normalize());
+      _skBones[idx].quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.position.clone().sub(a.position).normalize());
     } else {
       _skBones[idx].visible = false;
     }
@@ -461,14 +477,16 @@ function _updateSkeletonFromBones() {
 }
 
 function _updateSkeleton(frameData) {
-  window.ITDA_skeletonUpdatedThisFrame = true;
+  // 스켈레톤 모드가 아닐 때는 처리하지 않음
+  if (!skeletonGroup.visible) return;
   if (!frameData || frameData.length < 225) return;
+  window.ITDA_skeletonUpdatedThisFrame = true;
   const A = 0.45;
   for (let i = 0; i < 75; i++) {
-    const rx = frameData[i*3], ry = frameData[i*3+1], rz = frameData[i*3+2];
+    const rx = frameData[i * 3], ry = frameData[i * 3 + 1], rz = frameData[i * 3 + 2];
     if (rx === 0 && ry === 0) { _skJoints[i].visible = false; continue; }
     _skJoints[i].visible = true;
-    const tx = (rx-0.5)*1.8, ty = (0.5-ry)*1.8+1.2, tz = -rz*1.5;
+    const tx = (rx - 0.5) * 1.8, ty = (0.5 - ry) * 1.8 + 1.2, tz = -rz * 1.5;
     _skJoints[i].position.x += (tx - _skJoints[i].position.x) * A;
     _skJoints[i].position.y += (ty - _skJoints[i].position.y) * A;
     _skJoints[i].position.z += (tz - _skJoints[i].position.z) * A;
@@ -480,7 +498,7 @@ function _updateSkeleton(frameData) {
       _skBones[idx].visible = true;
       _skBones[idx].position.copy(a.position).add(b.position).multiplyScalar(0.5);
       _skBones[idx].scale.set(1, d, 1);
-      _skBones[idx].quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.position.clone().sub(a.position).normalize());
+      _skBones[idx].quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.position.clone().sub(a.position).normalize());
     } else { _skBones[idx].visible = false; }
   });
 }
@@ -497,7 +515,7 @@ function _setViewMode(mode) {
       btnAvatar.style.background = 'rgba(124,58,237,0.2)';
       btnAvatar.style.border = '1px solid rgba(124,58,237,0.5)';
       btnAvatar.style.color = '#7c3aed';
-      
+
       btnSkeleton.style.background = 'rgba(0,230,160,0.85)';
       btnSkeleton.style.border = '1px solid #00e6a0';
       btnSkeleton.style.color = '#fff';
@@ -505,7 +523,7 @@ function _setViewMode(mode) {
       btnAvatar.style.background = 'rgba(124,58,237,0.85)';
       btnAvatar.style.border = '1px solid #7c3aed';
       btnAvatar.style.color = '#fff';
-      
+
       btnSkeleton.style.background = 'rgba(0,230,160,0.2)';
       btnSkeleton.style.border = '1px solid rgba(0,230,160,0.5)';
       btnSkeleton.style.color = '#00e6a0';
@@ -517,27 +535,22 @@ function _setViewMode(mode) {
   let _savedCameraTarget = null;
 
   if (mode === 'skeleton') {
-    // 아바타 모델을 레이어 31로 이동 (카메라는 레이어 0만 보므로 숨겨짐)
-    if (model) {
-      model.traverse(child => {
-        if (child.isMesh) child.layers.set(31);
-      });
-    }
+    // 아바타 모델 완전 숨김
+    if (model) model.visible = false;
     skeletonGroup.visible = true;
 
     // 현재 카메라 위치 저장 후 전신 보이도록 뒤로 이동
     _setViewMode._savedPos = camera.position.clone();
     _setViewMode._savedTarget = controls.target.clone();
-    camera.position.set(0, 1.0, 2.5);
+    // 스켈레톤 모드에서 전체가 더 잘 보이도록 카메라 거리 증가
+    camera.position.set(0, 1.0, 3.8);
     camera.lookAt(0, 1.0, 0);
     controls.target.set(0, 1.0, 0);
     controls.update();
   } else {
-    // 아바타 모드: 레이어 0으로 복원
+    // 아바타 모드: 모델 다시 표시
     if (model) {
-      model.traverse(child => {
-        if (child.isMesh) child.layers.set(0);
-      });
+      model.visible = true;
       _setModelSilhouette(false);
     }
     // 스켈레톤 숨김
@@ -597,7 +610,7 @@ window.ITDAAvatar5 = {
     } else {
       // [Step 5] 오일러 방식 해부학적 제약 조건 적용
       let tx = rotation.x, ty = rotation.y, tz = rotation.z;
-      
+
       if (limit) {
         if (limit.x) tx = THREE.MathUtils.clamp(tx, limit.x[0], limit.x[1]);
         if (limit.y) ty = THREE.MathUtils.clamp(ty, limit.y[0], limit.y[1]);

@@ -65,9 +65,9 @@ async def resolve_motion(request: dict):
     if not word:
         raise HTTPException(status_code=400, detail="Word is required")
         
-    # 1. 이미 존재하는지 확인 (안전한 파일명으로 변환)
+    # 1. NPY 형식 파일이 이미 존재하는지 확인 (ksl_joints: 원시 관절 좌표 전용)
     safe_word = word.replace("/", "_").replace(",", "_")
-    target_path = Path("frontend/data/ksl_motions") / f"{safe_word}.json"
+    target_path = Path("frontend/data/ksl_joints") / f"{safe_word}.json"
     if target_path.exists():
         return {"status": "exists", "word": word, "safe_word": safe_word, "message": "Motion already exists"}
         

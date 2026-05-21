@@ -3,6 +3,7 @@ KNN 기반 수어 분류기 서비스
 - 훈련된 knn_model.pkl 을 로드하여 실시간 예측 수행
 - 신뢰도(confidence) 임계값 이상인 경우만 결과 반환
 """
+
 import math
 import joblib
 import numpy as np
@@ -11,7 +12,7 @@ from typing import Optional
 
 MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
 DIALOGUE_MODEL_PATH = Path("api/data/ksl_training/knn_model_dialogue.pkl")
-CONFIDENCE_THRESHOLD = 0.50  # 20개 일상어 분류 시 수용 감도를 고려하여 50% 수준으로 적정 튜닝 (오인식 방지 및 인식율 상향)
+CONFIDENCE_THRESHOLD = 0.35  # 조금 더 관대하게 허용하여 실제 손동작 인식 빈도 향상
 
 _model = None  # 싱글톤 캐시
 current_model_type = "main"  # 기본 모델타입 ('main' 또는 'dialogue')
@@ -27,9 +28,11 @@ def set_model_type(model_type: str) -> str:
     reload_model()
     return current_model_type
 
+
 def get_model_type() -> str:
     """현재 로드된 모델 타입 조회"""
     return current_model_type
+
 
 def reload_model():
     """모델을 강제로 다시 로드하여 메모리를 갱신합니다 (핫-리로딩)"""
@@ -37,10 +40,13 @@ def reload_model():
     target_path = MODEL_PATH if current_model_type == "main" else DIALOGUE_MODEL_PATH
     if target_path.exists():
         _model = joblib.load(target_path)
-        print(f"[KNN] 모델 리로드 완료 ({current_model_type}) - 인식 단어: {list(_model.classes_)}")
+        print(
+            f"[KNN] 모델 리로드 완료 ({current_model_type}) - 인식 단어: {list(_model.classes_)}"
+        )
     else:
         _model = None
     return _model
+
 
 def _load_model():
     global _model
@@ -56,10 +62,23 @@ from api.core.ml_utils import extract_ksl_features
 TWO_HANDED_SIGNS = {"친구", "집", "감사", "오늘", "안녕"}
 
 # 필수적으로 한 손만 사용해야 하는 수어 단어 정의
-ONE_HANDED_SIGNS = {"나", "너", "이름", "내일", "오다", "알다", "맛있다", "좋다", "잘하다,좋다", "가다"}
+ONE_HANDED_SIGNS = {
+    "나",
+    "너",
+    "이름",
+    "내일",
+    "오다",
+    "알다",
+    "맛있다",
+    "좋다",
+    "잘하다,좋다",
+    "가다",
+}
 
 
-def predict(right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optional[dict] = None) -> tuple[Optional[str], float]:
+def predict(
+    right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optional[dict] = None
+) -> tuple[Optional[str], float]:
     """
     양손 랜드마크 + 팔 관절 → (단어, 신뢰도) 반환.
     양손 스왑(Ambidextrous) 폴백을 적용하여 좌우 반전 및 왼손잡이 대응.
@@ -79,7 +98,7 @@ def predict(right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optio
     feats_normal = extract_ksl_features(right_lms, left_lms, pose_lms)
     if feats_normal is None:
         return None, 0.0
-    
+
     proba_normal = model.predict_proba([feats_normal])[0]
     idx_n = int(np.argmax(proba_normal))
     conf_normal = float(proba_normal[idx_n])
@@ -105,7 +124,9 @@ def predict(right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optio
     if final_label in TWO_HANDED_SIGNS:
         # 1) 한 손만 감지되면 즉시 차단
         if detected_hands < 2:
-            print(f"[KNN Guard] '{final_label}' 차단: 양손 수어인데 손 {detected_hands}개만 감지")
+            print(
+                f"[KNN Guard] '{final_label}' 차단: 양손 수어인데 손 {detected_hands}개만 감지"
+            )
             return None, 0.0
         # 2) 두 손 다 보이더라도, 양손이 실제로 가까이서 상호작용하는지 검증
         #    (쉬고 있는 손이 허리/책상 아래에서 잡히는 경우를 걸러냄)
@@ -115,14 +136,15 @@ def predict(right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optio
             y_dist = abs(r_wrist["y"] - l_wrist["y"])
             x_dist = abs(r_wrist["x"] - l_wrist["x"])
             if y_dist > 0.18 or x_dist > 0.35:
-                print(f"[KNN Proximity Guard] '{final_label}' 차단: 양손 거리 너무 멀음 (y={y_dist:.3f}, x={x_dist:.3f})")
+                print(
+                    f"[KNN Proximity Guard] '{final_label}' 차단: 양손 거리 너무 멀음 (y={y_dist:.3f}, x={x_dist:.3f})"
+                )
                 return None, 0.0
 
     if final_conf < CONFIDENCE_THRESHOLD:
         return None, final_conf
 
     return final_label, final_conf
-
 
 
 def is_model_ready() -> bool:

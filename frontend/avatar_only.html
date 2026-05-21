@@ -118,6 +118,17 @@
   </style>
 </head>
 <body>
+  <div id="error-log" style="position:fixed; top:0; left:0; width:100%; max-height:30%; overflow-y:auto; background:rgba(255,0,0,0.8); color:white; font-size:12px; z-index:9999; pointer-events:none;"></div>
+  <script>
+    window.addEventListener('error', function(e) {
+      const el = document.getElementById('error-log');
+      if (el) el.innerHTML += (e.error ? e.error.stack : e.message) + '<br><hr>';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const el = document.getElementById('error-log');
+      if (el) el.innerHTML += 'Unhandled Promise: ' + (e.reason ? (e.reason.stack || e.reason) : 'Unknown') + '<br><hr>';
+    });
+  </script>
   <header>
     <div style="font-weight: 900; font-size: 1.3rem; letter-spacing: -0.5px;">ITDA <span style="color:var(--accent-cyan)">MOTION STUDIO</span></div>
     <div style="display: flex; gap: 0.8rem; align-items: center;">
@@ -149,11 +160,11 @@
     }
   </script>
 
-  <script type="module" src="./js/avatar.js"></script>
-  <script type="module" src="./js/retargeting.js"></script>
-  <script type="module" src="./js/handshape_loader.js"></script>
-  <script type="module" src="./js/motion_loader_v3.js"></script>
-  <script type="module" src="./js/motion_loader_npy.js"></script>
+  <script type="module" src="./js/avatar.js?v=20260521k"></script>
+  <script type="module" src="./js/retargeting.js?v=20260521j"></script>
+  <script type="module" src="./js/handshape_loader.js?v=20260521j"></script>
+  <script type="module" src="./js/motion_loader_v3.js?v=20260521j"></script>
+  <script type="module" src="./js/motion_loader_npy.js?v=20260521j"></script>
 
   <script type="module">
     const statusEl = document.getElementById('ws-status');
@@ -163,8 +174,19 @@
     const skeletonBtn = document.getElementById('btn-toggle-skeleton');
     const guideBtn = document.getElementById('btn-toggle-guide');
     
-    let isSkeletonMode = false;
+    let isSkeletonMode = true;   // 기본값: 스켈레톤 모드
     let isGuideMode = false;
+
+    // 아바타 로드 완료 시 자동으로 스켈레톤 모드 전환
+    window.addEventListener('itda:avatar:ready', () => {
+      const avatar = window.ITDAAvatar5;
+      if (!avatar) return;
+      avatar.setViewMode('skeleton');
+      if (skeletonBtn) {
+        skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: ON';
+        skeletonBtn.classList.add('active');
+      }
+    });
 
     async function loadWordList() {
       try {
@@ -208,7 +230,9 @@
       }
       
       try {
-        // [NEW] V3 우선 재생, NPY 폴백
+        // [진단] V3 bone quaternion 방식 일시 비활성화 — NPY 직접 좌표 방식만 사용
+        // V3 방식은 좌표계 불일치 문제가 있을 수 있으므로 NPY로 테스트
+        /*
         if (window.ITDAMotionV3) {
           try {
             const motion = await window.ITDAMotionV3.load(word);
@@ -220,6 +244,7 @@
             console.warn('[Motion] V3 로드 실패, NPY 폴백:', e.message);
           }
         }
+        */
 
         if (window.ITDAMotionNPY) {
           await window.ITDAMotionNPY.play(word, { loop: isGuideMode });
@@ -266,7 +291,7 @@
         skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: ON';
         skeletonBtn.classList.add('active');
       } else {
-        avatar.setViewMode('normal');
+        avatar.setViewMode('avatar');
         skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: OFF';
         skeletonBtn.classList.remove('active');
       }
@@ -299,6 +324,14 @@
       loadWordList();
       connect();
     });
+
+    // 폴백: 아바타 준비 이벤트가 이미 지나쳤을 경우를 대비하여
+    // DOM이 준비되면 단어 목록을 강제로 로드한다.
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', loadWordList);
+    } else {
+      loadWordList();
+    }
   </script>
 </body>
 </html>

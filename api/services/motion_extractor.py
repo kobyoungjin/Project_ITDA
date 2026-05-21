@@ -12,7 +12,7 @@ from pathlib import Path
 # 경로 설정
 BASE_DIR = Path(__file__).parent.parent.parent
 MODEL_DIR = BASE_DIR / "api" / "models"
-OUTPUT_DIR = BASE_DIR / "frontend" / "data" / "ksl_motions"
+OUTPUT_DIR = BASE_DIR / "frontend" / "data" / "ksl_joints"
 VIDEO_MAP_PATH = BASE_DIR / "api" / "data" / "sign_video_urls.json"
 
 POSE_TASK = MODEL_DIR / "pose_landmarker.task"
@@ -202,7 +202,7 @@ class MotionExtractor:
                         rh = np.zeros((21, 3))
                         for i, handedness in enumerate(hr.handedness):
                             lms = np.array([[lm.x, lm.y, lm.z] for lm in hr.hand_landmarks[i]])
-                            if handedness[0].display_name == "Left": 
+                            if handedness[0].display_name == "Right": 
                                 lh = lms
                             else:
                                 rh = lms

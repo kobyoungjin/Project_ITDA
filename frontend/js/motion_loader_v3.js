@@ -471,21 +471,3 @@ window.ITDAMotionV3.browse = browseRange;
   }, 500);
 })();
 
-
-// ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
-(function _setDefaultIdle() {
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
-      clearInterval(timer);
-      const params = new URLSearchParams(location.search);
-      // 만약 autoplay 중이 아니라면 기본 Idle 자세를 설정
-      if (!params.get('autoplay')) {
-        window.ITDAMotionV3.setAsIdle('감사');
-      }
-    } else if (attempts > 60) {
-      clearInterval(timer);
-    }
-  }, 500);
-})();
