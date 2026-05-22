@@ -6,6 +6,7 @@ KNN 기반 수어 분류기 서비스
 
 import math
 import joblib
+import threading
 import numpy as np
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,7 @@ CONFIDENCE_THRESHOLD = 0.35  # 조금 더 관대하게 허용하여 실제 손�
 
 _model = None  # 싱글톤 캐시
 current_model_type = "main"  # 기본 모델타입 ('main' 또는 'dialogue')
+_model_lock = threading.Lock()  # 모델 로드/교체 경합 방지
 
 
 def set_model_type(model_type: str) -> str:
@@ -37,14 +39,16 @@ def get_model_type() -> str:
 def reload_model():
     """모델을 강제로 다시 로드하여 메모리를 갱신합니다 (핫-리로딩)"""
     global _model
-    target_path = MODEL_PATH if current_model_type == "main" else DIALOGUE_MODEL_PATH
-    if target_path.exists():
-        _model = joblib.load(target_path)
-        print(
-            f"[KNN] 모델 리로드 완료 ({current_model_type}) - 인식 단어: {list(_model.classes_)}"
-        )
-    else:
-        _model = None
+    # 학습(워커 스레드)과 모델 교체가 동시에 joblib.load 를 호출하는 경합을 방지
+    with _model_lock:
+        target_path = MODEL_PATH if current_model_type == "main" else DIALOGUE_MODEL_PATH
+        if target_path.exists():
+            _model = joblib.load(target_path)
+            print(
+                f"[KNN] 모델 리로드 완료 ({current_model_type}) - 인식 단어: {list(_model.classes_)}"
+            )
+        else:
+            _model = None
     return _model
 
 
@@ -56,7 +60,11 @@ def _load_model():
     return _model
 
 
-from api.core.ml_utils import extract_ksl_features
+from api.core.ml_utils import (
+    extract_ksl_features,
+    snapshot_prev_state,
+    restore_prev_state,
+)
 
 # 필수적으로 양손을 모두 사용해야 하는 수어 단어 정의
 TWO_HANDED_SIGNS = {"친구", "집", "감사", "오늘", "안녕"}
@@ -104,6 +112,10 @@ def predict(
     conf_normal = float(proba_normal[idx_n])
     label_normal = model.classes_[idx_n]
 
+    # 정방향 패스가 갱신한 속도 계산용 상태(_prev_state)를 보존해 둔다.
+    # 아래 역방향(스왑) 시도는 보조 추론이므로 이 상태를 오염시키면 안 된다.
+    state_after_normal = snapshot_prev_state()
+
     # 2. 역방향 시도 (오른손=L, 왼손=R) - 좌우 반전/스왑 대응
     feats_swap = extract_ksl_features(left_lms, right_lms, pose_lms)
     conf_swap = 0.0
@@ -113,6 +125,10 @@ def predict(
         idx_s = int(np.argmax(proba_swap))
         conf_swap = float(proba_swap[idx_s])
         label_swap = model.classes_[idx_s]
+
+    # 보조 추론이 끝났으니, 다음 프레임의 속도 계산을 위해
+    # 정방향 기준 상태로 _prev_state를 복원한다.
+    restore_prev_state(state_after_normal)
 
     # 3. 더 높은 신뢰도 선택
     if conf_normal >= conf_swap:

@@ -554,16 +554,15 @@
         <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
           <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
           
-          <!-- 뷰 모드 토글 버튼 -->
-          <div style="position: absolute; top: 0.6rem; right: 0.6rem; z-index: 30; display: flex; gap: 0.4rem;">
-            <button id="btn-view-avatar" title="아바타 모드" onclick="window.ITDAAvatar5?.setViewMode('avatar')"
-              style="background: rgba(124,58,237,0.85); border: 1px solid #7c3aed; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
-              🧍 아바타
-            </button>
-            <button id="btn-view-skeleton" title="스켈레톤 모드" onclick="window.ITDAAvatar5?.setViewMode('skeleton')"
-              style="background: rgba(0,230,160,0.2); border: 1px solid rgba(0,230,160,0.5); color: #00e6a0; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
-              🦴 스켈레톤
-            </button>
+          <!-- 상단 우측: 모드 전환 바(번역/학습/수집) + UI 표시·숨김 토글 -->
+          <div style="position: absolute; top: 0.6rem; right: 0.6rem; z-index: 30; display: flex; align-items: flex-start; gap: 0.4rem;">
+            <div id="mode-toggle" style="display:flex; gap:0.4rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid var(--border);">
+              <button class="mode-btn active" data-mode="translate">번역</button>
+              <button class="mode-btn" data-mode="learn">학습</button>
+              <button class="mode-btn" data-mode="collect">수집</button>
+            </div>
+            <button id="btn-ui-toggle" title="UI 숨김"
+              style="background: rgba(15,23,42,0.8); border: 1px solid var(--border); color: var(--text-main); padding: 5px 9px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">☰</button>
           </div>
           
           <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
@@ -593,15 +592,6 @@
           </div>
         </div>
 
-        <!-- 컨트롤 버튼 (아바타 영역 하단 플로팅) -->
-        <div class="controls" style="bottom: 1.2rem; right: 1.2rem;">
-          <div id="mode-toggle" style="display:flex; gap:0.4rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid var(--border);">
-            <button class="mode-btn active" data-mode="translate">번역</button>
-            <button class="mode-btn" data-mode="learn">학습</button>
-            <button class="mode-btn" data-mode="collect">수집</button>
-          </div>
-        </div>
-
         <!-- [NEW] 학습 모드 카드 -->
         <div id="lesson-card">
           <div class="lesson-header">
@@ -623,23 +613,25 @@
         <!-- [NEW] 수집 모드 카드 -->
         <div id="collect-card">
           <div class="collect-label">Collection Mode</div>
-          <div style="font-size: 1.1rem; font-weight: 800; margin-bottom: 0.8rem; color: var(--accent-green);">샘플 수집</div>
-          
-          <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력">
-          
-          <div class="collect-stats">
-            <span>샘플 수:</span>
-            <strong id="collect-sample-count" style="color: var(--accent-cyan);">0</strong>
-          </div>
+          <div style="font-size: 1.05rem; font-weight: 800; margin-bottom: 0.6rem; color: var(--accent-green);">동작 여러 번 찍어 수집</div>
 
-          <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 수집 시작</button>
-          <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 중지</button>
-          <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.4rem;">⚙️ KNN 모델 훈련</button>
+          <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력 (예: 안녕)">
+
+          <!-- take 요약 + 완료한 take 목록 -->
+          <div class="collect-stats">
+            <span id="collect-take-summary" style="color: var(--accent-cyan); font-weight: 700;">Take 0개 · 총 0개 샘플</span>
+          </div>
+          <div id="collect-take-list" style="display:flex; flex-direction:column; gap:3px; max-height:96px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.72rem; color:var(--text-muted);"></div>
+
+          <!-- 동작 1회 = take 1개. 같은 단어로 여러 번 반복 -->
+          <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 이번 동작 녹화</button>
+          <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 녹화 중지</button>
+          <div id="collect-take-status" style="font-size:0.72rem; color:var(--text-muted); margin:0.4rem 0; line-height:1.45;">단어를 입력하고 같은 동작을 여러 번 녹화하세요. 많이 찍을수록 정확해집니다.</div>
+
+          <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.2rem;">⚙️ KNN 모델 훈련</button>
           
           <div style="border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
-            <button id="btn-collect-batch" style="width: 100%; background: var(--accent-purple); color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.75rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">🚀 사전 영상 자동 학습 시작</button>
-            
-            <div style="display: flex; gap: 0.4rem; margin-top: 0.2rem;">
+            <div style="display: flex; gap: 0.4rem;">
               <input type="text" id="collect-url-input" class="collect-input" style="margin-bottom:0; flex:1;" placeholder="영상 URL 입력 (mp4)">
               <button id="btn-collect-url" style="background: var(--accent-cyan); color: #000; border: none; padding: 0 10px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.7rem;">추출</button>
             </div>
@@ -811,26 +803,47 @@
       window.ITDAEducation.start(words[lessonIndex]);
     }
 
-    modeBtns.forEach(b => b.addEventListener('click', () => _setMode(b.dataset.mode)));
+    // 모드 버튼 클릭 → 모드 전환 + 숨겨둔 패널이 있으면 다시 표시
+    modeBtns.forEach(b => b.addEventListener('click', () => {
+      uiVisible = true;
+      _syncUiToggle();
+      _setMode(b.dataset.mode);
+    }));
+
+    // UI(모드 패널) 표시/숨김 토글 — 학습/수집 패널 창을 켜고 끈다
+    const btnUiToggle = document.getElementById('btn-ui-toggle');
+    let uiVisible = true;
+
+    function _syncUiToggle() {
+      if (!btnUiToggle) return;
+      btnUiToggle.title = uiVisible ? 'UI 숨김' : 'UI 표시';
+      btnUiToggle.style.opacity = uiVisible ? '1' : '0.55';
+    }
+
+    function _applyPanelVisibility() {
+      // 현재 모드의 패널만, uiVisible 일 때만 표시 (번역 모드는 전용 패널 없음)
+      const collectCard = document.getElementById('collect-card');
+      lessonCard.style.display = (uiVisible && currentMode === 'learn') ? 'block' : 'none';
+      if (collectCard) collectCard.style.display = (uiVisible && currentMode === 'collect') ? 'block' : 'none';
+    }
+
+    btnUiToggle?.addEventListener('click', () => {
+      uiVisible = !uiVisible;
+      _syncUiToggle();
+      _applyPanelVisibility();
+    });
 
     function _setMode(mode) {
       currentMode = mode;
       modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-      
-      const collectCard = document.getElementById('collect-card');
-      
+      _applyPanelVisibility();
+
       if (mode === 'learn') {
-        lessonCard.style.display = 'block';
-        if (collectCard) collectCard.style.display = 'none';
         _activateWord(lessonIndex);
         window.ITDACollect?.stop();
       } else if (mode === 'collect') {
-        lessonCard.style.display = 'none';
-        if (collectCard) collectCard.style.display = 'block';
         window.ITDAEducation?.stop();
       } else {
-        lessonCard.style.display = 'none';
-        if (collectCard) collectCard.style.display = 'none';
         window.ITDAEducation?.stop();
         window.ITDACollect?.stop();
       }
@@ -1108,7 +1121,7 @@
     const selModel = document.getElementById('sel-model');
     if (selModel) {
       // 1. 초기 모델 상태 백엔드에서 조회 후 반영
-      fetch('http://127.0.0.1:8000/api/collect/get-model-type')
+      fetch(`http://${location.hostname || '127.0.0.1'}:8000/api/collect/get-model-type`)
         .then(res => res.json())
         .then(data => {
           if (data.ok && data.model_type) {
@@ -1122,7 +1135,7 @@
       selModel.addEventListener('change', async (e) => {
         const selectedModel = e.target.value;
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/collect/select-model', {
+          const res = await fetch(`http://${location.hostname || '127.0.0.1'}:8000/api/collect/select-model`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model_type: selectedModel })

@@ -12,11 +12,17 @@ FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss.index")
 METADATA_PATH = os.path.join(DATA_DIR, "metadata.json")
 
 class VectorDB:
+    # paraphrase-multilingual-MiniLM-L12-v2 의 임베딩 차원
+    _DEFAULT_DIM = 384
+
     def __init__(self, model_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'):
-        # 한국어 특화 임베딩 모델 (RAG 검색 품질 향상)
-        self.encoder = SentenceTransformer(model_name)
-        self.dimension = self.encoder.get_sentence_embedding_dimension()
-        
+        # 한국어 특화 임베딩 모델 (RAG 검색 품질 향상).
+        # 수백 MB 모델을 import 시점에 동기 로드하면 앱 기동 전체가 막히므로,
+        # 실제로 인코딩이 필요한 첫 호출 시점까지 로딩을 미룬다(지연 초기화).
+        self._model_name = model_name
+        self._encoder = None
+        self.dimension = self._DEFAULT_DIM
+
         # 오프라인 데이터 폴더 생성
         if not os.path.exists(DATA_DIR):
             os.makedirs(DATA_DIR)
@@ -40,6 +46,16 @@ class VectorDB:
                 self.metadata = []
         else:
             self.index = faiss.IndexFlatL2(self.dimension)
+
+    @property
+    def encoder(self):
+        """임베딩 모델을 최초 사용 시점에 1회만 로드한다(지연 초기화).
+        모듈 import 시 수백 MB 모델을 동기 로드해 앱 기동을 막는 것을 방지한다."""
+        if self._encoder is None:
+            print(f"[VectorDB] 임베딩 모델 로드 중... ({self._model_name})")
+            self._encoder = SentenceTransformer(self._model_name)
+            self.dimension = self._encoder.get_sentence_embedding_dimension()
+        return self._encoder
 
     def add_data(self, texts, metas):
         """텍스트 데이터를 벡터화하여 FAISS에 저장"""

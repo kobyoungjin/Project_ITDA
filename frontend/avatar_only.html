@@ -188,9 +188,11 @@
       }
     });
 
+    const API_HOST = location.hostname || '127.0.0.1';
+
     async function loadWordList() {
       try {
-        const resp = await fetch('http://localhost:8000/api/sign-language/list-motions');
+        const resp = await fetch(`http://${API_HOST}:8000/api/sign-language/list-motions`);
         const data = await resp.json();
         
         if (data.words && data.words.length > 0) {
@@ -257,8 +259,12 @@
       }
     }
 
+    let avatarWs = null;
     function connect() {
-      const ws = new WebSocket('ws://127.0.0.1:8000/api/ws/vision');
+      // 이미 연결돼 있거나 연결 중이면 중복 소켓을 만들지 않는다.
+      if (avatarWs && (avatarWs.readyState === WebSocket.OPEN || avatarWs.readyState === WebSocket.CONNECTING)) return;
+      const ws = new WebSocket(`ws://${API_HOST}:8000/api/ws/vision`);
+      avatarWs = ws;
       ws.onopen = () => {
         statusEl.textContent = '● LIVE CONNECTED';
         statusEl.style.color = '#00f2fe';
@@ -271,11 +277,12 @@
             if (word === '대기 중' || word.includes('미인식')) return;
             playMotion(word);
           }
-        } catch(e) {}
+        } catch(e) { console.warn('[AvatarOnly] WS 메시지 처리 실패:', e); }
       };
       ws.onclose = () => {
         statusEl.textContent = '○ DISCONNECTED';
         statusEl.style.color = '#f43f5e';
+        avatarWs = null;
         setTimeout(connect, 3000);
       };
     }

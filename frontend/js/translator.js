@@ -93,7 +93,7 @@ async function sendMessage(text) {
   }
 
   try {
-    const res = await fetch('http://localhost:8000/api/sign-language/search', {
+    const res = await fetch(`http://${location.hostname || 'localhost'}:8000/api/sign-language/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: text, context: "" })

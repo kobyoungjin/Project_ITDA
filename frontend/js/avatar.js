@@ -3,7 +3,6 @@
  */
 
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ── 해부학적 제약 조건 (BONE_CONSTRAINTS) ─────────────────────
@@ -99,8 +98,6 @@ const clock = new THREE.Clock();
 const _tmpV1 = new THREE.Vector3();
 const _tmpV2 = new THREE.Vector3();
 
-// ── 모델 URL (fallback 순서) ──────────────────────────────────
-const MODEL_URLS = [];
 const jstEl = document.getElementById('joint-status');
 
 // ── 스켈레톤 뷰 — animate IIFE 이전에 선언해야 TDZ 오류 없음 ──
@@ -137,79 +134,21 @@ _allC.forEach(() => {
 
 window.ITDA_skeletonUpdatedThisFrame = false;
 
-function loadModelWithFallback(urls, index = 0) {
-  if (index >= urls.length) {
-    console.info('[ITDA Avatar] 3D 모델 로딩 건너뜀 (모델 제거 모드)');
-    if (jstEl) jstEl.textContent = '3D 모델 비활성화';
-    const statusEl = document.getElementById('model-status');
-    if (statusEl) {
-      statusEl.textContent = '⚠️ 3D 모델 비활성화';
-      statusEl.classList.remove('loaded');
-    }
-    _setViewMode('skeleton');
-    window.dispatchEvent(new CustomEvent('itda:avatar:ready'));
-    return;
+// ── 아바타 초기화 (스켈레톤 전용 모드) ────────────────────────
+// 3D GLB 모델은 사용하지 않으므로 곧바로 스켈레톤 뷰로 시작한다.
+function initAvatar() {
+  console.info('[ITDA Avatar] 스켈레톤 전용 모드로 시작');
+  if (jstEl) jstEl.textContent = '3D 모델 비활성화';
+  const statusEl = document.getElementById('model-status');
+  if (statusEl) {
+    statusEl.textContent = '⚠️ 3D 모델 비활성화';
+    statusEl.classList.remove('loaded');
   }
-  console.info(`[ITDA Avatar] 모델 로드 시도 (${index + 1}/${urls.length}):`, urls[index]);
-  if (jstEl) jstEl.textContent = `모델 로딩 중... (${index + 1}/${urls.length})`;
-
-  new GLTFLoader().load(
-    urls[index],
-    (gltf) => {
-      model = gltf.scene;
-      // 일부 GLB 모델이 상하반전으로 로드되는 경우 보정
-      ///model.rotation.x = Math.PI;
-      scene.add(model);
-      model.visible = false; // 기본값: 숨김 (스켈레톤 모드 기본)
-
-      mixer = new THREE.AnimationMixer(model);
-      const idleClip = gltf.animations.find(a => a.name === 'Idle');
-      if (idleClip) mixer.clipAction(idleClip).play();
-
-      // 뼈/모프 수집 (재질은 GLB 원본 그대로 사용)
-      model.traverse((child) => {
-        if (child.isMesh) {
-          console.log('[Mesh]', child.name);
-
-          // 모프 타겟 — 가장 많은 블렌드쉐입을 가진 메시를 헤드로 지정
-          if (child.morphTargetDictionary) {
-            const count = Object.keys(child.morphTargetDictionary).length;
-            const currentCount = Object.keys(morphIndex).length;
-            if (count > currentCount) {
-              headMesh = child;
-              morphIndex = child.morphTargetDictionary;
-              console.info('[ITDA Avatar] Head Mesh:', child.name, '/ Morphs:', count);
-            }
-          }
-        }
-
-        if (child.isBone) {
-          bones[child.name] = child;
-          initialBoneQuats[child.name] = child.quaternion.clone();
-        }
-      });
-
-      if (jstEl) jstEl.textContent = 'Joints: ACTIVE';
-      const statusEl = document.getElementById('model-status');
-      if (statusEl) {
-        statusEl.textContent = `✅ 모델 로드 완료 (${index + 1}순위)`;
-        statusEl.classList.add('loaded');
-      }
-      console.info('[ITDA Avatar] 로드 완료:', urls[index], '/ 뼈:', Object.keys(bones).length);
-      window.dispatchEvent(new CustomEvent('itda:avatar:ready'));
-    },
-    (xhr) => {
-      if (xhr.total > 0 && jstEl)
-        jstEl.textContent = `모델 로딩 중... ${Math.round(xhr.loaded / xhr.total * 100)}%`;
-    },
-    (err) => {
-      console.warn('[ITDA Avatar] 로드 실패, 다음 fallback 시도:', urls[index], err.message);
-      loadModelWithFallback(urls, index + 1);
-    }
-  );
+  _setViewMode('skeleton');
+  window.dispatchEvent(new CustomEvent('itda:avatar:ready'));
 }
 
-loadModelWithFallback(MODEL_URLS);
+initAvatar();
 
 // ── 반응형 리사이즈 ───────────────────────────────────────────
 window.addEventListener('resize', () => {

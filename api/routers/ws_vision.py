@@ -1,4 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import asyncio
 import json
 import logging
 import time
@@ -333,7 +334,6 @@ async def _handle(session_id: str, raw: dict):
         manager.processing[session_id] = False
         
         # [개선안 1] 보류된 최신 프레임이 있으면 즉시 연달아 처리 (비동기 루프)
-        import asyncio
         next_raw = manager.pending_frames.get(session_id)
         if next_raw and session_id in manager.active:
             asyncio.create_task(_handle(session_id, next_raw))

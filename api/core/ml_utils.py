@@ -11,6 +11,16 @@ def reset_prev_state():
     global _prev_state
     _prev_state = {"right_wrist": None, "left_wrist": None}
 
+def snapshot_prev_state() -> dict:
+    """현재 모션 상태(_prev_state)를 깊은 복사로 저장합니다.
+    좌우 스왑 평가 등 보조 추론이 속도 계산용 상태를 오염시키는 것을 막는 용도입니다."""
+    return {k: (dict(v) if v else None) for k, v in _prev_state.items()}
+
+def restore_prev_state(snapshot: dict) -> None:
+    """snapshot_prev_state()로 저장해 둔 모션 상태를 복원합니다."""
+    global _prev_state
+    _prev_state = {k: (dict(v) if v else None) for k, v in snapshot.items()}
+
 def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Optional[list], pose_landmarks: Optional[dict] = None) -> Optional[list]:
     global _prev_state
     
@@ -113,13 +123,9 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
     x_widths = [rel_pos[6], rel_pos[9]] * 3
     combined = right_feats + left_feats + rel_pos + (velocity * 3) + y_heights + x_widths + arm_feats
     
-    if right_feats[-1] == 0.0 and left_feats[-1] == 0.0: return None
-    return combined
-    
-    # 둘 다 감지 안 된 경우 무시
+    # 양손 모두 감지되지 않은 경우 무시
     if right_feats[-1] == 0.0 and left_feats[-1] == 0.0:
         return None
-        
     return combined
 
 

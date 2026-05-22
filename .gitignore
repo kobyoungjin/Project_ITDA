@@ -43,3 +43,16 @@ Thumbs.db
 # Project specific
 data/ksl_motions/*.json
 !data/ksl_motions/.gitkeep
+
+# 다운로드한 원천 데이터 (AI Hub 수십 GB)
+api/data/aihub_raw/
+
+# 수집 중 생성되는 임시 영상 파일
+api/data/ksl_training/temp_*
+tmp_video.mp4
+
+# 백업 파일
+*.bak
+
+# 실험용 일회성 스크립트 (버전 관리 제외)
+scratch/

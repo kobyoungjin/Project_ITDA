@@ -149,7 +149,9 @@ async function startCamera() {
 }
 
 // ── WebSocket 연동 상태 ───────────────────────────────────────
-const WS_URL = `ws://127.0.0.1:8000/api/ws/vision`; // localhost 대신 127.0.0.1 사용하여 IPv6/IPv4 혼선 방지
+// 페이지를 서빙한 호스트를 그대로 사용해 origin 과 WS 대상의 IPv4/IPv6 혼선을 방지.
+// file:// 로 직접 열었을 때만 127.0.0.1 로 폴백.
+const WS_URL = `ws://${location.hostname || '127.0.0.1'}:8000/api/ws/vision`;
 let ws = null;
 let sessionId = crypto.randomUUID();
 let frameCounter = 0;
@@ -276,15 +278,16 @@ function connectWebSocket() {
     window.dispatchEvent(new CustomEvent('itda:vision:ws_state', {
       detail: { state: 'disconnected', code: evt.code, reason: evt.reason }
     }));
-    if (wsRetryCount < 3) {
-      console.warn(`[ITDA] 백엔드 연결 실패 (코드: ${evt.code}). 재연결 시도 중... (${wsRetryCount + 1}/3)`);
-      wsRetryCount++;
-      setTimeout(connectWebSocket, 2000);
-      window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { detail: { state: 'connecting' } }));
-    } else if (wsRetryCount === 3) {
-      console.info("💡 [ITDA] 백엔드(8000) 서버 오프라인으로 확인됨. 단독 모드로 전환합니다.");
-      wsRetryCount++;
+    wsRetryCount++;
+    // 초반 3회는 빠르게(2초), 이후에는 느리게(15초) 무한 재시도한다.
+    // 영구 포기하지 않으므로 백엔드가 나중에 켜져도 자동으로 복구된다.
+    const delay = wsRetryCount <= 3 ? 2000 : 15000;
+    if (wsRetryCount === 4) {
+      console.info("💡 [ITDA] 백엔드(8000) 오프라인. 단독 모드로 전환하고 15초마다 백그라운드 재연결을 시도합니다.");
     }
+    console.warn(`[ITDA] 백엔드 연결 끊김 (코드: ${evt.code}). ${delay / 1000}초 후 재연결 시도 (${wsRetryCount}회차)`);
+    setTimeout(connectWebSocket, delay);
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { detail: { state: 'connecting' } }));
   };
 }
 
@@ -540,10 +543,22 @@ function setStatus(msg) {
 window.ITDAVision5 = {
   init,
   start: async () => {
-    if (!isRunning) {
+    // isRunning 을 동기적으로 먼저 설정해 start() 중복 진입(이중 카메라/루프)을 막는다.
+    if (isRunning) return;
+    isRunning = true;
+    try {
       await startCamera();
       setStatus('✅ 실행 중');
+    } catch (err) {
+      isRunning = false;
+      console.error('[ITDA Vision] 카메라 시작 실패:', err);
+      setStatus('❌ 카메라 시작 실패: ' + err.message);
     }
+  },
+  reconnect: () => {
+    // 백엔드가 오프라인이었다가 복구된 경우 수동 재연결용
+    wsRetryCount = 0;
+    connectWebSocket();
   },
   stop: () => {
     isRunning = false;

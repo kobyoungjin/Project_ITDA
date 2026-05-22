@@ -69,7 +69,7 @@ def run_labels_only(limit: int | None = None):
 
     # 1. 다운로드 + 파싱
     downloader = AIHubDownloader()
-    records = downloader.run(labels_only=True)
+    records = downloader.run_morpheme_only()
 
     if not records:
         print("\n❌ 다운로드된 레코드 없음. API Key 또는 데이터셋 승인 상태를 확인하세요.")
@@ -110,7 +110,8 @@ def run_full(limit: int | None = None):
         return
 
     downloader = AIHubDownloader()
-    records = downloader.run(labels_only=False)
+    # keypoint 파일 다운로드가 목적이며, 변환은 아래 run_labels_only()가 담당한다.
+    downloader.run_with_keypoints()
 
     # 원천영상 기반 레코드는 frames 가 없으므로 영상 경로로 추출
     # (향후 구현: skeleton_extractor.extract_from_video 호출)

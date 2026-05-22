@@ -79,7 +79,8 @@ def process_video_url(label, url, limit_frames=30):
             
             features = extract_ksl_features(right_lms, left_lms)
             if features:
-                extracted_features.append(features + [label])
+                # 영상 URL을 출처(source)로 기록 — 누수 없는 평가용
+                extracted_features.append(features + [f"url:{url}", label])
                 frame_count += 1
 
     cap.release()
@@ -143,9 +144,9 @@ def batch_learn(limit: int = 50):
         return
 
     # 4. 데이터 저장 및 균형 조정 (다운샘플링)
-    # 컬럼명 생성 (f0, f1, ... f34, label)
-    feat_dim = len(all_data[0]) - 1
-    columns = [f"f{i}" for i in range(feat_dim)] + ["label"]
+    # 컬럼명 생성 (f0, f1, ... , source, label)
+    feat_dim = len(all_data[0]) - 2
+    columns = [f"f{i}" for i in range(feat_dim)] + ["source", "label"]
     df_total = pd.DataFrame(all_data, columns=columns)
     
     balanced_groups = []
@@ -168,7 +169,8 @@ def train_knn_model():
     
     print("\n[Train] KNN 모델 훈련 시작...")
     df = pd.read_csv(CSV_PATH, encoding='utf-8')
-    X = df.drop("label", axis=1).values
+    # source 는 출처 메타데이터이므로 학습 특징에서 제외
+    X = df.drop(columns=["label", "source"], errors="ignore").values
     y = df["label"].values
     
     model = KNeighborsClassifier(n_neighbors=3, weights='distance')
