@@ -77,16 +77,21 @@ async function loadJoints(word) {
 
 let currentAnimationId = null;
 let isPlaying = false;
+// playJoints 가 빠르게 두 번 호출되면 첫 호출의 await 중에 두 번째 호출이 끼어들어
+// 두 애니메이션 루프가 currentAnimationId 를 두고 경쟁한다.
+// 호출마다 토큰을 발급해, 자기 토큰이 아닌 stale 호출은 즉시 종료하도록 한다.
+let playToken = 0;
 
 /**
  * 관절 데이터 기반 아바타 재생
  */
 function playJoints(word, options = { loop: false }) {
+    const myToken = ++playToken;
     return new Promise(async (resolve) => {
-        isPlaying = true;
         const data = await loadJoints(word);
+        // 로딩 중 새 playJoints 호출이 있었다면 이 호출은 이미 stale — 조용히 종료
+        if (myToken !== playToken) { resolve(); return; }
         if (!data || !data.frames || data.frames.length === 0) {
-            isPlaying = false;
             resolve();
             return;
         }
@@ -114,11 +119,12 @@ function playJoints(word, options = { loop: false }) {
         console.info(`[JointLoader] '${word}' 재생 시작 (${data.frames.length} 프레임, 원본 ${fps}fps → skip=${frameSkip} → ${effectiveFps.toFixed(1)}fps)`);
 
         function animate(time) {
-            if (!isPlaying) {
+            // stop() 으로 isPlaying=false 또는 새 play 호출로 토큰이 바뀐 경우 종료
+            if (!isPlaying || myToken !== playToken) {
                 resolve();
                 return;
             }
-            
+
             if (!lastTime) lastTime = time;
             const delta = time - lastTime;
 
@@ -128,7 +134,7 @@ function playJoints(word, options = { loop: false }) {
                     avatar?.updateSkeleton?.(frameData);
                     retargeting?.apply75Landmarks?.(frameData);
                 }
-                
+
                 frameIdx += frameSkip;
                 lastTime = time;
             }
@@ -136,13 +142,14 @@ function playJoints(word, options = { loop: false }) {
             if (frameIdx < data.frames.length) {
                 currentAnimationId = requestAnimationFrame(animate);
             } else {
-                if (options.loop && isPlaying) {
+                if (options.loop && isPlaying && myToken === playToken) {
                     // 반복 재생 (Loop)
                     frameIdx = 0;
                     currentAnimationId = requestAnimationFrame(animate);
                 } else {
                     console.info(`[JointLoader] '${word}' 재생 완료`);
-                    stop();
+                    // 자기 토큰일 때만 stop — 새 play 가 끼어들었다면 그쪽을 망가뜨리지 않는다.
+                    if (myToken === playToken) stop();
                     resolve();
                 }
             }

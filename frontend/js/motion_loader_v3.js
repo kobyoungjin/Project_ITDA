@@ -149,12 +149,18 @@ async function playMotion(word) {
 
       // 현재 시각을 감싸는 두 keyframe 찾기
       let prev = keyframes[0], next = keyframes[0];
+      let found = false;
       for (let i = 1; i < keyframes.length; i++) {
         if (keyframes[i].time >= elapsed) {
           prev = keyframes[i - 1];
           next = keyframes[i];
+          found = true;
           break;
         }
+      }
+      if (!found) {
+        // 모든 keyframe time 이 elapsed 보다 작은 오차 구간 → 첫 프레임으로 스냅되던 버그 회피
+        prev = next = keyframes[keyframes.length - 1];
       }
       const span = Math.max(next.time - prev.time, 1e-3);
       const t = Math.min(1, (elapsed - prev.time) / span);

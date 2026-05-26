@@ -142,11 +142,17 @@ class MotionExtractor:
         return word.replace("/", "_").replace(",", "_")
 
     def extract_and_save(self, word: str) -> bool:
+        # MediaPipe 모델 파일이 없으면 미리 명확한 에러로 종료 (크립틱한 task 초기화 실패 방지)
+        for mdl in (POSE_TASK, HAND_TASK):
+            if not mdl.exists():
+                print(f"[Extractor] MediaPipe 모델 파일 없음: {mdl}")
+                return False
+
         video_url = self.find_video_url(word)
         if not video_url:
             print(f"[Extractor] '{word}' 에 대한 영상을 찾을 수 없습니다.")
             return False
-            
+
         video_url = video_url.replace("http://", "https://")
         safe_name = self.get_safe_name(word)
         output_path = OUTPUT_DIR / f"{safe_name}.json"

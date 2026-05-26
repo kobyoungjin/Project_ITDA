@@ -7,3 +7,4 @@ faiss-cpu==1.7.4
 requests==2.31.0
 numpy==1.26.4
 aiohttp==3.9.3
+yt-dlp>=2024.0.0

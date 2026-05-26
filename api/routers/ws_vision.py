@@ -329,7 +329,15 @@ async def _handle(session_id: str, raw: dict):
         return
 
     except Exception as e:
+        # 에러를 잡았으면 ack 라도 보내야 프론트가 응답 대기로 멈추지 않는다.
         print(f"[Vision] Critical error in handle: {e}")
+        try:
+            await manager.send_ack(
+                session_id,
+                VisionAck(frame_id=raw.get("frame_id", -1), status="error", message=str(e)),
+            )
+        except Exception:
+            pass
     finally:
         manager.processing[session_id] = False
         
