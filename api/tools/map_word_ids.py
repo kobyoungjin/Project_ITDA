@@ -1,44 +1,40 @@
 """
 map_word_ids.py ─ AI Hub morpheme → WORD_ID ↔ 한국어 매핑 + JSON rename
 
-입력:
-  morpheme 루트 (예: C:/Users/ComHolic/Desktop/data/[라벨]01_real_word_morpheme/morpheme/01)
-  ksl_motions 디렉토리 (frontend/data/ksl_motions)
-
 처리:
   1. morpheme JSON 전체 스캔 → WORD_ID → 한국어 단어 매핑 생성
   2. 같은 WORD_ID 의 여러 angle·performer JSON 은 같은 단어라야 함 (sanity check)
-  3. frontend/data/ksl_motions/WORD####.json 을 {한국어}.json 으로 COPY (원본 보존)
-  4. mapping.json 파일로 전체 매핑 저장
+  3. ksl_motions/WORD####.json 을 {한국어}.json 으로 COPY (원본 보존)
+  4. _mapping.json 파일로 전체 매핑 저장
   5. index.json 갱신
+
+실행:
+  python api/tools/map_word_ids.py --morpheme-root <morpheme JSON 루트>
+  (예: --morpheme-root "D:/data/01_real_word_morpheme/morpheme/01")
 """
 
+import argparse
 import json
 import re
-import sys
-import shutil
 from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-
-MORPHEME_ROOT = Path(r"C:/Users/ComHolic/Desktop/data/01_real_word_morpheme/morpheme/01")
-MOTIONS_DIR = ROOT / "frontend" / "data" / "ksl_motions"
+DEFAULT_MOTIONS_DIR = ROOT / "frontend" / "data" / "ksl_motions"
 
 # Windows 파일명에 쓸 수 없는 문자
 INVALID_FS_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
-def build_mapping() -> dict:
+def build_mapping(morpheme_root: Path) -> dict:
     """morpheme JSON 전체에서 WORD_ID → 한국어 단어 추출."""
-    if not MORPHEME_ROOT.exists():
-        raise FileNotFoundError(f"morpheme 루트 없음: {MORPHEME_ROOT}")
+    if not morpheme_root.exists():
+        raise FileNotFoundError(f"morpheme 루트 없음: {morpheme_root}")
 
     # WORD_ID → set of Korean words (sanity check: 같은 WORD_ID 는 같은 단어여야)
     raw_mapping: dict[str, set] = defaultdict(set)
 
-    files = list(MORPHEME_ROOT.rglob("*_morpheme.json"))
+    files = list(morpheme_root.rglob("*_morpheme.json"))
     print(f"[Map] morpheme JSON {len(files)}개 스캔 중...")
 
     for fp in files:
@@ -84,12 +80,12 @@ def sanitize_filename(name: str) -> str:
     return cleaned or "UNKNOWN"
 
 
-def apply_mapping(mapping: dict) -> None:
+def apply_mapping(mapping: dict, motions_dir: Path) -> None:
     """각 WORD####.json 을 {한국어}.json 으로 복사. 원본 유지."""
-    if not MOTIONS_DIR.exists():
-        raise FileNotFoundError(f"motions 디렉토리 없음: {MOTIONS_DIR}")
+    if not motions_dir.exists():
+        raise FileNotFoundError(f"motions 디렉토리 없음: {motions_dir}")
 
-    word_files = sorted(MOTIONS_DIR.glob("WORD*.json"))
+    word_files = sorted(motions_dir.glob("WORD*.json"))
     print(f"[Map] {len(word_files)}개 WORD JSON 을 한국어로 복사...")
 
     created = 0
@@ -120,23 +116,26 @@ def apply_mapping(mapping: dict) -> None:
             if idx > 1:
                 collisions.append((korean, duplicates))
 
-        out_path = MOTIONS_DIR / f"{safe_name}.json"
+        out_path = motions_dir / f"{safe_name}.json"
 
         # 원본 JSON 에 id 필드도 한국어로 업데이트
-        with open(wf, encoding="utf-8") as f:
-            motion = json.load(f)
-        motion["id"] = korean
-        motion["word_id"] = wid  # 역추적용
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(motion, f, ensure_ascii=False, indent=2)
-        created += 1
+        try:
+            with open(wf, encoding="utf-8") as f:
+                motion = json.load(f)
+            motion["id"] = korean
+            motion["word_id"] = wid  # 역추적용
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(motion, f, ensure_ascii=False, indent=2)
+            created += 1
+        except Exception as e:
+            print(f"  경고 {wf.name}: {e}")
 
     print(f"[Map] 한국어 JSON 생성: {created}개 / 매핑 없음 스킵: {skipped_no_map}개")
     if collisions:
         print(f"[Map] 중복 처리: {len(set(tuple(c[1]) for c in collisions))}종류 (suffix _2, _3 부여)")
 
     # mapping.json 저장 (양방향 조회용)
-    mapping_path = MOTIONS_DIR / "_mapping.json"
+    mapping_path = motions_dir / "_mapping.json"
     with open(mapping_path, "w", encoding="utf-8") as f:
         json.dump({
             "word_to_korean": mapping,
@@ -146,21 +145,34 @@ def apply_mapping(mapping: dict) -> None:
     print(f"[Map] 매핑 저장: {mapping_path}")
 
 
-def rebuild_index() -> None:
+def rebuild_index(motions_dir: Path) -> None:
     """index.json 을 현재 디렉토리 전체 파일 스캔으로 재생성."""
-    files = sorted([p for p in MOTIONS_DIR.glob("*.json")
+    files = sorted([p for p in motions_dir.glob("*.json")
                     if p.name not in ("index.json", "_mapping.json")])
     actions = [p.stem for p in files]
     idx = {"total": len(actions), "actions": actions}
-    with open(MOTIONS_DIR / "index.json", "w", encoding="utf-8") as f:
+    with open(motions_dir / "index.json", "w", encoding="utf-8") as f:
         json.dump(idx, f, ensure_ascii=False, indent=2)
     print(f"[Map] index.json 갱신: {len(actions)}개 항목")
 
 
 if __name__ == "__main__":
-    mapping = build_mapping()
-    apply_mapping(mapping)
-    rebuild_index()
+    parser = argparse.ArgumentParser(
+        description="AI Hub morpheme → WORD_ID↔한국어 매핑 및 ksl_motions JSON rename"
+    )
+    parser.add_argument(
+        "--morpheme-root", required=True, type=Path,
+        help="AI Hub morpheme JSON 루트 디렉토리 (*_morpheme.json 들이 들어있는 폴더)",
+    )
+    parser.add_argument(
+        "--motions-dir", type=Path, default=DEFAULT_MOTIONS_DIR,
+        help=f"ksl_motions 디렉토리 (기본: {DEFAULT_MOTIONS_DIR})",
+    )
+    args = parser.parse_args()
+
+    mapping = build_mapping(args.morpheme_root)
+    apply_mapping(mapping, args.motions_dir)
+    rebuild_index(args.motions_dir)
     print("\n[DONE] 한국어 이름으로 재생 가능:")
     # 샘플 10개
     samples = list(mapping.items())[:10]

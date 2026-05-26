@@ -6,7 +6,7 @@
  */
 
 const CACHE = new Map();
-const JOINT_CACHE_DIR = './data/ksl_motions'; // 국립국어원 데이터 기본 경로
+const JOINT_CACHE_DIR = './data/ksl_joints';  // NPY 원시 관절 좌표 전용 경로
 const FALLBACK_DIR    = './data/joint_cache'; // 기존 수동 캐시 경로
 
 const FILE_LIST_CACHE = { ksl: null, joint: null };
@@ -25,7 +25,7 @@ async function loadJoints(word) {
 
     const safeWord = word.replace(/\//g, "_").replace(/,/g, "_");
     
-    // 1. 정확한 이름으로 시도
+    // 1. 정확한 이름으로 시도 (NPY 전용 디렉토리 우선)
     const dirs = [JOINT_CACHE_DIR, FALLBACK_DIR];
     for (const dir of dirs) {
         const url = `${dir}/${encodeURIComponent(safeWord)}.json`;
@@ -33,8 +33,15 @@ async function loadJoints(word) {
             const resp = await fetch(url, { cache: 'no-cache' });
             if (resp.ok) {
                 const data = await resp.json();
-                CACHE.set(word, data);
-                return data;
+                // V3 형식(keyframes) 파일은 NPY 로더가 처리 불가 → 건너뜀
+                if (data.keyframes && !data.frames) {
+                    console.info(`[JointLoader] '${word}' 은 V3 형식입니다. NPY 재생성 요청...`);
+                    break;
+                }
+                if (data.frames?.length > 0) {
+                    CACHE.set(word, data);
+                    return data;
+                }
             }
         } catch(e) {}
     }
@@ -42,7 +49,7 @@ async function loadJoints(word) {
     // 2. 백엔드 실시간 생성 요청 (NEW)
     console.info(`[JointLoader] '${word}' 데이터를 찾을 수 없어 실시간 생성을 시도합니다...`);
     try {
-        const resolveResp = await fetch('http://localhost:8000/api/sign-language/resolve-motion', {
+        const resolveResp = await fetch(`http://${location.hostname || 'localhost'}:8000/api/sign-language/resolve-motion`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: word })
@@ -51,13 +58,15 @@ async function loadJoints(word) {
         if (resolveResp.ok) {
             const res = await resolveResp.json();
             console.info(`[JointLoader] 백엔드 생성 성공: ${res.message}`);
-            // 생성되었으니 다시 1번 로직으로 로드 시도
+            // 생성되었으니 NPY 전용 디렉토리에서 다시 로드
             const retryUrl = `${JOINT_CACHE_DIR}/${encodeURIComponent(safeWord)}.json`;
             const retryResp = await fetch(retryUrl, { cache: 'no-cache' });
             if (retryResp.ok) {
                 const data = await retryResp.json();
-                CACHE.set(word, data);
-                return data;
+                if (data.frames?.length > 0) {
+                    CACHE.set(word, data);
+                    return data;
+                }
             }
         }
     } catch(e) {

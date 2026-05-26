@@ -125,7 +125,7 @@ async function playMotion(word) {
 
   const initialQuats = new Map();
   for (const bName of touchedBones) {
-    const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+    const bone = _getBone(avatar, bName);
     if (bone) initialQuats.set(bName, bone.quaternion.clone());
   }
 
@@ -174,6 +174,29 @@ async function playMotion(word) {
 // Hand bone 이름은 'Hand(Thumb|Index|Middle|Ring|Pinky)\d' 패턴. 아래 정규식으로 구분.
 const HAND_BONE_RE = /Hand(Thumb|Index|Middle|Ring|Pinky)\d/;
 
+const BONE_MAPPING = {
+  'RightArm': ['mixamorig:RightArm', 'RightArm', 'RightUpperArm'],
+  'RightForeArm': ['mixamorig:RightForeArm', 'RightForeArm', 'RightForearm'],
+  'RightHand': ['mixamorig:RightHand', 'RightHand'],
+  'LeftArm': ['mixamorig:LeftArm', 'LeftArm', 'LeftUpperArm'],
+  'LeftForeArm': ['mixamorig:LeftForeArm', 'LeftForeArm', 'LeftForearm'],
+  'LeftHand': ['mixamorig:LeftHand', 'LeftHand']
+};
+
+function _getBone(avatar, name) {
+  if (!avatar || !avatar.bones) return null;
+  if (avatar.bones[name]) return avatar.bones[name];
+  const cands = BONE_MAPPING[name];
+  if (cands) {
+    for (const c of cands) {
+      if (avatar.bones[c]) return avatar.bones[c];
+    }
+  }
+  const fallbackName = 'mixamorig:' + name;
+  if (avatar.bones[fallbackName]) return avatar.bones[fallbackName];
+  return null;
+}
+
 function _isHandBone(name) { return HAND_BONE_RE.test(name); }
 
 function _applyInterpolated(avatar, prevKF, nextKF, t, scratch, motion) {
@@ -217,7 +240,7 @@ function _applyInterpolated(avatar, prevKF, nextKF, t, scratch, motion) {
   if (!isWorld) {
     // Legacy local space: 그냥 적용
     for (const [bName, wq] of worldQuats) {
-      const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+      const bone = _getBone(avatar, bName);
       if (bone) bone.quaternion.copy(wq);
     }
   } else {
@@ -234,7 +257,7 @@ function _applyInterpolated(avatar, prevKF, nextKF, t, scratch, motion) {
     const ordered = [...worldQuats.keys()].sort((a, b) => depth(a) - depth(b));
 
     for (const bName of ordered) {
-      const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+      const bone = _getBone(avatar, bName);
       if (!bone) continue;
       const wq = worldQuats.get(bName);
       const Wrest = restWorld.get(bName);
@@ -272,7 +295,7 @@ function _applyHandshapeOffset(avatar, shape, side) {
   const tmp = new THREE.Quaternion();
   for (const [bn, q] of Object.entries(shape)) {
     if (!bn.startsWith(prefix)) continue;
-    const bone = avatar.bones[bn] || avatar.bones['mixamorig:' + bn];
+    const bone = _getBone(avatar, bn);
     const r = rest[bn];
     if (!bone || !r) continue;
     tmp.set(q.x, q.y, q.z, q.w);
@@ -294,17 +317,45 @@ function _captureHandRest(avatar) {
 // 매 프레임 W_new = wq * W_rest_self 로 합성, 부모-자식 순서로 local 변환.
 function _captureArmRestWorld(avatar) {
   if (avatar._armRestWorld) return;
+  
+  // 1. 현재 본 쿼터니언 백업
+  const backup = new Map();
+  for (const name of Object.keys(avatar.bones || {})) {
+    backup.set(name, avatar.bones[name].quaternion.clone());
+  }
+  
+  // 2. 프리스틴 T-pose(initialBoneQuats)로 임시 복구하여 순수 T-pose 캡처 보장
+  if (avatar.initialBoneQuats) {
+    for (const [name, q] of Object.entries(avatar.initialBoneQuats)) {
+      if (avatar.bones[name]) avatar.bones[name].quaternion.copy(q);
+    }
+  }
+  
+  // 3. 월드 매트릭스 강제 갱신
+  if (avatar.model) {
+    avatar.model.updateMatrixWorld(true);
+  }
+  
+  // 4. 월드 쿼터니언 캡처
   const map = new Map();
   const armBoneNames = ['RightArm','LeftArm','RightForeArm','LeftForeArm','RightHand','LeftHand'];
   for (const name of armBoneNames) {
-    const bone = avatar.bones[name] || avatar.bones['mixamorig:' + name];
+    const bone = _getBone(avatar, name);
     if (!bone) continue;
     const wq = new THREE.Quaternion();
     bone.getWorldQuaternion(wq);
     map.set(name, wq);
   }
   avatar._armRestWorld = map;
-  console.info(`[MotionV3] arm rest world quats 캐시: ${map.size}개`);
+  console.info(`[MotionV3] arm rest world quats 캐시 (T-Pose 기준): ${map.size}개`);
+  
+  // 5. 백업했던 현재 포즈로 원복
+  for (const [name, q] of backup) {
+    if (avatar.bones[name]) avatar.bones[name].quaternion.copy(q);
+  }
+  if (avatar.model) {
+    avatar.model.updateMatrixWorld(true);
+  }
 }
 
 // ── 초기 자세로 부드럽게 복귀 (V2 엔진과 동일 톤) ───────────
@@ -313,14 +364,14 @@ async function _returnToInitial(avatar, initialQuats) {
   const startTime = performance.now();
   const currentQuats = new Map();
   for (const [bName] of initialQuats) {
-    const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+    const bone = _getBone(avatar, bName);
     if (bone) currentQuats.set(bName, bone.quaternion.clone());
   }
   return new Promise((resolve) => {
     function step(now) {
       const progress = Math.min((now - startTime) / duration, 1);
       for (const [bName, initQ] of initialQuats) {
-        const bone = avatar.bones[bName] || avatar.bones['mixamorig:' + bName];
+        const bone = _getBone(avatar, bName);
         const from = currentQuats.get(bName);
         if (bone && from) bone.quaternion.copy(from).slerp(initQ, progress);
       }
@@ -420,21 +471,3 @@ window.ITDAMotionV3.browse = browseRange;
   }, 500);
 })();
 
-
-// ── 기본 Idle 자세 설정 (감사 시작 자세) ────────────────────
-(function _setDefaultIdle() {
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (window.ITDAAvatar5?.bones && Object.keys(window.ITDAAvatar5.bones).length > 0) {
-      clearInterval(timer);
-      const params = new URLSearchParams(location.search);
-      // 만약 autoplay 중이 아니라면 기본 Idle 자세를 설정
-      if (!params.get('autoplay')) {
-        window.ITDAMotionV3.setAsIdle('감사');
-      }
-    } else if (attempts > 60) {
-      clearInterval(timer);
-    }
-  }, 500);
-})();

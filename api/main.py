@@ -1,5 +1,7 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import anyio
 import uvicorn
 from api.core.config import settings
 from api.routers import sign_language
@@ -8,10 +10,28 @@ from api.routers import stt as stt_adapter
 from api.routers import collect as collect_router
 from api.services.data_pipeline import data_pipeline
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """서버 수명주기. 기동 시 데이터 파이프라인을 빌드하고 FAISS 인덱스를 준비한다."""
+    app.state.is_ready = False
+    print("[ITDA Backend] 시스템 시작 중... 데이터 파이프라인 구동 및 FAISS 인덱스 빌드 시작")
+    try:
+        # CPU 집약적인 파이프라인 빌드를 스레드에서 실행해 기동 중 이벤트 루프를 막지 않는다.
+        processed_count = await anyio.to_thread.run_sync(data_pipeline.process_and_store)
+        print(f"[ITDA Backend] 초기화 완료! {processed_count}개의 따뜻한 수어 데이터가 벡터화되었습니다.")
+        app.state.is_ready = True
+    except Exception as e:
+        # 파이프라인 빌드가 실패해도 서버 자체는 기동시켜 /api/health 로 상태를 알린다.
+        print(f"[ITDA Backend] 초기화 실패 - 서버는 기동하되 RAG 기능이 제한됩니다: {e}")
+    yield
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="ITDA Project: 따뜻한 감정이 담긴 수어 데이터 파이프라인 및 RAG 엔진 API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # 안티그래비티 규칙: 프론트엔드 포트(3000)를 위한 CORS 허용
@@ -44,22 +64,11 @@ app.include_router(
     tags=["KSL Data Collection"]
 )
 
-# [P3] 6단계 통합: STT 라우터 (step6_stt 어댑터)
-# stt_adapter.router 는 로드 성공 시 step6_stt.stt_router(자체 prefix="/api") 이고,
-# 실패 시 /status/stt 만 노출하는 fallback 라우터 → prefix 추가 지정 불필요
+# STT 상태 라우터 (step6_stt 모듈 미포함으로 /status/stt 만 노출)
 app.include_router(
     stt_adapter.router,
-    tags=["STT (6단계)"]
+    tags=["STT"]
 )
-
-@app.on_event("startup")
-async def startup_event():
-    app.state.is_ready = False
-    # 백엔드 서버 시작 시, 문화데이터 수집 및 FAISS 벡터화 진행 (우선은 로컬 목업)
-    print("[ITDA Backend] 시스템 시작 중... 데이터 파이프라인 구동 및 FAISS 인덱스 빌드 시작")
-    processed_count = data_pipeline.process_and_store()
-    print(f"[ITDA Backend] 초기화 완료! {processed_count}개의 따뜻한 수어 데이터가 벡터화되었습니다.")
-    app.state.is_ready = True
 
 @app.get("/api/health")
 def health_check():

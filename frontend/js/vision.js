@@ -34,28 +34,31 @@ const FACEMESH_TESSELATION = [[10, 338], [338, 297], [297, 332], [332, 284], [28
 
 // ── 설정 ──────────────────────────────────────────────────────
 const CONFIG = {
-  MIN_FRAME_INTERVAL_MS: 33,        // ~30 fps
+  MIN_FRAME_INTERVAL_MS: 16,        // ~60 fps (기존 33ms에서 상향)
   FACE_DETECTION_CONFIDENCE: 0.5,
-  FACE_TRACKING_CONFIDENCE:  0.5,
-  HAND_DETECTION_CONFIDENCE: 0.4,
-  HAND_TRACKING_CONFIDENCE:  0.4,
+  FACE_TRACKING_CONFIDENCE: 0.5,
+  HAND_DETECTION_CONFIDENCE: 0.25,  // 더 약한 손/부분 노출도 탐지
+  HAND_PRESENCE_CONFIDENCE: 0.25,
+  HAND_TRACKING_CONFIDENCE: 0.25,
   MAX_HANDS: 2,
+  MIN_CAMERA_WIDTH: 1280,
+  MIN_CAMERA_HEIGHT: 720,
 };
 
 // ── 내부 상태 ─────────────────────────────────────────────────
-let faceLandmarker   = null;
-let handLandmarker   = null;
-let poseLandmarker   = null;
-let videoStream      = null;
-let animationId      = null;
-let lastFrameTime    = 0;
-let lastFpsSample    = 0;
-let fpsBuffer        = [];
-let isRunning        = false;
+let faceLandmarker = null;
+let handLandmarker = null;
+let poseLandmarker = null;
+let videoStream = null;
+let animationId = null;
+let lastFrameTime = 0;
+let lastFpsSample = 0;
+let fpsBuffer = [];
+let isRunning = false;
 
-const videoEl   = document.getElementById('vision-video');
-const canvasEl  = document.getElementById('vision-canvas');
-const statusEl  = document.getElementById('vision-status');
+const videoEl = document.getElementById('vision-video');
+const canvasEl = document.getElementById('vision-canvas');
+const statusEl = document.getElementById('vision-status');
 const canvasCtx = canvasEl.getContext('2d');
 let drawingUtils = null;
 
@@ -75,48 +78,48 @@ async function init() {
     faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-        delegate: 'CPU',
+        delegate: 'GPU', // CPU -> GPU 가속
       },
       outputFaceBlendshapes: true,
-      runningMode:           'VIDEO',
-      numFaces:              1,
+      runningMode: 'VIDEO',
+      numFaces: 1,
       minFaceDetectionConfidence: CONFIG.FACE_DETECTION_CONFIDENCE,
-      minTrackingConfidence:      CONFIG.FACE_TRACKING_CONFIDENCE,
+      minTrackingConfidence: CONFIG.FACE_TRACKING_CONFIDENCE,
     });
 
     // ② HandLandmarker
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-        delegate: 'CPU',
+        delegate: 'GPU', // CPU -> GPU 가속
       },
-      runningMode:    'VIDEO',
-      numHands:       CONFIG.MAX_HANDS,
+      runningMode: 'VIDEO',
+      numHands: CONFIG.MAX_HANDS,
       minHandDetectionConfidence: CONFIG.HAND_DETECTION_CONFIDENCE,
-      minHandPresenceConfidence:  0.5,
-      minTrackingConfidence:      CONFIG.HAND_TRACKING_CONFIDENCE,
+      minHandPresenceConfidence: CONFIG.HAND_PRESENCE_CONFIDENCE,
+      minTrackingConfidence: CONFIG.HAND_TRACKING_CONFIDENCE,
     });
 
     // ③ PoseLandmarker (팔·어깨·몸통 33개 관절) - 교차/겹침 상황 정확도 향상을 위해 full 모델 사용
     poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
-        delegate: 'CPU',
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        delegate: 'GPU', // full -> lite 모델로 경량화 및 GPU 가속
       },
-      runningMode:  'VIDEO',
-      numPoses:     1,
-      minPoseDetectionConfidence: 0.6,
-      minPosePresenceConfidence:  0.6,
-      minTrackingConfidence:      0.6,
-      outputSegmentationMasks:    false,
+      runningMode: 'VIDEO',
+      numPoses: 1,
+      minPoseDetectionConfidence: 0.5,
+      minPosePresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+      outputSegmentationMasks: false,
     });
 
     setStatus('카메라 연결 중…');
     await startCamera();
-    
+
     // Initialize DrawingUtils
     drawingUtils = new DrawingUtils(canvasCtx);
-    
+
     setStatus('✅ 실행 중');
     connectWebSocket(); // [활성화] 실시간 수어 번역을 위해 백엔드 웹소켓 연결 시작
     window.dispatchEvent(new CustomEvent('itda:vision:ready'));
@@ -130,7 +133,12 @@ async function init() {
 // ── 카메라 시작 ───────────────────────────────────────────────
 async function startCamera() {
   videoStream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } },
+    video: {
+      width: { ideal: CONFIG.MIN_CAMERA_WIDTH },
+      height: { ideal: CONFIG.MIN_CAMERA_HEIGHT },
+      frameRate: { ideal: 30 },
+      facingMode: 'user',
+    },
     audio: false,
   });
   videoEl.srcObject = videoStream;
@@ -141,7 +149,9 @@ async function startCamera() {
 }
 
 // ── WebSocket 연동 상태 ───────────────────────────────────────
-const WS_URL = `ws://127.0.0.1:8000/api/ws/vision`; // localhost 대신 127.0.0.1 사용하여 IPv6/IPv4 혼선 방지
+// 페이지를 서빙한 호스트를 그대로 사용해 origin 과 WS 대상의 IPv4/IPv6 혼선을 방지.
+// file:// 로 직접 열었을 때만 127.0.0.1 로 폴백.
+const WS_URL = `ws://${location.hostname || '127.0.0.1'}:8000/api/ws/vision`;
 let ws = null;
 let sessionId = crypto.randomUUID();
 let frameCounter = 0;
@@ -155,10 +165,10 @@ let wsRetryCount = 0;
 let latestPoseLandmarks = null;
 const POSE_KEYS = {
   nose: 0,
-  left_shoulder: 11,  right_shoulder: 12,
-  left_elbow: 13,     right_elbow: 14,
-  left_wrist: 15,     right_wrist: 16,
-  left_hip: 23,       right_hip: 24,
+  left_shoulder: 11, right_shoulder: 12,
+  left_elbow: 13, right_elbow: 14,
+  left_wrist: 15, right_wrist: 16,
+  left_hip: 23, right_hip: 24,
 };
 
 // [P2] 모션 세그먼테이션 상태머신 ──────────────────────────────
@@ -219,7 +229,7 @@ function _updateMotionPhase(hands, nowMs) {
     if (!motionState.stillSince) motionState.stillSince = nowMs;
     const heldMs = nowMs - motionState.stillSince;
     if (heldMs >= MOTION_THRESHOLDS.STABLE_HOLD_MS &&
-        (prevPhase === 'moving' || prevPhase === 'settling')) {
+      (prevPhase === 'moving' || prevPhase === 'settling')) {
       motionState.phase = 'stable';  // 이번 프레임 1회만 stable 로 트리거
     } else if (prevPhase === 'stable') {
       motionState.phase = 'idle';    // stable 은 1프레임 이벤트
@@ -256,27 +266,28 @@ function connectWebSocket() {
       if (ack.pose_analysis) {
         window.dispatchEvent(new CustomEvent('itda:pose:analysis', { detail: ack.pose_analysis }));
       }
-    } catch(e) {}
+    } catch (e) { }
   };
   ws.onerror = (err) => {
     console.error("[ITDA WebSocket] 에러 발생:", err);
-    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { 
-        detail: { state: 'error', message: 'Connection Refused (Check Backend)' } 
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', {
+      detail: { state: 'error', message: 'Connection Refused (Check Backend)' }
     }));
   };
   ws.onclose = (evt) => {
-    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { 
-        detail: { state: 'disconnected', code: evt.code, reason: evt.reason } 
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', {
+      detail: { state: 'disconnected', code: evt.code, reason: evt.reason }
     }));
-    if (wsRetryCount < 3) {
-      console.warn(`[ITDA] 백엔드 연결 실패 (코드: ${evt.code}). 재연결 시도 중... (${wsRetryCount + 1}/3)`);
-      wsRetryCount++;
-      setTimeout(connectWebSocket, 2000);
-      window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { detail: { state: 'connecting' } }));
-    } else if (wsRetryCount === 3) {
-      console.info("💡 [ITDA] 백엔드(8000) 서버 오프라인으로 확인됨. 단독 모드로 전환합니다.");
-      wsRetryCount++;
+    wsRetryCount++;
+    // 초반 3회는 빠르게(2초), 이후에는 느리게(15초) 무한 재시도한다.
+    // 영구 포기하지 않으므로 백엔드가 나중에 켜져도 자동으로 복구된다.
+    const delay = wsRetryCount <= 3 ? 2000 : 15000;
+    if (wsRetryCount === 4) {
+      console.info("💡 [ITDA] 백엔드(8000) 오프라인. 단독 모드로 전환하고 15초마다 백그라운드 재연결을 시도합니다.");
     }
+    console.warn(`[ITDA] 백엔드 연결 끊김 (코드: ${evt.code}). ${delay / 1000}초 후 재연결 시도 (${wsRetryCount}회차)`);
+    setTimeout(connectWebSocket, delay);
+    window.dispatchEvent(new CustomEvent('itda:vision:ws_state', { detail: { state: 'connecting' } }));
   };
 }
 
@@ -386,14 +397,14 @@ async function processFrame(timestamp) {
 
   // ② 손 감지 (HandLandmarker)
   const handResult = handLandmarker.detectForVideo(videoEl, timestamp);
-  
+
   // ── 시각화 (Drawing) ──
   drawResults(faceResult, handResult, poseResult);
 
   if (handResult.landmarks && handResult.landmarks.length > 0) {
     const hands = handResult.landmarks.map((lm, i) => ({
       handedness: handResult.handedness[i]?.[0]?.displayName ?? 'Unknown',
-      landmarks:  lm,
+      landmarks: lm,
     }));
     window.dispatchEvent(new CustomEvent('itda:hands:results', {
       detail: { hands },
@@ -469,7 +480,7 @@ function drawResults(faceResult, handResult, poseResult) {
       { idx: 15, color: '#FFCC00', label: '손목L' },
       { idx: 16, color: '#44FFCC', label: '손목R' },
     ];
-    const BONES = [[11,13],[13,15],[12,14],[14,16]];
+    const BONES = [[11, 13], [13, 15], [12, 14], [14, 16]];
 
     canvasCtx.lineWidth = 2;
     canvasCtx.strokeStyle = 'rgba(255,255,255,0.5)';
@@ -531,9 +542,36 @@ function setStatus(msg) {
 // ── 공개 API ──────────────────────────────────────────────────
 window.ITDAVision5 = {
   init,
+  start: async () => {
+    // isRunning 을 동기적으로 먼저 설정해 start() 중복 진입(이중 카메라/루프)을 막는다.
+    if (isRunning) return;
+    isRunning = true;
+    try {
+      await startCamera();
+      setStatus('✅ 실행 중');
+    } catch (err) {
+      isRunning = false;
+      console.error('[ITDA Vision] 카메라 시작 실패:', err);
+      setStatus('❌ 카메라 시작 실패: ' + err.message);
+    }
+  },
+  reconnect: () => {
+    // 백엔드가 오프라인이었다가 복구된 경우 수동 재연결용
+    wsRetryCount = 0;
+    connectWebSocket();
+  },
   stop: () => {
     isRunning = false;
     if (animationId) cancelAnimationFrame(animationId);
-    if (videoStream) videoStream.getTracks().forEach(t => t.stop());
+    if (videoStream) {
+      videoStream.getTracks().forEach(t => t.stop());
+      videoStream = null;
+    }
+    // 캔버스 잔상 제거
+    if (canvasCtx && canvasEl) {
+      canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    }
+    setStatus('⏸️ 카메라 꺼짐');
   },
+  isRunning: () => isRunning,
 };

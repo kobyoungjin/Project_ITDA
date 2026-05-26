@@ -7,12 +7,12 @@ import * as THREE from 'three';
 
 const MP = {
   POSE: { 
-    NOSE: 0,
-    L_S: 11, R_S: 12, L_E: 13, R_E: 14, L_W: 15, R_W: 16, 
-    L_H: 23, R_H: 24
+    NOSE: 42,
+    L_S: 53, R_S: 54, L_E: 55, R_E: 56, L_W: 57, R_W: 58, 
+    L_H: 65, R_H: 66
   },
   HAND: { 
-    L_B: 33, R_B: 54, 
+    L_B: 0, R_B: 21, 
     TIPS: [4, 8, 12, 16, 20], 
     NAMES: ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'] 
   }
@@ -74,26 +74,19 @@ function apply75Landmarks(lms) {
   const pts = [];
   for (let i = 0; i < 75; i++) pts.push({ x: lms[i*3], y: lms[i*3+1], z: lms[i*3+2] });
 
-  // 1. 위치 동기화 (어깨 중앙 기준)
-  const lS = pts[MP.POSE.L_S], rS = pts[MP.POSE.R_S];
-  if (lS && rS && avatar.model) {
-    const cX = (lS.x + rS.x) / 2;
-    const cY = (lS.y + rS.y) / 2;
-    
-    const targetX = -(cX - 0.5) * 1.8;
-    const targetY = (0.5 - cY) * 1.8 + 1.25; 
-    
-    // 모델의 전체 위치만 이동시키고 회전은 건드리지 않음
-    avatar.model.position.lerp(new THREE.Vector3(targetX, targetY - 1.45, 0), 0.2);
+  // 1. 모델 위치 고정 (항상 중앙 원점 유지)
+  // 이전에는 웹캠 어깨 위치로 모델을 이동시켰으나 아바타가 화면 밖으로 나가는 문제가 있어 제거
+  if (avatar.model) {
+    avatar.model.position.set(0, 0, 0);
   }
 
   // 2. 상체 관절 리깅 (머리 회전 포함)
   // 머리가 과도하게 꺾이는 문제를 방지하기 위해 회전 영향도를 대폭 낮추거나 비활성화
   rigUpperBody(pts, avatar);
 
-  // 3. 팔 리깅
-  rigSide('Right', pts, avatar, 'Left');
-  rigSide('Left', pts, avatar, 'Right');
+  // 3. 팔 리깅 (동일한 사이드 매핑)
+  rigSide('Right', pts, avatar, 'Right');
+  rigSide('Left', pts, avatar, 'Left');
 
   avatar.updateSkeleton?.(lms);
 }
@@ -116,7 +109,7 @@ function rigSide(side, pts, avatar, dataSide) {
   const e = pts[isR ? MP.POSE.R_E : MP.POSE.L_E];
   const w = pts[isR ? MP.POSE.R_W : MP.POSE.L_W];
 
-  const baseArm = (side === 'Right') ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(-1, 0, 0);
+  const baseArm = (side === 'Right') ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(1, 0, 0);
 
   // 팔 리깅 (Lerp 값을 조절하여 부드럽게 추종)
   if (s && e && m.u) {

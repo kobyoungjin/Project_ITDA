@@ -93,7 +93,7 @@ async function sendMessage(text) {
   }
 
   try {
-    const res = await fetch('http://localhost:8000/api/sign-language/search', {
+    const res = await fetch(`http://${location.hostname || 'localhost'}:8000/api/sign-language/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: text, context: "" })
@@ -266,7 +266,7 @@ const MOTION_PROFILES_V1 = {
       morphs: { mouthSmile: 0.5, eyeWideLeft: 0.2, eyeWideRight: 0.2 } 
     }
   ],
-  "미안합니다": [
+  "미안하다": [
     { duration: 800,  bones: { Neck: {x:0.3, y:0, z:0}, RightArm: {x:-1.5, y:0, z:0}, RightForeArm: {x:1.2, y:0, z:0} }, morphs: { Sad: 0.8 } },
     { duration: 1200, bones: { Neck: {x:0, y:0, z:0}, RightArm: {x:0, y:0, z:0} } }
   ],
@@ -488,7 +488,7 @@ const MOTION_PROFILES_V2 = {
   //   - ForeArm.y: Right 양수=중앙, Left 음수=중앙 (대칭)
   // ════════════════════════════════════════════════════════════
 
-  "미안합니다": {
+  "미안하다": {
     description: "오른손 PALM 을 가슴(심장 부근)에 대고 상체를 살짝 숙여 사과",
     steps: [
       // 1) 오른손을 가슴 앞으로 올림 (팔꿈치 굽혀 손이 가슴 중앙)

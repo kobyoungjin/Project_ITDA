@@ -65,9 +65,9 @@ async def resolve_motion(request: dict):
     if not word:
         raise HTTPException(status_code=400, detail="Word is required")
         
-    # 1. 이미 존재하는지 확인 (안전한 파일명으로 변환)
+    # 1. NPY 형식 파일이 이미 존재하는지 확인 (ksl_joints: 원시 관절 좌표 전용)
     safe_word = word.replace("/", "_").replace(",", "_")
-    target_path = Path("frontend/data/ksl_motions") / f"{safe_word}.json"
+    target_path = Path("frontend/data/ksl_joints") / f"{safe_word}.json"
     if target_path.exists():
         return {"status": "exists", "word": word, "safe_word": safe_word, "message": "Motion already exists"}
         
@@ -82,7 +82,11 @@ async def resolve_motion(request: dict):
 @router.get("/list-motions")
 async def list_motions():
     """학습 데이터셋(CSV)에서 실제 학습된 단어 목록을 추출하여 반환합니다."""
-    csv_path = Path("api/data/ksl_training/ksl_dataset.csv")
+    from api.services.knn_classifier import get_model_type
+    m_type = get_model_type()
+    csv_file = "ksl_dataset.csv" if m_type == "main" else "ksl_dataset_dialogue.csv"
+    csv_path = Path("api/data/ksl_training") / csv_file
+    
     if not csv_path.exists():
         return {"count": 0, "words": []}
     

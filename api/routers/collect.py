@@ -8,15 +8,14 @@
 """
 import os
 import csv
-import math
 import time
 import uuid
 import json
 import httpx
 import anyio
 import joblib
-import numpy as np
 from pathlib import Path
+from urllib.parse import urlparse
 from fastapi import APIRouter, UploadFile, File
 from pydantic import BaseModel
 from typing import List, Optional
@@ -30,8 +29,34 @@ router = APIRouter()
 # ── 저장 경로 ────────────────────────────────────────────────
 DATA_DIR = Path("api/data/ksl_training")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-CSV_PATH = DATA_DIR / "ksl_dataset.csv"
-MODEL_PATH = DATA_DIR / "knn_model.pkl"
+
+
+def _current_dataset():
+    """현재 선택된 모델(main/dialogue)에 맞는 (CSV 경로, 모델 경로)를 반환한다.
+    수집·훈련이 항상 '현재 활성 모델'의 데이터셋을 대상으로 동작하게 한다."""
+    from api.services.knn_classifier import get_model_type
+    if get_model_type() == "dialogue":
+        return (DATA_DIR / "ksl_dataset_dialogue.csv",
+                DATA_DIR / "knn_model_dialogue.pkl")
+    return (DATA_DIR / "ksl_dataset.csv",
+            DATA_DIR / "knn_model.pkl")
+
+# ── 영상 수집 허용 도메인 (SSRF 방지) ────────────────────────
+# /url 엔드포인트는 서버가 임의 URL을 요청하게 만들 수 있으므로,
+# 신뢰된 수어 영상 도메인만 허용한다.
+ALLOWED_VIDEO_HOSTS = ("sldict.korean.go.kr",)
+
+
+def _is_allowed_video_url(url: str) -> bool:
+    """수집용 영상 URL이 신뢰 도메인(ALLOWED_VIDEO_HOSTS)을 가리키는지 검증한다."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = (parsed.hostname or "").lower()
+    return any(host == d or host.endswith("." + d) for d in ALLOWED_VIDEO_HOSTS)
 
 # ── 수집 상태 (인메모리) ─────────────────────────────────────
 _collect_state = {
@@ -39,6 +64,7 @@ _collect_state = {
     "label": "",
     "count": 0,
     "started_at": 0.0,
+    "session": "",  # 수집 세션 ID — 누수 없는 평가용 출처(source)
 }
 
 # ── Pydantic 모델 ─────────────────────────────────────────────
@@ -58,18 +84,40 @@ class SampleRequest(BaseModel):
 class TrainRequest(BaseModel):
     n_neighbors: int = 5
 
-
-from api.core.ml_utils import extract_ksl_features
+class ModelSelectRequest(BaseModel):
+    model_type: str
 
 
 # ── API 엔드포인트 ────────────────────────────────────────────
+@router.get("/get-model-type")
+def get_current_model_type():
+    """현재 활성화된 모델 타입 조회 ('main' 또는 'dialogue')"""
+    from api.services.knn_classifier import get_model_type
+    return {"ok": True, "model_type": get_model_type()}
+
+
+@router.post("/select-model")
+def select_model(req: ModelSelectRequest):
+    """실시간으로 KNN 모델 변경 ('main' 또는 'dialogue')"""
+    from api.services.knn_classifier import set_model_type
+    try:
+        updated_type = set_model_type(req.model_type)
+        return {"ok": True, "model_type": updated_type, "message": f"모델이 '{req.model_type}'으로 변경되었습니다."}
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
+
+
 @router.post("/start")
 def start_collection(req: StartRequest):
     """수집 모드 시작 (단어 레이블 지정)"""
+    from api.core.ml_utils import reset_prev_state
+    reset_prev_state() # 수집 시작 시 이전 모션 잔상 제거
     _collect_state["active"] = True
     _collect_state["label"] = req.label.strip()
     _collect_state["count"] = 0
     _collect_state["started_at"] = time.time()
+    # 이번 수집 세션 고유 ID — 평가 시 train/test 누수 방지용 출처(source)
+    _collect_state["session"] = f"live_{uuid.uuid4().hex[:12]}"
     return {"ok": True, "label": _collect_state["label"], "message": f"'{req.label}' 수집 시작!"}
 
 
@@ -85,12 +133,13 @@ def stop_collection():
 @router.get("/status")
 def get_status():
     """현재 수집 상태 반환"""
+    csv_path, model_path = _current_dataset()
     return {
         "active": _collect_state["active"],
         "label": _collect_state["label"],
         "count": _collect_state["count"],
-        "csv_exists": CSV_PATH.exists(),
-        "model_exists": MODEL_PATH.exists(),
+        "csv_exists": csv_path.exists(),
+        "model_exists": model_path.exists(),
     }
 
 
@@ -119,14 +168,9 @@ def add_sample(req: SampleRequest):
         return {"ok": False, "message": "랜드마크 데이터 불충분"}
 
     label = _collect_state["label"]
-    is_new = not CSV_PATH.exists()
-
-    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if is_new:
-            header = [f"f{i}" for i in range(len(features))] + ["label"]
-            writer.writerow(header)
-        writer.writerow(features + [label])
+    # 이 라이브 수집 세션을 출처(source)로 기록 → 누수 없는 평가 가능
+    source = _collect_state.get("session") or "live_unknown"
+    _save_sample(features, label, source)
 
     _collect_state["count"] += 1
     return {"ok": True, "count": _collect_state["count"], "label": label}
@@ -138,39 +182,47 @@ def train_knn(req: TrainRequest):
     return train_knn_model(req.n_neighbors)
 
 def train_knn_model(n_neighbors: int = 5):
-    """내부 학습 로직"""
-    if not CSV_PATH.exists():
+    """내부 학습 로직 — 현재 선택된 모델(main/dialogue)의 데이터셋을 훈련한다."""
+    csv_path, model_path = _current_dataset()
+    if not csv_path.exists():
         return {"ok": False, "message": "학습 데이터가 없습니다. 먼저 샘플을 수집하세요."}
 
     import pandas as pd
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.model_selection import cross_val_score
 
-    df = pd.read_csv(CSV_PATH, encoding='utf-8')
-    
-    # [NEW] 사용자 데이터 병합 최적화 (Task 3)
-    original_len = len(df)
-    df = df.drop_duplicates() # 중복 노이즈 제거
-    # 클래스 불균형 해소: 단어당 최대 100개 샘플만 사용하여 오버피팅 방지
-    df = df.groupby('label').head(100).reset_index(drop=True)
-    
-    if len(df) < original_len:
-        print(f"[Collect] 데이터 정제: {original_len} -> {len(df)} (중복 및 초과 샘플 제거)")
-        df.to_csv(CSV_PATH, index=False, encoding='utf-8') # 정제된 데이터 덮어쓰기
+    df_full = pd.read_csv(csv_path, encoding='utf-8')
+
+    # 학습용 DataFrame 만 정제한다 — CSV 원본은 절대 덮어쓰지 않는다.
+    # (이전 버그: head(100) 으로 자른 뒤 CSV 를 덮어써서, 갓 수집한 데이터가
+    #  오래된 데이터에 밀려 영구 삭제되던 문제를 수정)
+    df = df_full.drop_duplicates()  # 완전 중복 행만 제거
+    # 클래스 불균형 완화: 단어당 최대 MAX_PER_LABEL 개. 초과 시 '무작위' 추출.
+    # (head 는 먼저 들어온 데이터만 남겨 새로 찍은 take 를 버리므로 sample 사용)
+    MAX_PER_LABEL = 400
+    parts = []
+    for _label, grp in df.groupby('label'):
+        if len(grp) > MAX_PER_LABEL:
+            grp = grp.sample(n=MAX_PER_LABEL, random_state=42)
+        parts.append(grp)
+    df = pd.concat(parts, ignore_index=True)
+    print(f"[Collect] 학습 데이터: CSV {len(df_full)}행 → 학습 {len(df)}행 "
+          f"(중복 제거 + 단어당 최대 {MAX_PER_LABEL}개)")
 
     if len(df) < 10:
         return {"ok": False, "message": f"샘플 수 부족 ({len(df)}개). 최소 10개 이상 필요합니다."}
 
-    X = df.drop("label", axis=1).values
+    # source 는 출처 메타데이터이므로 학습 특징에서 제외
+    X = df.drop(columns=["label", "source"], errors="ignore").values
     y = df["label"].values
     labels = sorted(set(y))
 
-    # [개선] n_neighbors 를 데이터 크기에 맞춰 동적으로 조정
-    final_n = min(n_neighbors, len(df) // 2)
+    # [개선] n_neighbors 를 데이터 크기에 맞춰 동적으로 조정 (정확도 향상을 위해 7~9 권장)
+    final_n = min(max(7, n_neighbors), len(df) // 3)
     if final_n < 1: final_n = 1
 
-    # [개선] 동작의 '형태'를 중시하는 코사인 유사도(Cosine) 메트릭 적용 및 가중치 강화
-    model = KNeighborsClassifier(n_neighbors=final_n, metric="cosine", weights="distance")
+    # [개선] 고차원(64차원) 모션 데이터에서는 'minkowski'(유클리드 변형)가 더 안정적인 경우가 많음
+    model = KNeighborsClassifier(n_neighbors=final_n, metric="minkowski", p=2, weights="distance")
     
     # 교차 검증으로 정확도 측정
     if len(df) >= 20:
@@ -180,7 +232,7 @@ def train_knn_model(n_neighbors: int = 5):
         accuracy = None
 
     model.fit(X, y)
-    joblib.dump(model, MODEL_PATH)
+    joblib.dump(model, model_path)
 
     # [핵심] 저장 후 메모리의 모델을 강제로 갱신 (서버 재시작 불필요)
     from api.services.knn_classifier import reload_model
@@ -191,8 +243,8 @@ def train_knn_model(n_neighbors: int = 5):
         "samples": int(len(df)),
         "labels": labels,
         "label_count": len(labels),
-        "accuracy": round(accuracy * 100, 1) if accuracy else "샘플 부족으로 측정 불가",
-        "model_path": str(MODEL_PATH),
+        "accuracy": round(accuracy * 100, 1) if accuracy is not None else "샘플 부족으로 측정 불가",
+        "model_path": str(model_path),
         "message": f"KNN 모델 훈련 완료! {len(labels)}개 단어, {len(df)}개 샘플"
     }
 
@@ -202,21 +254,30 @@ async def collect_from_video(label: str, file: UploadFile = File(...)):
     """
     업로드된 비디오 파일에서 랜드마크를 추출하여 학습 데이터에 추가합니다.
     """
-    temp_path = DATA_DIR / f"temp_{uuid.uuid4()}_{file.filename}"
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    # 클라이언트가 보낸 파일명을 경로에 그대로 쓰면 상위 디렉터리로 탈출(path traversal)할 수 있다.
+    # 파일명은 UUID로 대체하고 확장자만 안전하게 보존한다.
+    safe_suffix = Path(file.filename or "").suffix or ".mp4"
+    temp_path = DATA_DIR / f"temp_{uuid.uuid4()}{safe_suffix}"
+    # 업로드된 영상 파일명을 출처(source)로 기록
+    source = f"video:{Path(file.filename or 'upload').name}"
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    saved_count = _process_video_file(temp_path, label)
-    
-    if temp_path.exists():
-        os.remove(temp_path)
+        # CPU 집약적인 영상 분석은 별도 스레드에서 실행하여 이벤트 루프를 보호
+        saved_count = await anyio.to_thread.run_sync(_process_video_file, temp_path, label, source)
 
-    return {
-        "ok": True,
-        "label": label,
-        "saved_samples": saved_count,
-        "message": f"비디오 분석 완료: {saved_count}개의 샘플이 '{label}'로 저장되었습니다."
-    }
+        return {
+            "ok": True,
+            "label": label,
+            "saved_samples": saved_count,
+            "message": f"비디오 분석 완료: {saved_count}개의 샘플이 '{label}'로 저장되었습니다."
+        }
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
+    finally:
+        if temp_path.exists():
+            os.remove(temp_path)
 
 @router.post("/url")
 async def collect_from_url(label: str, url: str):
@@ -227,35 +288,45 @@ async def collect_from_url(label: str, url: str):
     if url.startswith("http://sldict.korean.go.kr"):
         url = url.replace("http://", "https://")
 
+    # [보안] 서버가 임의 URL을 요청하지 못하도록 신뢰 도메인만 허용 (SSRF 방지)
+    if not _is_allowed_video_url(url):
+        return {"ok": False, "message": f"허용되지 않은 영상 URL입니다. (허용 도메인: {', '.join(ALLOWED_VIDEO_HOSTS)})"}
+
+    temp_path = None
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
         async with httpx.AsyncClient(timeout=30.0, headers=headers, follow_redirects=True) as client:
             response = await client.get(url)
+            # 리다이렉트가 허용목록 밖 도메인으로 빠져나가는 우회를 차단
+            if not _is_allowed_video_url(str(response.url)):
+                return {"ok": False, "message": "리다이렉트가 허용되지 않은 도메인으로 향했습니다."}
             if response.status_code != 200:
                 return {"ok": False, "message": f"URL 접근 실패 (상태코드: {response.status_code})"}
-            
+
             # 파일이 너무 작으면 실패로 간주
             if len(response.content) < 1000:
                 return {"ok": False, "message": "유효하지 않은 영상 파일 (크기 너무 작음)"}
-            
+
             temp_path = DATA_DIR / f"temp_download_{uuid.uuid4()}.mp4"
             with open(temp_path, "wb") as f:
                 f.write(response.content)
-            
+
+        # 영상 URL을 출처(source)로 기록 (같은 URL = 같은 출처)
+        source = f"url:{url}"
         # CPU 집약적인 작업은 별도 스레드에서 실행하여 이벤트 루프를 보호
-        saved_count = await anyio.to_thread.run_sync(_process_video_file, temp_path, label)
-        
-        if temp_path.exists():
-            os.remove(temp_path)
-            
+        saved_count = await anyio.to_thread.run_sync(_process_video_file, temp_path, label, source)
+
         return {
-            "ok": True, 
-            "label": label, 
+            "ok": True,
+            "label": label,
             "saved_samples": saved_count,
             "message": f"URL 분석 완료: {saved_count}개의 샘플이 저장되었습니다."
         }
     except Exception as e:
         return {"ok": False, "message": str(e)}
+    finally:
+        if temp_path is not None and temp_path.exists():
+            os.remove(temp_path)
 
 @router.post("/batch")
 async def collect_batch(limit_words: int = 50):
@@ -302,11 +373,13 @@ async def collect_batch(limit_words: int = 50):
         "train_result": train_res
     }
 
-def _process_video_file(video_path: Path, label: str):
+def _process_video_file(video_path: Path, label: str, source: str):
     """
     실제 비디오 분석 (CPU 집약적 작업)
     [증강 적용] 프레임 1개 -> 원본 1 + 증강 8 = 총 9배 샘플 자동 생성
     """
+    from api.core.ml_utils import reset_prev_state
+    reset_prev_state() # 비디오 시작 시 모션 상태 초기화
     mp_hands = mp.solutions.hands
     mp_pose = mp.solutions.pose
     saved_count = 0
@@ -325,13 +398,23 @@ def _process_video_file(video_path: Path, label: str):
         with mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, \
              mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5) as pose:
             
-            count = 0
-            while cap.isOpened() and saved_count < 100:
+            # [품질 개선] 영상의 앞뒤 구간 제외 (준비 동작 제거)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            # '친구'처럼 오인식이 많은 단어는 더 엄격하게(가운데만) 추출
+            trim_rate = 0.35 if label == "친구" else 0.2
+            start_frame = int(total_frames * trim_rate)
+            end_frame = int(total_frames * (1.0 - trim_rate))
+            
+            cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+            count = start_frame
+            while cap.isOpened() and saved_count < 100 and count < end_frame:
                 ret, frame = cap.read()
                 if not ret: break
                 
                 count += 1
-                if count % 5 != 0: continue
+                if count % 3 != 0: continue # 추출 밀도 상향 (5 -> 3)
                 
                 image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 res_hands = hands.process(image)
@@ -359,7 +442,7 @@ def _process_video_file(video_path: Path, label: str):
                     # 원본 저장
                     features = extract_ksl_features(right_lms, left_lms, pose_res)
                     if features:
-                        _save_sample(features, label)
+                        _save_sample(features, label, source)
                         saved_count += 1
 
                     # 증강 샘플 (팔 관절은 원본 유지, 양손 독립 증강으로 개선)
@@ -370,7 +453,7 @@ def _process_video_file(video_path: Path, label: str):
                         
                         aug_feats = extract_ksl_features(aug_r, aug_l, pose_res)
                         if aug_feats:
-                            _save_sample(aug_feats, label)
+                            _save_sample(aug_feats, label, source)
                             saved_count += 1
 
     finally:
@@ -378,11 +461,12 @@ def _process_video_file(video_path: Path, label: str):
         
     return saved_count
 
-def _save_sample(features, label):
-    is_new = not CSV_PATH.exists()
-    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
+def _save_sample(features, label, source):
+    csv_path, _ = _current_dataset()
+    is_new = not csv_path.exists()
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if is_new:
-            header = [f"f{i}" for i in range(len(features))] + ["label"]
+            header = [f"f{i}" for i in range(len(features))] + ["source", "label"]
             writer.writerow(header)
-        writer.writerow(features + [label])
+        writer.writerow(features + [source, label])
