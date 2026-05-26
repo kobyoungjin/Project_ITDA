@@ -41,7 +41,11 @@ const canvas = document.querySelector('#three-canvas');
 const container = document.querySelector('#avatar-area');
 
 const getAppSize = () => {
-  const target = document.querySelector('#avatar-area') || document.querySelector('#app-container');
+  // avatar_only.html 은 #three-container 만 가지므로 그것도 후보에 포함한다.
+  // 이게 빠지면 framebuffer 가 윈도 크기로 잡혀 스켈레톤이 한쪽으로 치우쳐 보임.
+  const target = document.querySelector('#avatar-area')
+              || document.querySelector('#three-container')
+              || document.querySelector('#app-container');
   let width = target ? target.clientWidth : window.innerWidth;
   let height = target ? target.clientHeight : window.innerHeight;
   if (width === 0) width = Math.min(window.innerWidth, 450);

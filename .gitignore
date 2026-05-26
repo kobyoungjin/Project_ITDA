@@ -56,3 +56,8 @@ tmp_video.mp4
 
 # 실험용 일회성 스크립트 (버전 관리 제외)
 scratch/
+
+# 학습으로 재생성되는 KNN 모델 (CSV 에서 /train 으로 즉시 재생성 가능)
+api/data/ksl_training/*.pkl
+# FAISS 인덱스 (data_pipeline 으로 재빌드)
+api/data/faiss.index

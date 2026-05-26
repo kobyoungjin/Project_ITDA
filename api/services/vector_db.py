@@ -57,6 +57,11 @@ class VectorDB:
             self.dimension = self._encoder.get_sentence_embedding_dimension()
         return self._encoder
 
+    def clear(self):
+        """인덱스와 메타데이터를 모두 비운다 (전체 재빌드 직전에 사용)."""
+        self.index = faiss.IndexFlatL2(self.dimension)
+        self.metadata = []
+
     def add_data(self, texts, metas):
         """텍스트 데이터를 벡터화하여 FAISS에 저장"""
         if not texts:

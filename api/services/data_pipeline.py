@@ -1,8 +1,6 @@
 import os
 import json
 import glob
-import requests
-import faiss
 from typing import List, Dict
 from api.services.vector_db import vector_db
 from api.core.config import settings
@@ -233,9 +231,8 @@ class DataPipeline:
             print("[DataPipeline] 기존 오프라인 캐시가 존재합니다. 데이터 파이프라인 연산을 생략합니다.")
             return len(vector_db.metadata)
 
-        # 새로운 데이터를 위해 기존 인덱스 초기화 (vector_db에 clear_all이 없다면 metadata 초기화로 대응)
-        vector_db.index = faiss.IndexFlatL2(vector_db.dimension)
-        vector_db.metadata = []
+        # 새로운 데이터를 위해 기존 인덱스 초기화 (캡슐화된 clear() 사용)
+        vector_db.clear()
         
         data = self.fetch_sign_language_data()
         

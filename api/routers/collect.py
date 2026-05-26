@@ -27,7 +27,8 @@ from api.core.ml_utils import extract_ksl_features, augment_landmarks
 router = APIRouter()
 
 # ── 저장 경로 ────────────────────────────────────────────────
-DATA_DIR = Path("api/data/ksl_training")
+# 프로세스의 CWD 와 무관하게 동작하도록 __file__ 기반 절대경로 사용
+DATA_DIR = Path(__file__).resolve().parents[2] / "api" / "data" / "ksl_training"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -57,6 +58,43 @@ def _is_allowed_video_url(url: str) -> bool:
         return False
     host = (parsed.hostname or "").lower()
     return any(host == d or host.endswith("." + d) for d in ALLOWED_VIDEO_HOSTS)
+
+
+# ── YouTube 다운로드 지원 (yt-dlp) ────────────────────────────
+YOUTUBE_HOSTS = ("youtube.com", "youtu.be", "m.youtube.com")
+
+
+def _is_youtube_url(url: str) -> bool:
+    """URL 이 YouTube 영상을 가리키는지 확인."""
+    try:
+        host = (urlparse(url).hostname or "").lower()
+    except Exception:
+        return False
+    return any(host == h or host.endswith("." + h) for h in YOUTUBE_HOSTS)
+
+
+def _download_youtube(url: str, dest: Path) -> bool:
+    """yt-dlp 로 YouTube 영상을 dest 에 mp4 로 다운로드. 차단성이므로 별도 스레드에서 호출.
+    480p 이하 mp4 를 선호해 다운로드 크기를 줄인다(학습엔 충분)."""
+    try:
+        import yt_dlp
+    except ImportError:
+        print("[Collect] yt-dlp 가 설치되지 않았습니다. `pip install yt-dlp` 필요.")
+        return False
+    ydl_opts = {
+        "format": "mp4[height<=480]/mp4/best[ext=mp4]/best",
+        "outtmpl": str(dest),
+        "quiet": True,
+        "no_warnings": True,
+        "merge_output_format": "mp4",
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    except Exception as e:
+        print(f"[Collect] yt-dlp 다운로드 실패: {e}")
+        return False
+    return dest.exists() and dest.stat().st_size > 1000
 
 # ── 수집 상태 (인메모리) ─────────────────────────────────────
 _collect_state = {
@@ -282,37 +320,45 @@ async def collect_from_video(label: str, file: UploadFile = File(...)):
 @router.post("/url")
 async def collect_from_url(label: str, url: str):
     """
-    영상 URL에서 직접 랜드마크를 추출하여 학습 데이터에 추가합니다.
+    영상 URL에서 랜드마크를 추출하여 학습 데이터에 추가합니다.
+    지원: sldict.korean.go.kr 직접 mp4 / YouTube (yt-dlp 사용).
     """
     # sldict.korean.go.kr은 최근 http 접속이 막히는 경우가 있으므로 https로 전환
     if url.startswith("http://sldict.korean.go.kr"):
         url = url.replace("http://", "https://")
 
-    # [보안] 서버가 임의 URL을 요청하지 못하도록 신뢰 도메인만 허용 (SSRF 방지)
-    if not _is_allowed_video_url(url):
-        return {"ok": False, "message": f"허용되지 않은 영상 URL입니다. (허용 도메인: {', '.join(ALLOWED_VIDEO_HOSTS)})"}
+    is_youtube = _is_youtube_url(url)
+    # [보안] YouTube 가 아니면 신뢰 도메인 허용목록만 통과 (SSRF 방지)
+    if not is_youtube and not _is_allowed_video_url(url):
+        return {"ok": False, "message": f"허용되지 않은 영상 URL입니다. (sldict 또는 YouTube URL 만 가능)"}
 
     temp_path = None
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-        async with httpx.AsyncClient(timeout=30.0, headers=headers, follow_redirects=True) as client:
-            response = await client.get(url)
-            # 리다이렉트가 허용목록 밖 도메인으로 빠져나가는 우회를 차단
-            if not _is_allowed_video_url(str(response.url)):
-                return {"ok": False, "message": "리다이렉트가 허용되지 않은 도메인으로 향했습니다."}
-            if response.status_code != 200:
-                return {"ok": False, "message": f"URL 접근 실패 (상태코드: {response.status_code})"}
+        temp_path = DATA_DIR / f"temp_download_{uuid.uuid4()}.mp4"
 
-            # 파일이 너무 작으면 실패로 간주
-            if len(response.content) < 1000:
-                return {"ok": False, "message": "유효하지 않은 영상 파일 (크기 너무 작음)"}
+        if is_youtube:
+            # YouTube: yt-dlp 로 다운로드 (네트워크 차단성이므로 스레드에서 실행)
+            ok = await anyio.to_thread.run_sync(_download_youtube, url, temp_path)
+            if not ok:
+                return {"ok": False, "message": "YouTube 영상 다운로드 실패 (yt-dlp 미설치, 비공개 영상, 또는 차단된 영상)"}
+        else:
+            # sldict: 직접 mp4 다운로드
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+            async with httpx.AsyncClient(timeout=30.0, headers=headers, follow_redirects=True) as client:
+                response = await client.get(url)
+                # 리다이렉트가 허용목록 밖 도메인으로 빠져나가는 우회를 차단
+                if not _is_allowed_video_url(str(response.url)):
+                    return {"ok": False, "message": "리다이렉트가 허용되지 않은 도메인으로 향했습니다."}
+                if response.status_code != 200:
+                    return {"ok": False, "message": f"URL 접근 실패 (상태코드: {response.status_code})"}
+                # 파일이 너무 작으면 실패로 간주
+                if len(response.content) < 1000:
+                    return {"ok": False, "message": "유효하지 않은 영상 파일 (크기 너무 작음)"}
+                with open(temp_path, "wb") as f:
+                    f.write(response.content)
 
-            temp_path = DATA_DIR / f"temp_download_{uuid.uuid4()}.mp4"
-            with open(temp_path, "wb") as f:
-                f.write(response.content)
-
-        # 영상 URL을 출처(source)로 기록 (같은 URL = 같은 출처)
-        source = f"url:{url}"
+        # 출처(source) 기록 — 같은 URL = 같은 source
+        source = f"{'youtube' if is_youtube else 'url'}:{url}"
         # CPU 집약적인 작업은 별도 스레드에서 실행하여 이벤트 루프를 보호
         saved_count = await anyio.to_thread.run_sync(_process_video_file, temp_path, label, source)
 
@@ -320,7 +366,7 @@ async def collect_from_url(label: str, url: str):
             "ok": True,
             "label": label,
             "saved_samples": saved_count,
-            "message": f"URL 분석 완료: {saved_count}개의 샘플이 저장되었습니다."
+            "message": f"{'YouTube' if is_youtube else 'URL'} 분석 완료: {saved_count}개의 샘플이 저장되었습니다."
         }
     except Exception as e:
         return {"ok": False, "message": str(e)}

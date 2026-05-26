@@ -104,6 +104,91 @@
 
     #three-container { flex: 1; position: relative; background: radial-gradient(circle at center, #0f172a 0%, #050810 100%); }
     #three-canvas { width: 100%; height: 100%; display: block; }
+
+    /* ── 인식 결과 표시 (아바타는 동작하지 않고 텍스트로만 알림) ── */
+    #recognition-display {
+      position: absolute;
+      top: 1rem; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 99px;
+      padding: 6px 18px;
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      max-width: 80%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 4px 16px rgba(0, 242, 254, 0.15);
+    }
+    #recognition-display.show { opacity: 1; }
+    #recognition-display.sentence {
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 8px 22px;
+      max-width: 90%;
+      white-space: normal;
+      text-align: center;
+    }
+
+    /* ── 수어 영상 오버레이 (학습 단어 클릭 시 표시) ───── */
+    #video-overlay {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px; max-width: 80%;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 16px;
+      padding: 1rem;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      backdrop-filter: blur(20px);
+    }
+    #video-overlay.active { display: block; }
+    #video-overlay video {
+      width: 100%; border-radius: 8px; background: #000;
+      display: block;
+    }
+    .video-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.6rem;
+    }
+    .video-title { font-size: 1.05rem; font-weight: 700; color: var(--accent-cyan); }
+    .video-close {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: #fff;
+      width: 30px; height: 30px;
+      border-radius: 50%; cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+    }
+    .video-close:hover { background: rgba(255,71,87,0.3); border-color: #f43f5e; }
+
+    /* 우측 사이드바 — 수집 모드 (카메라 + 패널) */
+    #sidebar-right {
+      width: 300px;
+      min-width: 300px;
+      flex-shrink: 0;
+      background: rgba(10, 15, 30, 0.98);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      backdrop-filter: blur(20px);
+      z-index: 10;
+    }
+    #sidebar-right::-webkit-scrollbar { width: 6px; }
+    #sidebar-right::-webkit-scrollbar-track { background: transparent; }
+    #sidebar-right::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #sidebar-right::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
     
     /* Custom Scrollbar */
     #sidebar::-webkit-scrollbar { width: 6px; }
@@ -115,6 +200,88 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* ── collect-card 가 쓰는 추가 색 변수 ───────────────────── */
+    :root {
+      --accent-green: #00e6a0;
+      --text-muted: #94a3b8;
+    }
+
+    /* ── 카메라 미니 프리뷰 — 사이드바 안 (vision.js 가 사용) ── */
+    #camera-mini {
+      position: relative;
+      margin: 0.8rem 1rem 0.5rem 1rem;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      background: #000;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    #camera-mini video, #camera-mini canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    #camera-mini canvas { pointer-events: none; }
+    #vision-status {
+      position: absolute; bottom: 4px; left: 6px;
+      font-size: 0.62rem; color: var(--accent-cyan);
+      background: rgba(0,0,0,0.55);
+      padding: 1px 6px; border-radius: 4px;
+      z-index: 2;
+    }
+
+    /* ── 수집 패널 — 사이드바 안 ───────────────────────────── */
+    #collect-card {
+      position: relative;
+      margin: 0 1rem 1rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem;
+      color: var(--text-main);
+    }
+    .collect-label {
+      font-size: 0.62rem;
+      color: var(--accent-green);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 0.3rem;
+    }
+    .collect-input {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+      font-family: inherit;
+    }
+    .collect-stats {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    .btn-collect {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border: none;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-collect-start { background: #ef4444; color: #fff; }
+    .btn-collect-stop  { background: #64748b; color: #fff; display: none; }
+    .btn-collect-start:hover { background: #dc2626; }
   </style>
 </head>
 <body>
@@ -133,6 +300,7 @@
     <div style="font-weight: 900; font-size: 1.3rem; letter-spacing: -0.5px;">ITDA <span style="color:var(--accent-cyan)">MOTION STUDIO</span></div>
     <div style="display: flex; gap: 0.8rem; align-items: center;">
       <button id="btn-toggle-guide" class="control-btn"><span>🔄</span> 동작 가이드: OFF</button>
+      <button id="btn-toggle-video" class="control-btn"><span>▶</span> 영상 보기: OFF</button>
       <button id="btn-toggle-skeleton" class="control-btn"><span>💀</span> 스켈레톤 모델: OFF</button>
       <div id="ws-status" class="status-badge">대기 중</div>
     </div>
@@ -148,6 +316,54 @@
     </div>
     <div id="three-container">
       <canvas id="three-canvas"></canvas>
+
+      <!-- 인식된 단어/문장 텍스트 표시 (아바타 자동 재생 대신) -->
+      <div id="recognition-display"></div>
+
+      <!-- 학습 단어 클릭 시 표시되는 수어 영상 오버레이 -->
+      <div id="video-overlay">
+        <div class="video-header">
+          <div class="video-title" id="video-title">단어</div>
+          <button class="video-close" id="btn-close-video" title="닫기">✕</button>
+        </div>
+        <video id="ref-video-player" controls playsinline></video>
+      </div>
+    </div>
+    <div id="sidebar-right">
+      <!-- 카메라 미리보기 (vision.js 가 vision-video/canvas/status 를 사용) -->
+      <div id="camera-mini">
+        <video id="vision-video" autoplay muted playsinline></video>
+        <canvas id="vision-canvas"></canvas>
+        <div id="vision-status">카메라 준비 중…</div>
+      </div>
+
+      <!-- 수집 패널 (collect_ui.js 가 멀티-take 흐름 제어) -->
+      <div id="collect-card">
+        <div class="collect-label">Collection Mode</div>
+        <div style="font-size: 1rem; font-weight: 800; margin-bottom: 0.6rem; color: var(--accent-green);">동작 여러 번 찍어 수집</div>
+
+        <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력 (예: 안녕)">
+
+        <div class="collect-stats">
+          <span id="collect-take-summary" style="color: var(--accent-cyan); font-weight: 700;">Take 0개 · 총 0개 샘플</span>
+        </div>
+        <div id="collect-take-list" style="display:flex; flex-direction:column; gap:3px; max-height:96px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.72rem; color:var(--text-muted);"></div>
+
+        <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 이번 동작 녹화</button>
+        <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 녹화 중지</button>
+        <div id="collect-take-status" style="font-size:0.7rem; color:var(--text-muted); margin:0.4rem 0; line-height:1.45;">단어를 입력하고 같은 동작을 여러 번 녹화하세요. 많이 찍을수록 정확해집니다.</div>
+
+        <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.2rem;">⚙️ KNN 모델 훈련</button>
+
+        <div style="border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <div style="display: flex; gap: 0.4rem;">
+            <input type="text" id="collect-url-input" class="collect-input" style="margin-bottom:0; flex:1;" placeholder="영상 URL (sldict / YouTube)">
+            <button id="btn-collect-url" style="background: var(--accent-cyan); color: #000; border: none; padding: 0 10px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.7rem;">추출</button>
+          </div>
+          <input type="file" id="collect-video-file" accept="video/*" style="display: none;">
+          <button id="btn-collect-video" style="width: 100%; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan); padding: 6px; border-radius: 8px; cursor: pointer; font-size: 0.7rem;">📂 내 PC 영상 파일 학습</button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -166,6 +382,10 @@
   <script type="module" src="./js/motion_loader_v3.js?v=20260521j"></script>
   <script type="module" src="./js/motion_loader_npy.js?v=20260521j"></script>
 
+  <!-- 수집 모드(멀티-take)를 이 페이지에서도 동작시키기 위해 vision + collect_ui 로드 -->
+  <script type="module" src="./js/vision.js?v=20260522"></script>
+  <script type="module" src="./js/collect_ui.js?v=20260522"></script>
+
   <script type="module">
     const statusEl = document.getElementById('ws-status');
     const overlay = document.getElementById('overlay');
@@ -176,6 +396,8 @@
     
     let isSkeletonMode = true;   // 기본값: 스켈레톤 모드
     let isGuideMode = false;
+    let isVideoMode = false;     // ON 시 단어 클릭하면 영상 오버레이 표시
+    const videoBtn = document.getElementById('btn-toggle-video');
 
     // 아바타 로드 완료 시 자동으로 스켈레톤 모드 전환
     window.addEventListener('itda:avatar:ready', () => {
@@ -201,7 +423,10 @@
             const item = document.createElement('div');
             item.className = 'word-item';
             item.textContent = word;
-            item.onclick = () => playMotion(word, item);
+            item.onclick = () => {
+              if (isVideoMode) showWordVideo(word);
+              else playMotion(word, item);
+            };
             wordListEl.appendChild(item);
           });
         } else {
@@ -259,33 +484,44 @@
       }
     }
 
-    let avatarWs = null;
-    function connect() {
-      // 이미 연결돼 있거나 연결 중이면 중복 소켓을 만들지 않는다.
-      if (avatarWs && (avatarWs.readyState === WebSocket.OPEN || avatarWs.readyState === WebSocket.CONNECTING)) return;
-      const ws = new WebSocket(`ws://${API_HOST}:8000/api/ws/vision`);
-      avatarWs = ws;
-      ws.onopen = () => {
+    // vision.js 가 /ws/vision 연결을 관리하므로 별도 WebSocket 을 만들지 않는다.
+    // 인식 결과는 itda:rag:result 이벤트로 받고, 연결 상태는 itda:vision:ws_state 로 표시한다.
+    // 인식된 단어/문장 표시 (아바타 자동 재생은 의도적으로 비활성 — 단어 누적 + 문장 구성을 방해하지 않기 위함)
+    const recogDisplay = document.getElementById('recognition-display');
+    let recogHideTimer = null;
+    function showRecognition(text) {
+      if (!recogDisplay) return;
+      const isSentence = text.startsWith('💬');
+      recogDisplay.textContent = text;
+      recogDisplay.classList.toggle('sentence', isSentence);
+      recogDisplay.classList.add('show');
+      clearTimeout(recogHideTimer);
+      // 문장이면 길게(8초), 개별 단어면 짧게(2.5초) 표시
+      recogHideTimer = setTimeout(() => recogDisplay.classList.remove('show'), isSentence ? 8000 : 2500);
+    }
+
+    window.addEventListener('itda:rag:result', (e) => {
+      const ack = e.detail || {};
+      const rag = ack.rag_result;
+      if (!rag || rag.type !== 'final') return;
+      const word = rag.text;
+      if (word === '대기 중' || (word && word.includes('미인식'))) return;
+      // 아바타 동작 재생은 하지 않고 텍스트로만 알림
+      showRecognition(word);
+    });
+    window.addEventListener('itda:vision:ws_state', (e) => {
+      const s = e.detail?.state;
+      if (s === 'connected') {
         statusEl.textContent = '● LIVE CONNECTED';
         statusEl.style.color = '#00f2fe';
-      };
-      ws.onmessage = (evt) => {
-        try {
-          const ack = JSON.parse(evt.data);
-          if (ack.rag_result && ack.rag_result.type === 'final') {
-            const word = ack.rag_result.text;
-            if (word === '대기 중' || word.includes('미인식')) return;
-            playMotion(word);
-          }
-        } catch(e) { console.warn('[AvatarOnly] WS 메시지 처리 실패:', e); }
-      };
-      ws.onclose = () => {
+      } else if (s === 'disconnected' || s === 'error') {
         statusEl.textContent = '○ DISCONNECTED';
         statusEl.style.color = '#f43f5e';
-        avatarWs = null;
-        setTimeout(connect, 3000);
-      };
-    }
+      } else if (s === 'connecting') {
+        statusEl.textContent = '… 연결 중';
+        statusEl.style.color = '#fde68a';
+      }
+    });
 
 
     skeletonBtn.addEventListener('click', () => {
@@ -318,6 +554,46 @@
       }
     });
 
+    // 6. 영상 보기 모드 토글 — ON 시 단어 클릭 = 국립국어원 수어사전 영상
+    videoBtn?.addEventListener('click', () => {
+      isVideoMode = !isVideoMode;
+      videoBtn.innerHTML = `<span>▶</span> 영상 보기: ${isVideoMode ? 'ON' : 'OFF'}`;
+      videoBtn.classList.toggle('active', isVideoMode);
+    });
+
+    async function showWordVideo(word) {
+      const overlay = document.getElementById('video-overlay');
+      const titleEl = document.getElementById('video-title');
+      const video = document.getElementById('ref-video-player');
+      titleEl.textContent = `${word} — 로딩 중…`;
+      overlay.classList.add('active');
+      try {
+        const res = await fetch(`http://${API_HOST}:8000/api/sign-language/video-url?word=${encodeURIComponent(word)}`);
+        if (!res.ok) {
+          titleEl.textContent = `'${word}' 영상을 찾을 수 없습니다.`;
+          video.removeAttribute('src');
+          video.load();
+          return;
+        }
+        const data = await res.json();
+        titleEl.textContent = word;
+        video.src = data.video_url;
+        video.play().catch(() => { /* 자동재생 차단은 무시 — controls 로 재생 가능 */ });
+      } catch (e) {
+        console.error('영상 로드 실패:', e);
+        titleEl.textContent = `'${word}' 영상 로드 실패`;
+      }
+    }
+
+    document.getElementById('btn-close-video')?.addEventListener('click', () => {
+      const overlay = document.getElementById('video-overlay');
+      const video = document.getElementById('ref-video-player');
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      overlay.classList.remove('active');
+    });
+
     // 모델 변경 채널 브로드캐스트 리스너
     const modelChannel = new BroadcastChannel('itda_model_channel');
     modelChannel.onmessage = (event) => {
@@ -329,15 +605,21 @@
 
     window.addEventListener('itda:avatar:ready', () => {
       loadWordList();
-      connect();
     });
 
-    // 폴백: 아바타 준비 이벤트가 이미 지나쳤을 경우를 대비하여
-    // DOM이 준비되면 단어 목록을 강제로 로드한다.
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', loadWordList);
-    } else {
+    // 부트스트랩 — 아바타 준비 이벤트는 동기 dispatch 라 listener 가 놓칠 수 있으므로
+    // 단어 목록 로드와 카메라 시작을 직접 호출한다. (둘 다 1회만 실행되도록 가드)
+    let _booted = false;
+    function _bootstrap() {
+      if (_booted) return;
+      _booted = true;
       loadWordList();
+      window.ITDAVision5?.init();
+    }
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', _bootstrap);
+    } else {
+      _bootstrap();
     }
   </script>
 </body>

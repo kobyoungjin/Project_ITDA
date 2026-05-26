@@ -22,6 +22,9 @@ class SearchResponse(BaseModel):
     status: str
     data: SearchResponseData
 
+class ResolveMotionRequest(BaseModel):
+    word: str
+
 @router.post("/search", response_model=SearchResponse)
 async def search_sign_language(request: SearchRequest):
     """주어진 문장이나 쿼리로 '온기'가 담긴 수어 데이터를 검색합니다."""
@@ -56,12 +59,12 @@ async def refresh_pipeline(force: bool = True):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/resolve-motion")
-async def resolve_motion(request: dict):
+async def resolve_motion(request: ResolveMotionRequest):
     """
-    단어에 해당하는 관절 데이터가 로컬에 있는지 확인하고, 
+    단어에 해당하는 관절 데이터가 로컬에 있는지 확인하고,
     없으면 국립국어원 영상을 통해 생성합니다.
     """
-    word = request.get("word")
+    word = request.word.strip()
     if not word:
         raise HTTPException(status_code=400, detail="Word is required")
         
@@ -79,6 +82,19 @@ async def resolve_motion(request: dict):
         # 3. 폴백 (Fuzzy Match 시도 - 이미 추출된 파일 중 이름에 포함된 게 있는지)
         # (이 부분은 추후 고도화 가능)
         raise HTTPException(status_code=404, detail=f"Motion for '{word}' could not be resolved")
+@router.get("/video-url")
+async def get_video_url(word: str):
+    """단어에 해당하는 국립국어원 수어사전 영상 URL 반환.
+    motion_extractor 의 동의어 매핑(DIALOGUE_WORDS_MAP)을 통해 표제어 변형도 찾는다."""
+    video_url = motion_extractor.find_video_url(word)
+    if not video_url:
+        raise HTTPException(status_code=404, detail=f"'{word}' 에 대한 수어 영상을 찾을 수 없습니다.")
+    # sldict 는 https 로 강제 전환 (혼합 콘텐츠 차단 회피)
+    if video_url.startswith("http://sldict.korean.go.kr"):
+        video_url = video_url.replace("http://", "https://", 1)
+    return {"word": word, "video_url": video_url}
+
+
 @router.get("/list-motions")
 async def list_motions():
     """학습 데이터셋(CSV)에서 실제 학습된 단어 목록을 추출하여 반환합니다."""
