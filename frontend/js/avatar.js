@@ -142,7 +142,11 @@ window.ITDA_skeletonUpdatedThisFrame = false;
 // 3D GLB 모델은 사용하지 않으므로 곧바로 스켈레톤 뷰로 시작한다.
 function initAvatar() {
   console.info('[ITDA Avatar] 스켈레톤 전용 모드로 시작');
-  if (jstEl) jstEl.textContent = '3D 모델 비활성화';
+  if (jstEl) {
+    // 헤더의 컴팩트 status-pill 포맷에 맞춰 dot + 짧은 라벨로 출력
+    jstEl.innerHTML = '<span class="status-dot warn"></span>3D OFF';
+    jstEl.title = '3D 모델 비활성화 (스켈레톤 전용 모드)';
+  }
   const statusEl = document.getElementById('model-status');
   if (statusEl) {
     statusEl.textContent = '⚠️ 3D 모델 비활성화';
