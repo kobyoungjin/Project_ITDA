@@ -258,6 +258,103 @@
     /* 모드 토글(번역/학습/수집) · 학습 카드 · 수집 카드 CSS 는
        기능이 새창(avatar_only.html)으로 이동하면서 모두 제거됨. */
 
+    /* ── [NEW] LIVE TRANSLATION pulse 강조: 새 단어 인식 순간 시안 글로우 한 번 ── */
+    #prediction-area.pulse-once {
+      animation: live-pulse 0.9s ease-out 1;
+    }
+    /* prediction-area 는 Hero 표시 여부에 따라 display:none/flex 로 통째로 전환된다. */
+    @keyframes live-pulse {
+      0%   { box-shadow: inset 0 0 0 0 rgba(0,242,254,0); background: var(--bg-card); }
+      30%  { box-shadow: inset 0 0 28px 0 rgba(0,242,254,0.35); background: rgba(0,242,254,0.06); }
+      100% { box-shadow: inset 0 0 0 0 rgba(0,242,254,0); background: var(--bg-card); }
+    }
+
+    /* ── [NEW] Recognition Hero — 카메라 ON 일 때 아바타 영역에 떠 있는 큰 인식 카드 ── */
+    #recognition-hero {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(86%, 560px);
+      background: linear-gradient(140deg, rgba(15,23,42,0.92), rgba(15,23,42,0.78));
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(0, 242, 254, 0.28);
+      border-radius: 20px;
+      padding: 1.5rem 1.7rem 1.3rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+      z-index: 10;
+      display: flex; flex-direction: column; gap: 0.6rem;
+      transition: opacity .35s ease, transform .35s ease;
+      pointer-events: none;
+    }
+    #recognition-hero.hidden {
+      opacity: 0;
+      transform: translate(-50%, -45%);
+      pointer-events: none;
+    }
+    .hero-label {
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em;
+      color: var(--accent-cyan); text-transform: uppercase;
+    }
+    .hero-current {
+      font-size: 2.6rem; font-weight: 900; letter-spacing: -0.02em;
+      color: #fff; line-height: 1.15;
+      min-height: 3rem;
+      word-break: keep-all;
+    }
+    .hero-current.sentence { color: #c4b5fd; font-size: 1.9rem; }
+    .hero-current.idle { color: var(--text-muted); font-size: 1.4rem; font-weight: 600; font-style: italic; }
+    .hero-current.flash { animation: hero-flash 0.8s ease-out 1; }
+    @keyframes hero-flash {
+      0%   { transform: scale(0.92); opacity: 0; filter: drop-shadow(0 0 24px rgba(0,242,254,0.7)); }
+      60%  { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; filter: none; }
+    }
+    .hero-conf-row {
+      display: flex; align-items: center; gap: 0.7rem;
+      margin-top: 0.2rem;
+    }
+    .hero-conf-bar {
+      flex: 1; height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px; overflow: hidden;
+    }
+    .hero-conf-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      border-radius: 999px;
+      transition: width .35s ease;
+    }
+    .hero-conf-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+      min-width: 44px; text-align: right;
+    }
+    .hero-timeline-label {
+      font-size: 0.62rem; color: var(--text-muted); margin-top: 0.4rem;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .hero-timeline {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+      min-height: 1.7rem;
+    }
+    .hero-chip {
+      display: inline-flex; align-items: center;
+      font-size: 0.78rem; font-weight: 700;
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      color: var(--accent-cyan);
+      padding: 3px 10px; border-radius: 999px;
+    }
+    .hero-chip.sentence {
+      background: rgba(124, 58, 237, 0.12);
+      border-color: rgba(124, 58, 237, 0.4);
+      color: #c4b5fd;
+    }
+    .hero-chip.empty {
+      background: transparent; border-style: dashed;
+      color: var(--text-muted); font-weight: 500;
+    }
+
     /* ── [Tier1] 모션 엔진 V2/V1 토글 ───────────────────── */
     #motion-version-toggle {
       display: inline-flex; gap: 4px;
@@ -463,22 +560,20 @@
             <div id="mini-emotion-output" style="background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">중립 😐</div>
           </div>
 
+          <!-- 이력 보기 버튼은 스켈레톤 모델 영역(#avatar-area) 우상단으로 이동됨 -->
+
           <video id="vision-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
           <canvas id="vision-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none;"></canvas>
         </div>
         
-        <!-- 수어 예측 결과 영역 -->
-        <div id="prediction-area" style="background: var(--bg-card); padding: 0.6rem 1.2rem; border-top: 1px solid var(--border); min-height: 60px; display: flex; flex-direction: column; justify-content: center; position: relative;">
-          <div class="t-label" style="font-size: 0.6rem; color: var(--accent-cyan); margin-bottom: 2px;">LIVE TRANSLATION</div>
-          <div class="t-output" id="slm-output" style="font-size: 1.15rem; width: 100%; font-weight: 700;">
-            <em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">수어 동작을 하면 분석 결과가 나타납니다.</em>
+        <!-- 수어 예측 결과 — 카메라 영역 위에 떠 있는 반투명 오버레이.
+             position:absolute 라 #top-section 의 flex 흐름을 차지하지 않으므로 카메라가 잘리지 않는다. -->
+        <div id="prediction-area" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 15; background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,0.85) 55%, rgba(15,23,42,0.95) 100%); backdrop-filter: blur(6px); padding: 0.55rem 1.2rem 0.65rem; min-height: 40px; display: flex; flex-direction: column; justify-content: center; transition: opacity 0.25s ease;">
+          <div class="t-output" id="slm-output" style="font-size: 1.05rem; width: 100%; font-weight: 700; line-height: 1.25; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">
+            <em style="color:rgba(255,255,255,0.7); font-weight: 400; font-size: 0.85rem;">수어 동작을 하면 분석 결과가 나타납니다.</em>
           </div>
           
-          <!-- [NEW] 통역 로그 열기 버튼. 우측 카운트 배지는 누적 항목 수 -->
-          <button id="btn-toggle-log" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
-            <span>📜 이력 보기</span>
-            <span id="log-count-badge" style="display:none; background: var(--accent-cyan); color:#000; font-weight:800; font-size:0.65rem; padding:1px 6px; border-radius: 999px;">0</span>
-          </button>
+          <!-- 이력 보기 버튼은 카메라 영역 우상단 오버레이로 이동됨(#cam-status-overlay) -->
         </div>
 
       </div>
@@ -488,7 +583,29 @@
         <!-- 아바타 영역 -->
         <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
           <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-          
+
+          <!-- 스켈레톤 모델 영역 우상단: 이력 보기 버튼 (Hero 카드보다 위 z-index) -->
+          <button id="btn-toggle-log" style="position: absolute; top: 0.7rem; right: 0.7rem; z-index: 30; cursor:pointer; background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 5px 11px; border-radius: 6px; font-size: 0.72rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <span>📜 이력 보기</span>
+            <span id="log-count-badge" style="display:none; background: var(--accent-cyan); color:#000; font-weight:800; font-size:0.65rem; padding:1px 6px; border-radius: 999px;">0</span>
+          </button>
+
+          <!-- [NEW] 인식 HERO 카드 — 카메라 ON 일 때만 표시. 큰 단어 + 신뢰도 + 최근 5개 타임라인. -->
+          <div id="recognition-hero" aria-live="polite">
+            <div class="hero-label">실시간 인식 결과</div>
+            <div class="hero-current" id="hero-current">수어 동작을 시작하세요</div>
+            <div class="hero-conf-row">
+              <div class="hero-conf-bar" title="모델 신뢰도">
+                <div class="hero-conf-fill" id="hero-conf-fill"></div>
+              </div>
+              <div class="hero-conf-text" id="hero-conf-text">—</div>
+            </div>
+            <div class="hero-timeline-label">최근 인식</div>
+            <div class="hero-timeline" id="hero-timeline">
+              <span class="hero-chip empty">아직 없음</span>
+            </div>
+          </div>
+
           <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
           <div id="ref-pip">
             <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
@@ -749,8 +866,16 @@
 
           lastSuccessAt = Date.now();
 
-          // 최종 확정 출력
-          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
+          // 최종 확정 출력 (prediction-area 컴팩트 모드에 맞춘 폰트 크기)
+          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.05rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
+
+          // LIVE TRANSLATION pulse 강조 (성공 시 한 번)
+          const predArea = document.getElementById('prediction-area');
+          if (predArea) {
+            predArea.classList.remove('pulse-once');
+            void predArea.offsetWidth; // reflow → 재생 강제
+            predArea.classList.add('pulse-once');
+          }
 
           // [중복 방지] 같은 결과 연속 출력 시 TTS/이력 중복은 막되, 출력 UI 갱신은 위에서 이미 처리.
           const isDup = (result.text === lastFinalText);
@@ -766,8 +891,9 @@
               window.speechSynthesis.speak(utterance);
             }
 
-            // 이력에 항목 추가 (localStorage 영속화)
+            // 이력에 항목 추가 (localStorage 영속화) + Hero 카드 갱신
             pushHistoryEntry(result.text, result.knn_confidence);
+            _updateHero(result.text, result.knn_confidence);
           }
 
         }
@@ -906,15 +1032,113 @@
     // 페이지 진입 시 저장된 이력 복원
     _refreshHistoryUI();
 
+    // ── [NEW] Recognition Hero 카드 갱신 ──
+    const heroEl       = document.getElementById('recognition-hero');
+    const heroCurrent  = document.getElementById('hero-current');
+    const heroConfFill = document.getElementById('hero-conf-fill');
+    const heroConfText = document.getElementById('hero-conf-text');
+    const heroTimeline = document.getElementById('hero-timeline');
+    const HERO_MAX = 5; // 최근 단어 chip 최대 개수
+    const _heroRecent = []; // [{text, isSentence}]
+
+    function _updateHero(text, conf) {
+      if (!heroCurrent) return;
+      const isSentence = text.startsWith('💬');
+      // current
+      heroCurrent.textContent = text;
+      heroCurrent.classList.remove('idle', 'sentence', 'flash');
+      if (isSentence) heroCurrent.classList.add('sentence');
+      void heroCurrent.offsetWidth; // reflow → flash 재생 강제
+      heroCurrent.classList.add('flash');
+      // confidence
+      const pct = Math.round(Math.max(0, Math.min(1, conf || 0)) * 100);
+      if (heroConfFill) heroConfFill.style.width = pct + '%';
+      if (heroConfText) heroConfText.textContent = pct ? (pct + '%') : '—';
+      // timeline: 새 단어를 앞에 추가, 최대 N개
+      _heroRecent.unshift({ text, isSentence });
+      if (_heroRecent.length > HERO_MAX) _heroRecent.length = HERO_MAX;
+      _renderHeroTimeline();
+    }
+    function _renderHeroTimeline() {
+      if (!heroTimeline) return;
+      if (_heroRecent.length === 0) {
+        heroTimeline.innerHTML = '<span class="hero-chip empty">아직 없음</span>';
+        return;
+      }
+      heroTimeline.innerHTML = _heroRecent
+        .map(e => `<span class="hero-chip${e.isSentence ? ' sentence' : ''}">${e.text}</span>`)
+        .join('');
+    }
+    function _setHeroIdle(message) {
+      if (!heroCurrent) return;
+      heroCurrent.textContent = message;
+      heroCurrent.classList.add('idle');
+      heroCurrent.classList.remove('sentence', 'flash');
+      if (heroConfFill) heroConfFill.style.width = '0%';
+      if (heroConfText) heroConfText.textContent = '—';
+    }
+    function setHeroVisible(visible) {
+      if (!heroEl) return;
+      heroEl.classList.toggle('hidden', !visible);
+      if (visible && _heroRecent.length === 0) _setHeroIdle('수어 동작을 시작하세요');
+      // prediction-area 는 카메라 위에 떠 있는 오버레이(position:absolute).
+      // Hero 가 표시될 땐 페이드 아웃, 숨겨질 땐 페이드 인 — 카메라 크기에는 영향 없음.
+      const pred = document.getElementById('prediction-area');
+      if (pred) {
+        pred.style.opacity = visible ? '0' : '1';
+        pred.style.pointerEvents = visible ? 'none' : 'auto';
+      }
+    }
+
+    // Hero 가시성은 3가지 상태의 AND:
+    //  - 카메라 ON
+    //  - 사용자가 텍스트 입력을 사용 중이지 않음 (focus 없고 값 비어있음)
+    //  - 텍스트→수어 애니메이션이 재생 중이지 않음
+    // 이 중 하나라도 false 면 Hero 를 숨겨 아바타 동작을 그대로 볼 수 있게 한다.
+    let _cameraOn = true;
+    let _animatingT2S = false;
+    const _chatInputEl = document.getElementById('chat-input');
+    function _isTyping() {
+      return _chatInputEl && (document.activeElement === _chatInputEl
+                              || _chatInputEl.value.trim().length > 0);
+    }
+    function _evalHeroVisibility() {
+      setHeroVisible(_cameraOn && !_isTyping() && !_animatingT2S);
+    }
+    // 입력창 상호작용
+    _chatInputEl?.addEventListener('focus', _evalHeroVisibility);
+    _chatInputEl?.addEventListener('blur',  () => setTimeout(_evalHeroVisibility, 150));
+    _chatInputEl?.addEventListener('input', _evalHeroVisibility);
+    // 텍스트→수어 애니메이션 시작/종료 감지
+    document.getElementById('btn-send')?.addEventListener('click', () => {
+      _animatingT2S = true; _evalHeroVisibility();
+    });
+    _chatInputEl?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') { _animatingT2S = true; _evalHeroVisibility(); }
+    });
+    window.addEventListener('itda:motion:played', () => {
+      _animatingT2S = false; _evalHeroVisibility();
+    });
+    // 안전망: 애니메이션이 너무 길게 끝나지 않을 경우 8초 후 강제 해제
+    window.addEventListener('itda:motion:played', () => clearTimeout(_t2sFallback));
+    let _t2sFallback = null;
+    document.getElementById('btn-send')?.addEventListener('click', () => {
+      clearTimeout(_t2sFallback);
+      _t2sFallback = setTimeout(() => { _animatingT2S = false; _evalHeroVisibility(); }, 8000);
+    });
+
+    // 초기: 카메라 ON 으로 자동 init() → Hero 표시
+    _evalHeroVisibility();
+
     // 로그 패널 토글 제어 — body 직속 fixed 패널을 버튼 아래로 띄움
     function _positionLogPanel() {
-      const btn = document.getElementById('btn-toggle-log');
-      const anchor = document.getElementById('prediction-area'); // LIVE TRANSLATION 영역
-      if (!btn || !logPanel || !anchor) return;
-      const btnRect = btn.getBoundingClientRect();
+      // 패널을 스켈레톤 뷰(#avatar-area) 상단·전체 폭에 맞춰 띄운다.
+      // 이력 보기 ↔ 닫기 버튼이 가려지더라도 화면 정렬을 우선.
+      const anchor = document.getElementById('avatar-area')
+                   || document.getElementById('camera-area');
+      if (!logPanel || !anchor) return;
       const aRect = anchor.getBoundingClientRect();
-      // 패널 폭/좌측을 LIVE TRANSLATION 과 동일하게, top 은 버튼 바로 아래
-      logPanel.style.top   = (btnRect.bottom + 6) + 'px';
+      logPanel.style.top   = aRect.top + 'px';
       logPanel.style.left  = aRect.left + 'px';
       logPanel.style.width = aRect.width + 'px';
       logPanel.style.right = 'auto';
@@ -1050,7 +1274,7 @@
       window.open('./avatar_only.html', 'AvatarViewer', 'width=800,height=800,menubar=no,toolbar=no,location=no,status=no');
     });
 
-    // 카메라 ON/OFF 제어
+    // 카메라 ON/OFF 제어 — Hero 카드 표시 상태와 함께 토글
     document.getElementById('btn-toggle-camera')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       if (window.ITDAVision5) {
@@ -1061,12 +1285,16 @@
           btn.style.background = "#ff4757";
           btn.style.color = "#fff";
           btn.style.boxShadow = "0 0 10px rgba(255,71,87,0.3)";
+          _cameraOn = false;
+          _evalHeroVisibility();
         } else {
           await window.ITDAVision5.start();
           btn.textContent = "📷 카메라: ON";
           btn.style.background = "#00f2fe";
           btn.style.color = "#000";
           btn.style.boxShadow = "0 0 10px rgba(0,242,254,0.3)";
+          _cameraOn = true;
+          _evalHeroVisibility();
         }
       }
     });
