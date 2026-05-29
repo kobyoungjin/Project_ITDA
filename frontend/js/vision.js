@@ -131,13 +131,16 @@ async function init() {
 }
 
 // ── 카메라 시작 ───────────────────────────────────────────────
+// 현재 사용 중인 카메라 방향. 'user'=전면, 'environment'=후면(모바일).
+let currentFacingMode = 'user';
+
 async function startCamera() {
   videoStream = await navigator.mediaDevices.getUserMedia({
     video: {
       width: { ideal: CONFIG.MIN_CAMERA_WIDTH },
       height: { ideal: CONFIG.MIN_CAMERA_HEIGHT },
       frameRate: { ideal: 30 },
-      facingMode: 'user',
+      facingMode: currentFacingMode,
     },
     audio: false,
   });
@@ -145,7 +148,37 @@ async function startCamera() {
   await new Promise(res => { videoEl.onloadedmetadata = res; });
   videoEl.play();
   isRunning = true;
+  // 전면 카메라는 사용자가 자기 모습을 보는 게 자연스러우므로 좌우반전.
+  // 후면 카메라는 실세계를 그대로 보여야 하므로 반전하지 않는다.
+  videoEl.style.transform = (currentFacingMode === 'user') ? 'scaleX(-1)' : 'scaleX(1)';
+  if (canvasEl) {
+    canvasEl.style.transform = (currentFacingMode === 'user') ? 'scaleX(-1)' : 'scaleX(1)';
+  }
   requestAnimationFrame(processFrame);
+}
+
+// 전·후면 카메라 전환. 현재 카메라를 정지하고 반대편 facingMode 로 재시작.
+async function switchCamera() {
+  const wasRunning = isRunning;
+  currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+  }
+  if (wasRunning) {
+    isRunning = false;
+    try {
+      await startCamera();
+      setStatus('✅ 실행 중 (' + (currentFacingMode === 'user' ? '전면' : '후면') + ')');
+    } catch (err) {
+      // 후면 카메라가 없는 디바이스 등은 원래 facingMode 로 폴백
+      console.warn('[ITDA Vision] 카메라 전환 실패, 폴백:', err.message);
+      currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+      await startCamera();
+      setStatus('⚠️ 다른 카메라가 없습니다');
+    }
+  }
+  return currentFacingMode;
 }
 
 // ── WebSocket 연동 상태 ───────────────────────────────────────
@@ -574,4 +607,6 @@ window.ITDAVision5 = {
     setStatus('⏸️ 카메라 꺼짐');
   },
   isRunning: () => isRunning,
+  switchCamera,
+  getFacingMode: () => currentFacingMode,
 };

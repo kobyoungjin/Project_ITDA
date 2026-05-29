@@ -554,10 +554,11 @@
             <div class="pip-label" style="margin: 0; position: static;">📷 실시간 카메라</div>
           </div>
           
-          <!-- [NEW] 카메라 우상단 상태 표시 (손 개수 + 표정) -->
+          <!-- [NEW] 카메라 우상단 상태 표시 (손 개수 + 표정 + 카메라 전환) -->
           <div id="cam-status-overlay" style="position: absolute; top: 0.5rem; right: 0.5rem; z-index: 20; display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;">
             <div id="mini-hand-output" style="background: rgba(0,0,0,0.6); color: var(--accent-cyan); padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(0,242,254,0.2);">0개 ✋</div>
             <div id="mini-emotion-output" style="background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">중립 😐</div>
+            <button id="btn-switch-camera" title="전·후면 카메라 전환" style="cursor:pointer; background: rgba(0,0,0,0.7); color: #fff; padding: 3px 9px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.2); display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">🔄 전면</button>
           </div>
 
           <!-- 이력 보기 버튼은 스켈레톤 모델 영역(#avatar-area) 우상단으로 이동됨 -->
@@ -1272,6 +1273,23 @@
     // 아바타 전용 창 열기
     document.getElementById('btn-open-avatar-window')?.addEventListener('click', () => {
       window.open('./avatar_only.html', 'AvatarViewer', 'width=800,height=800,menubar=no,toolbar=no,location=no,status=no');
+    });
+
+    // 전·후면 카메라 전환 (모바일용). 전환 후 버튼 라벨도 갱신.
+    document.getElementById('btn-switch-camera')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (!window.ITDAVision5?.switchCamera) return;
+      btn.disabled = true;
+      btn.style.opacity = '0.55';
+      try {
+        const mode = await window.ITDAVision5.switchCamera();
+        btn.textContent = mode === 'user' ? '🔄 전면' : '🔄 후면';
+      } catch (err) {
+        console.warn('[Camera] 전환 실패:', err);
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
     });
 
     // 카메라 ON/OFF 제어 — Hero 카드 표시 상태와 함께 토글
