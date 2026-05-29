@@ -90,7 +90,27 @@
     }
     .logo em { color: var(--accent-cyan); font-style: normal; }
 
-    .header-right { display: flex; align-items: center; gap: 0.6rem; }
+    .header-right { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* 컴팩트 상태 표시(헤더용). hud-item 보다 작고 조용함. */
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em;
+      color: var(--text-muted);
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 10px;
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #64748b;
+      box-shadow: 0 0 6px rgba(100,116,139,0.6);
+    }
+    .status-dot.ok   { background: #00e6a0; box-shadow: 0 0 6px rgba(0,230,160,0.75); }
+    .status-dot.warn { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.75); }
+    .status-dot.err  { background: #ff4757; box-shadow: 0 0 6px rgba(255,71,87,0.75); }
     .badge {
       padding: 0.2rem 0.65rem; border-radius: 99px;
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
@@ -235,95 +255,105 @@
     }
     .motion-dot.stable.flash { animation: motion-stable-pulse 0.7s ease-out 1; }
 
-    /* ── [⑥ Education] 모드 토글 & 학습 카드 ─────────────── */
-    #mode-toggle {
-      display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      background: rgba(15, 23, 42, 0.4);
+    /* 모드 토글(번역/학습/수집) · 학습 카드 · 수집 카드 CSS 는
+       기능이 새창(avatar_only.html)으로 이동하면서 모두 제거됨. */
+
+    /* ── [NEW] LIVE TRANSLATION pulse 강조: 새 단어 인식 순간 시안 글로우 한 번 ── */
+    #prediction-area.pulse-once {
+      animation: live-pulse 0.9s ease-out 1;
     }
-    .mode-btn {
-      background: transparent; color: var(--text-muted);
-      border: 0; padding: 5px 12px;
-      font-family: inherit; font-size: 0.72rem; font-weight: 700;
-      cursor: pointer; transition: all .15s;
-    }
-    .mode-btn:hover { color: var(--text-main); }
-    .mode-btn.active {
-      background: rgba(0, 242, 254, 0.15);
-      color: var(--accent-cyan);
-      box-shadow: inset 0 0 8px rgba(0, 242, 254, 0.25);
+    /* prediction-area 는 Hero 표시 여부에 따라 display:none/flex 로 통째로 전환된다. */
+    @keyframes live-pulse {
+      0%   { box-shadow: inset 0 0 0 0 rgba(0,242,254,0); background: var(--bg-card); }
+      30%  { box-shadow: inset 0 0 28px 0 rgba(0,242,254,0.35); background: rgba(0,242,254,0.06); }
+      100% { box-shadow: inset 0 0 0 0 rgba(0,242,254,0); background: var(--bg-card); }
     }
 
-    #lesson-card {
-      position: absolute; bottom: 1.2rem; right: 1.2rem;
-      width: 280px;
-      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px);
-      border: 1px solid var(--border); border-radius: 16px;
-      padding: 1rem; z-index: 100;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-      color: var(--text-main);
-      display: none;
+    /* ── [NEW] Recognition Hero — 카메라 ON 일 때 아바타 영역에 떠 있는 큰 인식 카드 ── */
+    #recognition-hero {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(86%, 560px);
+      background: linear-gradient(140deg, rgba(15,23,42,0.92), rgba(15,23,42,0.78));
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(0, 242, 254, 0.28);
+      border-radius: 20px;
+      padding: 1.5rem 1.7rem 1.3rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+      z-index: 10;
+      display: flex; flex-direction: column; gap: 0.6rem;
+      transition: opacity .35s ease, transform .35s ease;
+      pointer-events: none;
     }
-    .lesson-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
-    .lesson-emoji { font-size: 2rem; line-height: 1; }
-    .lesson-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
-    .lesson-word  { font-size: 1.2rem; font-weight: 800; color: var(--accent-cyan); }
-    .lesson-hint  {
-      font-size: 0.7rem; color: var(--text-muted); line-height: 1.45;
-      padding: 0.5rem 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 0.6rem;
+    #recognition-hero.hidden {
+      opacity: 0;
+      transform: translate(-50%, -45%);
+      pointer-events: none;
     }
-    .lesson-status {
-      font-size: 0.76rem; font-weight: 700;
-      padding: 0.4rem 0.6rem; border-radius: 6px; text-align: center;
-      transition: all .2s;
+    .hero-label {
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em;
+      color: var(--accent-cyan); text-transform: uppercase;
     }
-    .lesson-status[data-state="idle"]    { background: rgba(100,116,139,0.25); color: #94a3b8; }
-    .lesson-status[data-state="trying"]  { background: rgba(250,204,21,0.2);   color: #fde68a; }
-    .lesson-status[data-state="success"] {
-      background: rgba(34,197,94,0.25); color: #86efac;
-      animation: lesson-success-pulse 0.8s ease-out 1;
+    .hero-current {
+      font-size: 2.6rem; font-weight: 900; letter-spacing: -0.02em;
+      color: #fff; line-height: 1.15;
+      min-height: 3rem;
+      word-break: keep-all;
     }
-    @keyframes lesson-success-pulse {
-      0% { transform: scale(1); }
-      40% { transform: scale(1.08); box-shadow: 0 0 18px rgba(34,197,94,0.7); }
-      100% { transform: scale(1); }
+    .hero-current.sentence { color: #c4b5fd; font-size: 1.9rem; }
+    .hero-current.idle { color: var(--text-muted); font-size: 1.4rem; font-weight: 600; font-style: italic; }
+    .hero-current.flash { animation: hero-flash 0.8s ease-out 1; }
+    @keyframes hero-flash {
+      0%   { transform: scale(0.92); opacity: 0; filter: drop-shadow(0 0 24px rgba(0,242,254,0.7)); }
+      60%  { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; filter: none; }
     }
-    .lesson-nav { display: flex; gap: 0.4rem; margin-top: 0.7rem; justify-content: space-between; }
-    .lesson-nav-btn {
-      flex: 1; background: rgba(0, 242, 254, 0.08);
-      border: 1px solid rgba(0,242,254,0.25);
+    .hero-conf-row {
+      display: flex; align-items: center; gap: 0.7rem;
+      margin-top: 0.2rem;
+    }
+    .hero-conf-bar {
+      flex: 1; height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px; overflow: hidden;
+    }
+    .hero-conf-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      border-radius: 999px;
+      transition: width .35s ease;
+    }
+    .hero-conf-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+      min-width: 44px; text-align: right;
+    }
+    .hero-timeline-label {
+      font-size: 0.62rem; color: var(--text-muted); margin-top: 0.4rem;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .hero-timeline {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+      min-height: 1.7rem;
+    }
+    .hero-chip {
+      display: inline-flex; align-items: center;
+      font-size: 0.78rem; font-weight: 700;
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.3);
       color: var(--accent-cyan);
-      padding: 0.35rem 0; border-radius: 6px;
-      cursor: pointer; font-size: 0.85rem;
-      transition: all .15s;
+      padding: 3px 10px; border-radius: 999px;
     }
-    .lesson-nav-btn:hover { background: rgba(0, 242, 254, 0.2); }
-
-    /* ── [NEW] 수집 패널 (Collect Mode) ────────────────── */
-    #collect-card {
-      position: absolute; bottom: 1.2rem; right: 1.2rem;
-      width: 280px;
-      background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px);
-      border: 1px solid var(--border); border-radius: 16px;
-      padding: 1rem; z-index: 100;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-      color: var(--text-main);
-      display: none;
+    .hero-chip.sentence {
+      background: rgba(124, 58, 237, 0.12);
+      border-color: rgba(124, 58, 237, 0.4);
+      color: #c4b5fd;
     }
-    .collect-label { font-size: 0.62rem; color: var(--accent-green); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 0.3rem; }
-    .collect-input {
-      width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
-      color: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.6rem;
+    .hero-chip.empty {
+      background: transparent; border-style: dashed;
+      color: var(--text-muted); font-weight: 500;
     }
-    .collect-stats { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.6rem; display: flex; justify-content: space-between; }
-    .btn-collect {
-      width: 100%; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; border: none; transition: all 0.2s;
-    }
-    .btn-collect-start { background: #ef4444; color: #fff; }
-    .btn-collect-stop  { background: #64748b; color: #fff; display: none; }
-    .btn-collect-start:hover { background: #dc2626; }
 
     /* ── [Tier1] 모션 엔진 V2/V1 토글 ───────────────────── */
     #motion-version-toggle {
@@ -485,18 +515,31 @@
     <header>
       <div class="logo">
         <div class="logo-icon">✋</div>
-        ITDA <em>SIGN</em>
+        ITDA
       </div>
       <div class="header-right">
-        <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: rgba(100, 116, 139, 0.15); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; min-width: 95px; text-align: center;">🔇 음성: OFF</button>
-        <button id="btn-open-avatar-window" class="hud-item" style="cursor:pointer; background: var(--accent-purple); border: 1px solid rgba(124, 58, 237, 0.5); color: #fff; font-weight: 800;">🪟 새창</button>
-        <select id="sel-model" class="hud-item" style="cursor:pointer; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; font-weight: 800; border-radius: 6px; padding: 4px 8px; outline: none; font-size: 0.75rem; box-shadow: 0 0 10px rgba(0, 242, 254, 0.15); transition: all 0.2s ease;">
-          <option value="main" style="background:#0f172a; color:#fff;">🏷️ 기본 모델 (16단어)</option>
-          <option value="dialogue" style="background:#0f172a; color:#fff;">💬 대화 모델 (80단어)</option>
-        </select>
-        <div class="hud-item" id="backend-status" style="color: #ff4757; border-color: rgba(255, 71, 87, 0.4);">Backend: OFFLINE</div>
-        <div class="hud-item" id="fps-display">FPS: 0</div>
-        <div class="hud-item" id="joint-status">Joints: ACTIVE</div>
+        <div class="status-pill" id="backend-status" title="백엔드 연결 상태"><span class="status-dot err"></span>OFFLINE</div>
+        <div class="status-pill" id="joint-status" title="3D 모델 상태"><span class="status-dot warn"></span>3D OFF</div>
+        <div class="status-pill" id="fps-display" title="FPS"><span class="status-dot ok"></span>0 fps</div>
+
+        <!-- 헤더 메뉴: 음성 토글 / 새창 / 모델 선택을 한곳으로 묶음 -->
+        <div id="header-menu-wrap" style="position: relative;">
+          <button id="btn-header-menu" class="hud-item" title="메뉴" aria-haspopup="true" aria-expanded="false"
+            style="cursor:pointer; background: rgba(15,23,42,0.8); border: 1px solid var(--border); color: var(--text-main); padding: 5px 11px; font-size: 1rem; font-weight: 700;">☰</button>
+          <div id="header-menu-panel" role="menu" aria-hidden="true"
+            style="display:none; flex-direction:column; gap:0.55rem; position:absolute; top: calc(100% + 8px); right: 0; min-width: 240px; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); padding: 0.7rem; z-index: 200;">
+            <button id="btn-toggle-camera" class="hud-item" style="cursor:pointer; background: #00f2fe; border: none; color: #000; padding: 6px 10px; border-radius: 6px; font-weight: 800; width: 100%; text-align: center; box-shadow: 0 0 10px rgba(0,242,254,0.3);">📷 카메라: ON</button>
+            <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: rgba(100, 116, 139, 0.15); border: 1px solid var(--border); color: var(--text-muted); width: 100%; text-align: center;">🔇 음성: OFF</button>
+            <button id="btn-open-avatar-window" class="hud-item" style="cursor:pointer; background: var(--accent-purple); border: 1px solid rgba(124, 58, 237, 0.5); color: #fff; font-weight: 800; width: 100%;">🪟 새창 열기</button>
+            <label style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+              인식 모델
+              <select id="sel-model" class="hud-item" style="cursor:pointer; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; font-weight: 800; border-radius: 6px; padding: 6px 8px; outline: none; font-size: 0.78rem; box-shadow: 0 0 10px rgba(0, 242, 254, 0.15); width: 100%;">
+                <option value="main" style="background:#0f172a; color:#fff;">🏷️ 기본 모델 (16단어)</option>
+                <option value="dialogue" style="background:#0f172a; color:#fff;">💬 대화 모델 (80단어)</option>
+              </select>
+            </label>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -509,43 +552,31 @@
         <div id="camera-area" style="flex: 1; position: relative; overflow: hidden;">
           <div style="position: absolute; top: 0.5rem; left: 0.5rem; z-index: 20; display: flex; gap: 0.5rem; align-items: center;">
             <div class="pip-label" style="margin: 0; position: static;">📷 실시간 카메라</div>
-            <button id="btn-toggle-camera" style="cursor:pointer; background: #00f2fe; border: none; color: #000; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 0 10px rgba(0,242,254,0.3); transition: all 0.2s ease;">카메라: ON</button>
           </div>
           
-          <!-- [NEW] 카메라 우상단 상태 표시 (손 개수 + 표정) -->
+          <!-- [NEW] 카메라 우상단 상태 표시 (손 개수 + 표정 + 카메라 전환) -->
           <div id="cam-status-overlay" style="position: absolute; top: 0.5rem; right: 0.5rem; z-index: 20; display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;">
             <div id="mini-hand-output" style="background: rgba(0,0,0,0.6); color: var(--accent-cyan); padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(0,242,254,0.2);">0개 ✋</div>
             <div id="mini-emotion-output" style="background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">중립 😐</div>
+            <button id="btn-switch-camera" title="전·후면 카메라 전환" style="cursor:pointer; background: rgba(0,0,0,0.7); color: #fff; padding: 3px 9px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.2); display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">🔄 전면</button>
           </div>
+
+          <!-- 이력 보기 버튼은 스켈레톤 모델 영역(#avatar-area) 우상단으로 이동됨 -->
 
           <video id="vision-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
           <canvas id="vision-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none;"></canvas>
         </div>
         
-        <!-- 수어 예측 결과 영역 -->
-        <div id="prediction-area" style="background: var(--bg-card); padding: 0.6rem 1.2rem; border-top: 1px solid var(--border); min-height: 60px; display: flex; flex-direction: column; justify-content: center; position: relative;">
-          <div class="t-label" style="font-size: 0.6rem; color: var(--accent-cyan); margin-bottom: 2px;">LIVE TRANSLATION</div>
-          <div class="t-output" id="slm-output" style="font-size: 1.15rem; width: 100%; font-weight: 700;">
-            <em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">수어 동작을 하면 분석 결과가 나타납니다.</em>
+        <!-- 수어 예측 결과 — 카메라 영역 위에 떠 있는 반투명 오버레이.
+             position:absolute 라 #top-section 의 flex 흐름을 차지하지 않으므로 카메라가 잘리지 않는다. -->
+        <div id="prediction-area" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 15; background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,0.85) 55%, rgba(15,23,42,0.95) 100%); backdrop-filter: blur(6px); padding: 0.55rem 1.2rem 0.65rem; min-height: 40px; display: flex; flex-direction: column; justify-content: center; transition: opacity 0.25s ease;">
+          <div class="t-output" id="slm-output" style="font-size: 1.05rem; width: 100%; font-weight: 700; line-height: 1.25; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">
+            <em style="color:rgba(255,255,255,0.7); font-weight: 400; font-size: 0.85rem;">수어 동작을 하면 분석 결과가 나타납니다.</em>
           </div>
           
-          <!-- [NEW] 통역 로그 열기 버튼 -->
-          <button id="btn-toggle-log" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; transition: all 0.2s;">
-            📜 이력 보기
-          </button>
+          <!-- 이력 보기 버튼은 카메라 영역 우상단 오버레이로 이동됨(#cam-status-overlay) -->
         </div>
-        
-        <!-- [NEW] 수어 통역 로그 패널 (슬라이드 애니메이션) -->
-        <div id="translation-log-panel" style="position: absolute; top: 100%; left: 0; width: 100%; height: 200px; background: var(--bg-card); 
-             border-top: 1px solid var(--border); z-index: 40; padding: 1rem; overflow-y: auto; display: none; transition: all 0.3s ease;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-            <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-cyan);">📋 통역 이력 (Sign-to-Text)</span>
-            <button id="btn-clear-log" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.7rem;">지우기</button>
-          </div>
-          <div id="translation-log-list" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-            <!-- 로그 아이템들이 여기에 추가됨 -->
-          </div>
-        </div>
+
       </div>
 
       <!-- [아래쪽 60%] 아바타 + 텍스트 입력 -->
@@ -553,18 +584,29 @@
         <!-- 아바타 영역 -->
         <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
           <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-          
-          <!-- 상단 우측: 모드 전환 바(번역/학습/수집) + UI 표시·숨김 토글 -->
-          <div style="position: absolute; top: 0.6rem; right: 0.6rem; z-index: 30; display: flex; align-items: flex-start; gap: 0.4rem;">
-            <div id="mode-toggle" style="display:flex; gap:0.4rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid var(--border);">
-              <button class="mode-btn active" data-mode="translate">번역</button>
-              <button class="mode-btn" data-mode="learn">학습</button>
-              <button class="mode-btn" data-mode="collect">수집</button>
+
+          <!-- 스켈레톤 모델 영역 우상단: 이력 보기 버튼 (Hero 카드보다 위 z-index) -->
+          <button id="btn-toggle-log" style="position: absolute; top: 0.7rem; right: 0.7rem; z-index: 30; cursor:pointer; background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 5px 11px; border-radius: 6px; font-size: 0.72rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <span>📜 이력 보기</span>
+            <span id="log-count-badge" style="display:none; background: var(--accent-cyan); color:#000; font-weight:800; font-size:0.65rem; padding:1px 6px; border-radius: 999px;">0</span>
+          </button>
+
+          <!-- [NEW] 인식 HERO 카드 — 카메라 ON 일 때만 표시. 큰 단어 + 신뢰도 + 최근 5개 타임라인. -->
+          <div id="recognition-hero" aria-live="polite">
+            <div class="hero-label">실시간 인식 결과</div>
+            <div class="hero-current" id="hero-current">수어 동작을 시작하세요</div>
+            <div class="hero-conf-row">
+              <div class="hero-conf-bar" title="모델 신뢰도">
+                <div class="hero-conf-fill" id="hero-conf-fill"></div>
+              </div>
+              <div class="hero-conf-text" id="hero-conf-text">—</div>
             </div>
-            <button id="btn-ui-toggle" title="UI 숨김"
-              style="background: rgba(15,23,42,0.8); border: 1px solid var(--border); color: var(--text-main); padding: 5px 9px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">☰</button>
+            <div class="hero-timeline-label">최근 인식</div>
+            <div class="hero-timeline" id="hero-timeline">
+              <span class="hero-chip empty">아직 없음</span>
+            </div>
           </div>
-          
+
           <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
           <div id="ref-pip">
             <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
@@ -592,53 +634,7 @@
           </div>
         </div>
 
-        <!-- [NEW] 학습 모드 카드 -->
-        <div id="lesson-card">
-          <div class="lesson-header">
-            <div class="lesson-emoji" id="lesson-emoji">🎓</div>
-            <div>
-              <div class="lesson-label">Sign Learning</div>
-              <div class="lesson-word" id="lesson-word">준비 중</div>
-            </div>
-          </div>
-          <div class="lesson-hint" id="lesson-hint">동작을 따라해 보세요.</div>
-          <div class="lesson-status" id="lesson-status" data-state="idle">대기 중</div>
-          <div class="lesson-nav">
-            <button class="lesson-nav-btn" id="lesson-prev">◀</button>
-            <button class="lesson-nav-btn" id="lesson-stop">중지</button>
-            <button class="lesson-nav-btn" id="lesson-next">▶</button>
-          </div>
-        </div>
-
-        <!-- [NEW] 수집 모드 카드 -->
-        <div id="collect-card">
-          <div class="collect-label">Collection Mode</div>
-          <div style="font-size: 1.05rem; font-weight: 800; margin-bottom: 0.6rem; color: var(--accent-green);">동작 여러 번 찍어 수집</div>
-
-          <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력 (예: 안녕)">
-
-          <!-- take 요약 + 완료한 take 목록 -->
-          <div class="collect-stats">
-            <span id="collect-take-summary" style="color: var(--accent-cyan); font-weight: 700;">Take 0개 · 총 0개 샘플</span>
-          </div>
-          <div id="collect-take-list" style="display:flex; flex-direction:column; gap:3px; max-height:96px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.72rem; color:var(--text-muted);"></div>
-
-          <!-- 동작 1회 = take 1개. 같은 단어로 여러 번 반복 -->
-          <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 이번 동작 녹화</button>
-          <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 녹화 중지</button>
-          <div id="collect-take-status" style="font-size:0.72rem; color:var(--text-muted); margin:0.4rem 0; line-height:1.45;">단어를 입력하고 같은 동작을 여러 번 녹화하세요. 많이 찍을수록 정확해집니다.</div>
-
-          <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.2rem;">⚙️ KNN 모델 훈련</button>
-          
-          <div style="border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
-            <div style="display: flex; gap: 0.4rem;">
-              <input type="text" id="collect-url-input" class="collect-input" style="margin-bottom:0; flex:1;" placeholder="영상 URL (sldict mp4 / YouTube)">
-              <button id="btn-collect-url" style="background: var(--accent-cyan); color: #000; border: none; padding: 0 10px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.7rem;">추출</button>
-            </div>
-            <input type="file" id="collect-video-file" accept="video/*" style="display: none;">
-            <button id="btn-collect-video" style="width: 100%; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan); padding: 6px; border-radius: 8px; cursor: pointer; font-size: 0.7rem;">📂 내 PC 영상 파일 학습</button>
-          </div>
-        </div>
+        <!-- 학습/수집 카드는 새창(avatar_only.html)에서 제공 -->
 
 
       <!-- 비전 로딩 오버레이 -->
@@ -785,96 +781,7 @@
       el.innerHTML = `<span class="motion-dot ${phase}${flashCls}"></span>${MOTION_LABELS[phase] || phase}`;
     });
 
-    // [⑥ Education] 모드 토글 + 학습 카드 제어
-    const modeBtns    = document.querySelectorAll('#mode-toggle .mode-btn');
-    const lessonCard  = document.getElementById('lesson-card');
-    const lessonWord  = document.getElementById('lesson-word');
-    const lessonEmoji = document.getElementById('lesson-emoji');
-    const lessonHint  = document.getElementById('lesson-hint');
-    const lessonStatus= document.getElementById('lesson-status');
-    let currentMode   = 'translate';
-    let lessonIndex   = 0;
-
-    function _activateWord(idx) {
-      if (!window.ITDAEducation) return;
-      const words = window.ITDAEducation.getWords();
-      if (!words.length) return;
-      lessonIndex = ((idx % words.length) + words.length) % words.length;
-      window.ITDAEducation.start(words[lessonIndex]);
-    }
-
-    // 모드 버튼 클릭 → 모드 전환 + 숨겨둔 패널이 있으면 다시 표시
-    modeBtns.forEach(b => b.addEventListener('click', () => {
-      uiVisible = true;
-      _syncUiToggle();
-      _setMode(b.dataset.mode);
-    }));
-
-    // UI(모드 패널) 표시/숨김 토글 — 학습/수집 패널 창을 켜고 끈다
-    const btnUiToggle = document.getElementById('btn-ui-toggle');
-    let uiVisible = true;
-
-    function _syncUiToggle() {
-      if (!btnUiToggle) return;
-      btnUiToggle.title = uiVisible ? 'UI 숨김' : 'UI 표시';
-      btnUiToggle.style.opacity = uiVisible ? '1' : '0.55';
-    }
-
-    function _applyPanelVisibility() {
-      // 현재 모드의 패널만, uiVisible 일 때만 표시 (번역 모드는 전용 패널 없음)
-      const collectCard = document.getElementById('collect-card');
-      lessonCard.style.display = (uiVisible && currentMode === 'learn') ? 'block' : 'none';
-      if (collectCard) collectCard.style.display = (uiVisible && currentMode === 'collect') ? 'block' : 'none';
-    }
-
-    btnUiToggle?.addEventListener('click', () => {
-      uiVisible = !uiVisible;
-      _syncUiToggle();
-      _applyPanelVisibility();
-    });
-
-    function _setMode(mode) {
-      currentMode = mode;
-      modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-      _applyPanelVisibility();
-
-      if (mode === 'learn') {
-        _activateWord(lessonIndex);
-        window.ITDACollect?.stop();
-      } else if (mode === 'collect') {
-        window.ITDAEducation?.stop();
-      } else {
-        window.ITDAEducation?.stop();
-        window.ITDACollect?.stop();
-      }
-    }
-
-    document.getElementById('lesson-prev')?.addEventListener('click', () => _activateWord(lessonIndex - 1));
-    document.getElementById('lesson-next')?.addEventListener('click', () => _activateWord(lessonIndex + 1));
-    document.getElementById('lesson-stop')?.addEventListener('click', () => _setMode('translate'));
-
-
-
-    // 학습 피드백 이벤트 → 카드 UI 갱신
-    window.addEventListener('itda:lesson:feedback', (e) => {
-      const d = e.detail || {};
-      if (d.status === 'started') {
-        lessonWord.textContent  = d.word;
-        lessonEmoji.textContent = d.emoji || '🎓';
-        lessonHint.textContent  = d.hint || '';
-        lessonStatus.dataset.state = 'idle';
-        lessonStatus.textContent = '시도해 보세요 ✍️';
-      } else if (d.status === 'trying') {
-        lessonStatus.dataset.state = 'trying';
-        lessonStatus.textContent = '🟡 ' + (d.message || '조금만 더!');
-      } else if (d.status === 'success') {
-        lessonStatus.dataset.state = 'success';
-        lessonStatus.textContent = '🟢 ' + (d.message || '정답!');
-      } else if (d.status === 'stopped') {
-        lessonStatus.dataset.state = 'idle';
-        lessonStatus.textContent = '대기 중';
-      }
-    });
+    // 학습 피드백(itda:lesson:feedback) UI 는 새창(avatar_only.html)에서만 처리한다.
 
     // [Tier1] 모션 엔진 V2/V1 토글 — 마지막 재생 단어를 재생하며 비교
     window.ITDAMotion = window.ITDAMotion || { version: 'v2' };
@@ -917,13 +824,17 @@
     const translationLogList = document.getElementById('translation-log-list');
     const logPanel = document.getElementById('translation-log-panel');
     let lastFinalText = "";
+    // 직전 성공 인식 시각: 백엔드가 60fps로 미인식/대기 ACK를 쏟아내기 때문에
+    // 성공한 단어가 즉시 "미확정"으로 덮어써져 사람 눈에 보이지 않는 현상을 막는다.
+    let lastSuccessAt = 0;
+    const SUCCESS_HOLD_MS = 3500;
 
     window.addEventListener('itda:rag:result', (e) => {
       const result = e.detail.rag_result;
       if (!result) return;
       const emotionsHtml = result.emotions ? result.emotions.map(em => `<span class="t-emotion-badge" style="background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">${em}</span>`).join(' ') : '';
       const conf = result.knn_confidence ? ` (${Math.round(result.knn_confidence * 100)}%)` : "";
-      
+
       const outputEl = document.getElementById('slm-output');
       const liveOverlay = document.getElementById('live-translation-overlay');
       const liveText = document.getElementById('live-translation-text');
@@ -931,13 +842,15 @@
       if (outputEl) {
         if (result.type === 'draft') {
           if (result.text === '대기 중') {
+            if (Date.now() - lastSuccessAt < SUCCESS_HOLD_MS) return;
             outputEl.innerHTML = `<em style="color:var(--text-muted); font-weight: 400; font-size: 0.9rem;">동작 분석 중...</em>`;
             return;
           }
 
           const isUncertain = result.text.includes('미인식') || result.text === 'None';
-          
+
           if (isUncertain) {
+            if (Date.now() - lastSuccessAt < SUCCESS_HOLD_MS) return;
             outputEl.innerHTML = `<span style="color:#94a3b8; font-style:italic;">🤔 미확정: 다시 보여주세요</span>`;
           } else {
             outputEl.innerHTML = `<span style="color:var(--accent-orange); font-style:italic;">🔍 예측 중: ${result.text}${conf}</span>`;
@@ -946,69 +859,337 @@
           if (result.text.includes('분석 중이에요')) return;
 
           if (result.text === '대기 중' || result.text.includes('미인식') || result.text === 'None') {
+            if (Date.now() - lastSuccessAt < SUCCESS_HOLD_MS) return;
             outputEl.innerHTML = `<span style="color:#94a3b8; font-weight: 500;">🤔 미확정: 다시 보여주세요</span>`;
             lastFinalText = "";
             return;
           }
 
-          // 최종 확정 출력
-          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✅ 확정: ${result.text}</span> ${emotionsHtml}`;
+          lastSuccessAt = Date.now();
 
+          // 최종 확정 출력 (prediction-area 컴팩트 모드에 맞춘 폰트 크기)
+          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.05rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
 
-          // [중복 방지 강화] 동일 문장 연속 출력 방지 (4초 이내 동일 결과 무시)
-          if (result.text === lastFinalText) return;
+          // LIVE TRANSLATION pulse 강조 (성공 시 한 번)
+          const predArea = document.getElementById('prediction-area');
+          if (predArea) {
+            predArea.classList.remove('pulse-once');
+            void predArea.offsetWidth; // reflow → 재생 강제
+            predArea.classList.add('pulse-once');
+          }
+
+          // [중복 방지] 같은 결과 연속 출력 시 TTS/이력 중복은 막되, 출력 UI 갱신은 위에서 이미 처리.
+          const isDup = (result.text === lastFinalText);
           lastFinalText = result.text;
-          // 4초 후 마지막 텍스트 초기화 (다른 동작 인식 준비)
-          setTimeout(() => { if(lastFinalText === result.text) lastFinalText = ""; }, 4000); 
+          setTimeout(() => { if (lastFinalText === result.text) lastFinalText = ""; }, 4000);
 
-          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
-          
-          /* [수정] 웹캠 번역(Sign-to-Text) 시에는 사용자가 동작을 이미 수행했으므로, 
-             아바타가 인식된 단어 동작을 굳이 다시 재생(Replay)하지 않도록 제거합니다. 
-             (텍스트 직접 입력 시의 Text-to-Sign 번역에서만 아바타 동작이 재생되도록 유지)
-          if (window.ITDATranslator) {
-            window.ITDATranslator.replay(result.text);
-          } else if (window.ITDAMotionNPY) {
-            window.ITDAMotionNPY.play(result.text);
-          }
-          */
-          
-          // [NEW] TTS 음성 출력 (Voice Toggle 반영)
-          if (window.speechSynthesis && window._isVoiceOn) {
-            const utterance = new SpeechSynthesisUtterance(result.text);
-            utterance.lang = 'ko-KR';
-            utterance.rate = 1.0;
-            window.speechSynthesis.speak(utterance);
-          }
+          if (!isDup) {
+            // TTS 음성 출력 (Voice Toggle 반영)
+            if (window.speechSynthesis && window._isVoiceOn) {
+              const utterance = new SpeechSynthesisUtterance(result.text);
+              utterance.lang = 'ko-KR';
+              utterance.rate = 1.0;
+              window.speechSynthesis.speak(utterance);
+            }
 
-          // [NEW] 통역 로그 추가
-          if (translationLogList) {
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const item = document.createElement('div');
-            item.style.padding = "0.5rem";
-            item.style.background = "rgba(255,255,255,0.03)";
-            item.style.borderRadius = "6px";
-            item.innerHTML = `<span style="color:var(--text-muted); font-size:0.7rem; margin-right:8px;">${time}</span> 
-                              <span style="color:var(--accent-cyan); font-weight:700;">${result.text}</span>`;
-            translationLogList.prepend(item);
-            if (translationLogList.children.length > 50) translationLogList.lastChild.remove();
+            // 이력에 항목 추가 (localStorage 영속화) + Hero 카드 갱신
+            pushHistoryEntry(result.text, result.knn_confidence);
+            _updateHero(result.text, result.knn_confidence);
           }
 
         }
       }
     });
 
-    // 로그 패널 토글 제어
-    document.getElementById('btn-toggle-log')?.addEventListener('click', () => {
-      const isVisible = logPanel.style.display === 'block';
-      logPanel.style.display = isVisible ? 'none' : 'block';
-      document.getElementById('btn-toggle-log').textContent = isVisible ? '📜 이력 보기' : '✖ 닫기';
+    // ── 통역 이력 영속화 (localStorage 기반, 최대 100개) ──
+    const LOG_STORAGE_KEY = 'itda:translation_log';
+    const LOG_MAX = 100;
+
+    function _loadHistory() {
+      try {
+        const raw = localStorage.getItem(LOG_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    function _saveHistory(entries) {
+      try { localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(entries.slice(0, LOG_MAX))); }
+      catch (e) { /* quota/private 모드 등은 조용히 무시 */ }
+    }
+    function _renderHistoryItem(entry) {
+      const isSentence = entry.isSentence || entry.text.startsWith('💬');
+      const item = document.createElement('div');
+      item.style.padding = '0.55rem 0.7rem';
+      item.style.background = isSentence ? 'rgba(124, 58, 237, 0.12)' : 'rgba(0, 242, 254, 0.06)';
+      item.style.border = isSentence ? '1px solid rgba(124, 58, 237, 0.35)' : '1px solid rgba(0, 242, 254, 0.18)';
+      item.style.borderRadius = '6px';
+      item.style.display = 'flex';
+      item.style.alignItems = 'baseline';
+      item.style.gap = '10px';
+      const confTxt = entry.conf ? ` <span style="color:var(--text-muted); font-size:0.7rem;">(${Math.round(entry.conf*100)}%)</span>` : '';
+
+      // 단어 누적 항목은 2개 이상이면 띄어쓰기 한 줄로 "단어1 단어2 단어3" 형태 출력.
+      // 문장(💬)은 원문 그대로.
+      let displayText;
+      if (!isSentence && Array.isArray(entry.words) && entry.words.length >= 2) {
+        displayText = entry.words.join(' ');
+      } else {
+        displayText = entry.text;
+      }
+      const displayHtml = `<span style="color:${isSentence ? '#c4b5fd' : 'var(--accent-cyan)'}; font-weight:700;">${displayText}</span>`;
+
+      item.innerHTML = `
+        <span style="color:var(--text-muted); font-size:0.7rem; font-family:'JetBrains Mono', monospace; min-width: 64px;">${entry.time}</span>
+        ${displayHtml}${confTxt}
+      `;
+      return item;
+    }
+    function _refreshHistoryUI() {
+      if (!translationLogList) return;
+      const entries = _loadHistory();
+      translationLogList.innerHTML = '';
+      const emptyHint = document.getElementById('log-empty-hint');
+      if (entries.length === 0) {
+        if (emptyHint) {
+          translationLogList.appendChild(emptyHint);
+        } else {
+          const h = document.createElement('div');
+          h.id = 'log-empty-hint';
+          h.style.cssText = 'color:var(--text-muted); font-style:italic; padding:1rem; text-align:center; font-size:0.8rem;';
+          h.textContent = '아직 인식된 단어나 문장이 없습니다.';
+          translationLogList.appendChild(h);
+        }
+      } else {
+        entries.forEach(e => translationLogList.appendChild(_renderHistoryItem(e)));
+      }
+      const summary = document.getElementById('log-summary');
+      if (summary) summary.textContent = `${entries.length}개`;
+      const badge = document.getElementById('log-count-badge');
+      if (badge) {
+        badge.textContent = entries.length;
+        badge.style.display = entries.length > 0 ? 'inline-block' : 'none';
+      }
+    }
+    // 백엔드 SentenceBuilder 와 동기화: 연속된 단어는 같은 버퍼 항목에 누적,
+    // "💬 ..." 문장이 오면 그 버퍼 항목을 문장으로 교체하고 다음 단어는 새 항목으로 시작.
+    let _activeBufferId = null; // 누적 중인 항목의 ts (식별자)
+    // 마지막 단어 후 이만큼 지나면 버퍼 분리. 사용자가 천천히 수어를 이어가도
+    // 같은 세션으로 묶이도록 1분으로 넉넉히 잡음. (sentence 💬 가 오면 즉시 종결됨)
+    const BUFFER_IDLE_MS = 60000;
+
+    function pushHistoryEntry(text, conf) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const entries = _loadHistory();
+      const now = Date.now();
+      const isSentence = text.startsWith('💬');
+
+      // 1) 문장: 진행 중인 버퍼 항목을 이 문장으로 교체. 없으면 새 항목 생성.
+      if (isSentence) {
+        if (_activeBufferId != null) {
+          const idx = entries.findIndex(e => e.ts === _activeBufferId);
+          if (idx >= 0) {
+            entries[idx] = { text, conf: conf || 0, time, ts: now, isSentence: true };
+            _activeBufferId = null;
+            _saveHistory(entries);
+            _refreshHistoryUI();
+            return;
+          }
+        }
+        entries.unshift({ text, conf: conf || 0, time, ts: now, isSentence: true });
+        _activeBufferId = null;
+        _saveHistory(entries);
+        _refreshHistoryUI();
+        return;
+      }
+
+      // 2) 단어: 진행 중인 버퍼 항목이 있고 너무 오래되지 않았다면 같은 항목에 이어붙임.
+      if (_activeBufferId != null) {
+        const idx = entries.findIndex(e => e.ts === _activeBufferId);
+        const active = idx >= 0 ? entries[idx] : null;
+        if (active && !active.isSentence && (now - active.ts) <= BUFFER_IDLE_MS) {
+          active.words = Array.isArray(active.words) ? active.words : [active.text];
+          active.words.push(text);
+          active.text = active.words.join(' ');   // 폴백 표시·검색용
+          active.ts = now;
+          active.time = time;
+          active.conf = Math.max(active.conf || 0, conf || 0);
+          _saveHistory(entries);
+          _refreshHistoryUI();
+          return;
+        }
+        // 버퍼가 stale → 새 항목 시작
+        _activeBufferId = null;
+      }
+
+      // 3) 새 버퍼 항목 시작 — 단어 1개로 시작
+      const entry = { text, words: [text], conf: conf || 0, time, ts: now, isSentence: false };
+      entries.unshift(entry);
+      _activeBufferId = now;
+      _saveHistory(entries);
+      _refreshHistoryUI();
+    }
+
+    // 페이지 진입 시 저장된 이력 복원
+    _refreshHistoryUI();
+
+    // ── [NEW] Recognition Hero 카드 갱신 ──
+    const heroEl       = document.getElementById('recognition-hero');
+    const heroCurrent  = document.getElementById('hero-current');
+    const heroConfFill = document.getElementById('hero-conf-fill');
+    const heroConfText = document.getElementById('hero-conf-text');
+    const heroTimeline = document.getElementById('hero-timeline');
+    const HERO_MAX = 5; // 최근 단어 chip 최대 개수
+    const _heroRecent = []; // [{text, isSentence}]
+
+    function _updateHero(text, conf) {
+      if (!heroCurrent) return;
+      const isSentence = text.startsWith('💬');
+      // current
+      heroCurrent.textContent = text;
+      heroCurrent.classList.remove('idle', 'sentence', 'flash');
+      if (isSentence) heroCurrent.classList.add('sentence');
+      void heroCurrent.offsetWidth; // reflow → flash 재생 강제
+      heroCurrent.classList.add('flash');
+      // confidence
+      const pct = Math.round(Math.max(0, Math.min(1, conf || 0)) * 100);
+      if (heroConfFill) heroConfFill.style.width = pct + '%';
+      if (heroConfText) heroConfText.textContent = pct ? (pct + '%') : '—';
+      // timeline: 새 단어를 앞에 추가, 최대 N개
+      _heroRecent.unshift({ text, isSentence });
+      if (_heroRecent.length > HERO_MAX) _heroRecent.length = HERO_MAX;
+      _renderHeroTimeline();
+    }
+    function _renderHeroTimeline() {
+      if (!heroTimeline) return;
+      if (_heroRecent.length === 0) {
+        heroTimeline.innerHTML = '<span class="hero-chip empty">아직 없음</span>';
+        return;
+      }
+      heroTimeline.innerHTML = _heroRecent
+        .map(e => `<span class="hero-chip${e.isSentence ? ' sentence' : ''}">${e.text}</span>`)
+        .join('');
+    }
+    function _setHeroIdle(message) {
+      if (!heroCurrent) return;
+      heroCurrent.textContent = message;
+      heroCurrent.classList.add('idle');
+      heroCurrent.classList.remove('sentence', 'flash');
+      if (heroConfFill) heroConfFill.style.width = '0%';
+      if (heroConfText) heroConfText.textContent = '—';
+    }
+    function setHeroVisible(visible) {
+      if (!heroEl) return;
+      heroEl.classList.toggle('hidden', !visible);
+      if (visible && _heroRecent.length === 0) _setHeroIdle('수어 동작을 시작하세요');
+      // prediction-area 는 카메라 위에 떠 있는 오버레이(position:absolute).
+      // Hero 가 표시될 땐 페이드 아웃, 숨겨질 땐 페이드 인 — 카메라 크기에는 영향 없음.
+      const pred = document.getElementById('prediction-area');
+      if (pred) {
+        pred.style.opacity = visible ? '0' : '1';
+        pred.style.pointerEvents = visible ? 'none' : 'auto';
+      }
+    }
+
+    // Hero 가시성은 3가지 상태의 AND:
+    //  - 카메라 ON
+    //  - 사용자가 텍스트 입력을 사용 중이지 않음 (focus 없고 값 비어있음)
+    //  - 텍스트→수어 애니메이션이 재생 중이지 않음
+    // 이 중 하나라도 false 면 Hero 를 숨겨 아바타 동작을 그대로 볼 수 있게 한다.
+    let _cameraOn = true;
+    let _animatingT2S = false;
+    const _chatInputEl = document.getElementById('chat-input');
+    function _isTyping() {
+      return _chatInputEl && (document.activeElement === _chatInputEl
+                              || _chatInputEl.value.trim().length > 0);
+    }
+    function _evalHeroVisibility() {
+      setHeroVisible(_cameraOn && !_isTyping() && !_animatingT2S);
+    }
+    // 입력창 상호작용
+    _chatInputEl?.addEventListener('focus', _evalHeroVisibility);
+    _chatInputEl?.addEventListener('blur',  () => setTimeout(_evalHeroVisibility, 150));
+    _chatInputEl?.addEventListener('input', _evalHeroVisibility);
+    // 텍스트→수어 애니메이션 시작/종료 감지
+    document.getElementById('btn-send')?.addEventListener('click', () => {
+      _animatingT2S = true; _evalHeroVisibility();
+    });
+    _chatInputEl?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') { _animatingT2S = true; _evalHeroVisibility(); }
+    });
+    window.addEventListener('itda:motion:played', () => {
+      _animatingT2S = false; _evalHeroVisibility();
+    });
+    // 안전망: 애니메이션이 너무 길게 끝나지 않을 경우 8초 후 강제 해제
+    window.addEventListener('itda:motion:played', () => clearTimeout(_t2sFallback));
+    let _t2sFallback = null;
+    document.getElementById('btn-send')?.addEventListener('click', () => {
+      clearTimeout(_t2sFallback);
+      _t2sFallback = setTimeout(() => { _animatingT2S = false; _evalHeroVisibility(); }, 8000);
     });
 
+    // 초기: 카메라 ON 으로 자동 init() → Hero 표시
+    _evalHeroVisibility();
+
+    // 로그 패널 토글 제어 — body 직속 fixed 패널을 버튼 아래로 띄움
+    function _positionLogPanel() {
+      // 패널을 스켈레톤 뷰(#avatar-area) 상단·전체 폭에 맞춰 띄운다.
+      // 이력 보기 ↔ 닫기 버튼이 가려지더라도 화면 정렬을 우선.
+      const anchor = document.getElementById('avatar-area')
+                   || document.getElementById('camera-area');
+      if (!logPanel || !anchor) return;
+      const aRect = anchor.getBoundingClientRect();
+      logPanel.style.top   = aRect.top + 'px';
+      logPanel.style.left  = aRect.left + 'px';
+      logPanel.style.width = aRect.width + 'px';
+      logPanel.style.right = 'auto';
+    }
+    function _setLogOpen(open) {
+      const labelSpan = document.querySelector('#btn-toggle-log > span:first-child');
+      if (open) {
+        _refreshHistoryUI();
+        logPanel.style.display = 'block';
+        _positionLogPanel();
+        if (labelSpan) labelSpan.textContent = '✖ 닫기';
+      } else {
+        logPanel.style.display = 'none';
+        if (labelSpan) labelSpan.textContent = '📜 이력 보기';
+      }
+    }
+    document.getElementById('btn-toggle-log')?.addEventListener('click', () => {
+      _setLogOpen(logPanel.style.display !== 'block');
+    });
+    document.getElementById('btn-close-log')?.addEventListener('click', () => _setLogOpen(false));
+    // 창 크기 변화·스크롤에 위치 추적
+    window.addEventListener('resize', () => { if (logPanel.style.display === 'block') _positionLogPanel(); });
+    window.addEventListener('scroll', () => { if (logPanel.style.display === 'block') _positionLogPanel(); }, true);
+
     document.getElementById('btn-clear-log')?.addEventListener('click', () => {
-      if (translationLogList) translationLogList.innerHTML = '';
+      _saveHistory([]);
+      _refreshHistoryUI();
       lastFinalText = "";
     });
+
+    // 헤더 햄버거 메뉴 토글 (음성 / 새창 / 모델 선택 묶음)
+    (() => {
+      const btn = document.getElementById('btn-header-menu');
+      const panel = document.getElementById('header-menu-panel');
+      if (!btn || !panel) return;
+      const setOpen = (open) => {
+        panel.style.display = open ? 'flex' : 'none';
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+      };
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setOpen(panel.style.display === 'none');
+      });
+      // 패널 내부 클릭은 닫지 않음 (select/option 조작 보호)
+      panel.addEventListener('click', (e) => e.stopPropagation());
+      // 바깥 클릭 또는 ESC 시 닫기
+      document.addEventListener('click', () => setOpen(false));
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+    })();
 
     // [NEW] 음성 토글 제어
     window._isVoiceOn = false;
@@ -1021,39 +1202,35 @@
       btn.style.color = window._isVoiceOn ? '#c4b5fd' : 'var(--text-muted)';
     });
 
-    // 백엔드 연결 상태 모니터링
+    // 백엔드 연결 상태 모니터링 — 색 dot + 짧은 라벨
     function _updateBackendStatus(status, detail = {}) {
       const el = document.getElementById('backend-status');
       if (!el) return;
-      if (status === 'connected') {
-        el.textContent = 'Backend: ONLINE';
-        el.style.color = 'var(--accent-green)';
-        el.style.borderColor = 'rgba(0, 230, 160, 0.4)';
-        el.title = "Connected to 127.0.0.1:8000";
-      } else if (status === 'connecting') {
-        el.textContent = 'Backend: CONNECTING...';
-        el.style.color = 'var(--accent-orange)';
-        el.style.borderColor = 'rgba(255, 159, 67, 0.4)';
-      } else if (status === 'error') {
-        el.textContent = 'Backend: ERROR';
-        el.style.color = '#ff4757';
-        el.style.borderColor = 'rgba(255, 71, 87, 0.6)';
-        el.title = detail.message || "Connection error";
-      } else {
-        el.textContent = `Backend: OFFLINE (${detail.code || '?'})`;
-        el.style.color = '#ff4757';
-        el.style.borderColor = 'rgba(255, 71, 87, 0.4)';
-        el.title = detail.reason || "Server is not reachable";
-      }
+      const dotCls = status === 'connected' ? 'ok'
+                   : status === 'connecting' ? 'warn'
+                   : 'err';
+      const label = status === 'connected'  ? 'ONLINE'
+                  : status === 'connecting' ? 'CONNECTING'
+                  : status === 'error'      ? 'ERROR'
+                  : `OFFLINE${detail.code ? ' ('+detail.code+')' : ''}`;
+      el.innerHTML = `<span class="status-dot ${dotCls}"></span>${label}`;
+      el.title = status === 'connected'  ? 'Connected to 127.0.0.1:8000'
+              : status === 'error'      ? (detail.message || 'Connection error')
+              : status === 'connecting' ? 'Connecting…'
+              : (detail.reason || 'Server is not reachable');
     }
 
     window.addEventListener('itda:vision:ws_state', (e) => {
       _updateBackendStatus(e.detail.state, e.detail);
     });
 
-    // FPS HUD
+    // FPS HUD — 컴팩트 포맷
     window.addEventListener('itda:fps:update', (e) => {
-      document.getElementById('fps-display').textContent = `FPS: ${e.detail.fps.toFixed(0)}`;
+      const el = document.getElementById('fps-display');
+      if (!el) return;
+      const fps = Math.round(e.detail.fps);
+      const dotCls = fps >= 24 ? 'ok' : fps >= 12 ? 'warn' : 'err';
+      el.innerHTML = `<span class="status-dot ${dotCls}"></span>${fps} fps`;
     });
 
     function updateEmotionBar(emotion, value) {
@@ -1098,21 +1275,44 @@
       window.open('./avatar_only.html', 'AvatarViewer', 'width=800,height=800,menubar=no,toolbar=no,location=no,status=no');
     });
 
-    // 카메라 ON/OFF 제어
+    // 전·후면 카메라 전환 (모바일용). 전환 후 버튼 라벨도 갱신.
+    document.getElementById('btn-switch-camera')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (!window.ITDAVision5?.switchCamera) return;
+      btn.disabled = true;
+      btn.style.opacity = '0.55';
+      try {
+        const mode = await window.ITDAVision5.switchCamera();
+        btn.textContent = mode === 'user' ? '🔄 전면' : '🔄 후면';
+      } catch (err) {
+        console.warn('[Camera] 전환 실패:', err);
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    });
+
+    // 카메라 ON/OFF 제어 — Hero 카드 표시 상태와 함께 토글
     document.getElementById('btn-toggle-camera')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       if (window.ITDAVision5) {
         const isRunning = window.ITDAVision5.isRunning();
         if (isRunning) {
           window.ITDAVision5.stop();
-          btn.textContent = "카메라: OFF";
+          btn.textContent = "📷 카메라: OFF";
           btn.style.background = "#ff4757";
+          btn.style.color = "#fff";
           btn.style.boxShadow = "0 0 10px rgba(255,71,87,0.3)";
+          _cameraOn = false;
+          _evalHeroVisibility();
         } else {
           await window.ITDAVision5.start();
-          btn.textContent = "카메라: ON";
+          btn.textContent = "📷 카메라: ON";
           btn.style.background = "#00f2fe";
+          btn.style.color = "#000";
           btn.style.boxShadow = "0 0 10px rgba(0,242,254,0.3)";
+          _cameraOn = true;
+          _evalHeroVisibility();
         }
       }
     });
@@ -1160,6 +1360,21 @@
     // 자동 시작
     window.ITDAVision5?.init();
   </script>
+
+  <!-- [NEW] 통역 이력 패널 — body 직속으로 띄워 #top-section 의 overflow:hidden 클리핑을 회피 -->
+  <div id="translation-log-panel" style="position: fixed; top: 0; left: 0; max-height: 70vh; background: var(--bg-card); border: 1px solid var(--accent-cyan); border-radius: 12px; z-index: 2000; padding: 1rem; overflow-y: auto; display: none; box-shadow: 0 18px 50px rgba(0,0,0,0.6); box-sizing: border-box;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+      <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-cyan);">📋 통역 이력 (Sign-to-Text)</span>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <span id="log-summary" style="font-size:0.7rem; color:var(--text-muted);">0개</span>
+        <button id="btn-clear-log" style="background:none; border:1px solid var(--border); color:var(--text-muted); cursor:pointer; font-size:0.7rem; padding:3px 8px; border-radius:4px;">지우기</button>
+        <button id="btn-close-log" title="닫기" style="background:none; border:1px solid var(--border); color:var(--text-muted); cursor:pointer; font-size:0.7rem; padding:3px 8px; border-radius:4px;">✖</button>
+      </div>
+    </div>
+    <div id="translation-log-list" style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem;">
+      <div id="log-empty-hint" style="color:var(--text-muted); font-style:italic; padding:1rem; text-align:center; font-size:0.8rem;">아직 인식된 단어나 문장이 없습니다.</div>
+    </div>
+  </div>
 
 </body>
 </html>
