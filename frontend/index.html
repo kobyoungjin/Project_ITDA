@@ -534,7 +534,6 @@
             <label style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
               인식 모델
               <select id="sel-model" class="hud-item" style="cursor:pointer; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; font-weight: 800; border-radius: 6px; padding: 6px 8px; outline: none; font-size: 0.78rem; box-shadow: 0 0 10px rgba(0, 242, 254, 0.15); width: 100%;">
-                <option value="main" style="background:#0f172a; color:#fff;">🏷️ 기본 모델 (16단어)</option>
                 <option value="dialogue" style="background:#0f172a; color:#fff;">💬 대화 모델 (80단어)</option>
               </select>
             </label>
@@ -1321,12 +1320,34 @@
     const selModel = document.getElementById('sel-model');
     if (selModel) {
       // 1. 초기 모델 상태 백엔드에서 조회 후 반영
-      fetch(`http://${location.hostname || '127.0.0.1'}:8000/api/collect/get-model-type`)
+      //    UI에서 '기본 모델(16단어/main)'을 제거했으므로 백엔드가 'main' 상태면 'dialogue' 로 자동 전환한다.
+      const _apiBase = `http://${location.hostname || '127.0.0.1'}:8000`;
+      fetch(`${_apiBase}/api/collect/get-model-type`)
         .then(res => res.json())
-        .then(data => {
-          if (data.ok && data.model_type) {
-            selModel.value = data.model_type;
-            console.info(`[ITDA Model] 현재 활성 모델 로드 완료: ${data.model_type}`);
+        .then(async (data) => {
+          if (!data.ok || !data.model_type) return;
+          if (data.model_type === 'dialogue') {
+            selModel.value = 'dialogue';
+            console.info(`[ITDA Model] 현재 활성 모델 로드 완료: dialogue`);
+            return;
+          }
+          // 백엔드가 'main' 인 경우 → 'dialogue' 로 자동 승격
+          console.info(`[ITDA Model] 백엔드 모델이 'main' 입니다. 'dialogue' 로 자동 전환합니다.`);
+          try {
+            const r = await fetch(`${_apiBase}/api/collect/select-model`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model_type: 'dialogue' }),
+            });
+            const j = await r.json();
+            if (j.ok) {
+              selModel.value = 'dialogue';
+              new BroadcastChannel('itda_model_channel').postMessage({ type: 'model_changed', model_type: 'dialogue' });
+            } else {
+              console.warn('[ITDA Model] dialogue 자동 전환 실패:', j.message);
+            }
+          } catch (e) {
+            console.warn('[ITDA Model] dialogue 자동 전환 중 오류:', e);
           }
         })
         .catch(err => console.warn('모델 상태 로드 실패:', err));
@@ -1346,7 +1367,7 @@
             const modelChannel = new BroadcastChannel('itda_model_channel');
             modelChannel.postMessage({ type: 'model_changed', model_type: selectedModel });
 
-            alert(`🧠 모델 전환 완료!\n현재 활성화된 모델: ${selectedModel === 'main' ? '기본 모델 (16단어)' : '대화 모델 (80단어)'}`);
+            alert(`🧠 모델 전환 완료!\n현재 활성화된 모델: 대화 모델 (80단어)`);
           } else {
             alert(`모델 전환 실패: ${data.message}`);
           }

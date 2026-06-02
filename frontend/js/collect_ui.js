@@ -220,6 +220,13 @@ async function trainModel() {
         });
         const data = await res.json();
         if (data.ok) {
+            // 학습 단어 목록이 갱신되었음을 다른 창(avatar_only.html 등)에 알림.
+            // 수신 측은 '🆕 새로 추가된 단어' 섹션을 자동 업데이트한다.
+            try {
+                const ch = new BroadcastChannel('itda_model_channel');
+                ch.postMessage({ type: 'words_updated', label_count: data.label_count });
+                ch.close();
+            } catch (e) { /* 채널 미지원 환경 — 무시 */ }
             alert(`훈련 완료!\n정확도: ${data.accuracy}%\n단어 수: ${data.label_count}`);
         } else {
             alert(`훈련 실패: ${data.message}`);
