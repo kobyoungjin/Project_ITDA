@@ -235,6 +235,13 @@ def train_knn_model(n_neighbors: int = 5):
     # (이전 버그: head(100) 으로 자른 뒤 CSV 를 덮어써서, 갓 수집한 데이터가
     #  오래된 데이터에 밀려 영구 삭제되던 문제를 수정)
     df = df_full.drop_duplicates()  # 완전 중복 행만 제거
+    # source == 'PENDING' 행은 "수집 예정" placeholder 이므로 학습에서 제외.
+    # (list-motions 는 CSV 전체를 보므로 학습된 단어 목록에는 노출되지만, 모델은 추론하지 않음)
+    if 'source' in df.columns:
+        pending_n = int((df['source'] == 'PENDING').sum())
+        if pending_n:
+            df = df[df['source'] != 'PENDING']
+            print(f"[Collect] PENDING placeholder {pending_n}행 제외")
     # 클래스 불균형 완화: 단어당 최대 MAX_PER_LABEL 개. 초과 시 '무작위' 추출.
     # (head 는 먼저 들어온 데이터만 남겨 새로 찍은 take 를 버리므로 sample 사용)
     MAX_PER_LABEL = 400
