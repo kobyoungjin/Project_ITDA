@@ -39,7 +39,32 @@
     .control-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-cyan); transform: translateY(-1px); }
     .control-btn.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
 
-    main { flex: 1; position: relative; display: flex; overflow: hidden; }
+    main { flex: 1; position: relative; display: flex; overflow: hidden; min-height: 0; min-width: 0; }
+
+    /* 반응형 — 좁은 창에서도 깨지지 않게 */
+    @media (max-width: 1100px) {
+      #sidebar      { width: 240px; min-width: 240px; }
+      #sidebar-right { width: 260px; min-width: 260px; }
+      #sidebar-right-toggle { right: 260px; }
+      #sidebar-right-toggle.collapsed-state { right: 0; }
+    }
+    @media (max-width: 800px) {
+      #sidebar      { width: 200px; min-width: 200px; }
+      #sidebar-right { width: 240px; min-width: 240px; }
+      #sidebar-right-toggle { right: 240px; }
+      header { flex-wrap: wrap; gap: 0.5rem; padding: 0.6rem 0.9rem; }
+      header > div:last-child { gap: 0.4rem !important; flex-wrap: wrap; }
+      .control-btn { padding: 6px 10px; font-size: 0.78rem; }
+    }
+    @media (max-width: 600px) {
+      /* 매우 좁은 폭 — 헤더 버튼 컴팩트화 */
+      header > div:first-child { font-size: 1.05rem !important; }
+      .control-btn { padding: 5px 8px; font-size: 0.72rem; }
+      .control-btn span { font-size: 0.85em; }
+      #sidebar      { width: 180px; min-width: 180px; }
+      #sidebar-right { width: 220px; min-width: 220px; }
+      #sidebar-right-toggle { right: 220px; }
+    }
     
     /* 사이드바 개선 (스크린샷 세로 정렬 문제 해결) */
     #sidebar {
@@ -300,7 +325,7 @@
       box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
     }
 
-    #three-container { flex: 1; position: relative; background: radial-gradient(circle at center, #0f172a 0%, #050810 100%); }
+    #three-container { flex: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(circle at center, #0f172a 0%, #050810 100%); }
     #three-canvas { width: 100%; height: 100%; display: block; }
 
     /* ── 인식 결과 표시 (아바타는 동작하지 않고 텍스트로만 알림) ── */
@@ -380,13 +405,72 @@
       display: flex;
       flex-direction: column;
       overflow-y: auto;
+      overflow-x: hidden;
       backdrop-filter: blur(20px);
       z-index: 10;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-left-width 0.3s ease;
+    }
+    /* 접힌 상태 — 폭 0으로 줄임. 토글 버튼은 항상 보이게 유지 */
+    #sidebar-right.collapsed {
+      width: 0;
+      min-width: 0;
+      border-left-width: 0;
+      pointer-events: none; /* 안쪽 입력 받지 않게 */
+    }
+    #sidebar-right.collapsed > * {
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    #sidebar-right > * {
+      opacity: 1;
+      transition: opacity 0.2s ease 0.1s;
     }
     #sidebar-right::-webkit-scrollbar { width: 6px; }
     #sidebar-right::-webkit-scrollbar-track { background: transparent; }
     #sidebar-right::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     #sidebar-right::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+    /* 접기/펴기 토글 버튼 — 오른쪽 가장자리에 고정 */
+    #sidebar-right-toggle {
+      position: fixed;
+      top: 50%;
+      right: 300px; /* 사이드바 폭과 동일 */
+      transform: translateY(-50%);
+      width: 24px;
+      height: 64px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+      color: var(--accent-cyan);
+      cursor: pointer;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  background 0.15s ease, color 0.15s ease;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.25);
+    }
+    #sidebar-right-toggle:hover {
+      background: rgba(0, 242, 254, 0.15);
+      color: #fff;
+    }
+    #sidebar-right-toggle.collapsed-state {
+      right: 0;
+    }
+    #sidebar-right-toggle .arrow {
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+    #sidebar-right-toggle.collapsed-state .arrow {
+      transform: rotate(180deg);
+    }
     
     /* Custom Scrollbar */
     #sidebar::-webkit-scrollbar { width: 6px; }
@@ -564,6 +648,11 @@
         <video id="ref-video-player" controls playsinline></video>
       </div>
     </div>
+    <!-- 우측 사이드바 접기/펴기 토글 — 사이드바 왼쪽 가장자리에 고정 -->
+    <button id="sidebar-right-toggle" type="button" title="수집 패널 접기/펴기" aria-label="수집 패널 접기/펴기" aria-controls="sidebar-right" aria-expanded="true">
+      <span class="arrow">›</span>
+    </button>
+
     <div id="sidebar-right">
       <!-- 카메라 미리보기 (vision.js 가 vision-video/canvas/status 를 사용) -->
       <div id="camera-mini">
@@ -1090,6 +1179,32 @@
     window.addEventListener('itda:avatar:ready', () => {
       loadWordList();
     });
+
+    // ── 우측 사이드바(수집 패널) 접기/펴기 토글 ──────────────
+    // 상태는 localStorage 에 영속화. 토글 후 Three.js 렌더 크기 갱신을 위해 resize 이벤트 디스패치.
+    (function setupRightSidebarToggle() {
+      const sidebar = document.getElementById('sidebar-right');
+      const btn = document.getElementById('sidebar-right-toggle');
+      if (!sidebar || !btn) return;
+      const KEY = 'itda:avatar:right_sidebar_collapsed';
+      function _apply(collapsed) {
+        sidebar.classList.toggle('collapsed', collapsed);
+        btn.classList.toggle('collapsed-state', collapsed);
+        btn.setAttribute('aria-expanded', String(!collapsed));
+        // 전환 종료 후 캔버스 리사이즈 (avatar.js 가 window resize 를 구독함)
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
+      }
+      // 초기 상태 복원
+      let initial = false;
+      try { initial = localStorage.getItem(KEY) === '1'; } catch (e) {}
+      _apply(initial);
+
+      btn.addEventListener('click', () => {
+        const next = !sidebar.classList.contains('collapsed');
+        try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+        _apply(next);
+      });
+    })();
 
     // 부트스트랩 — 아바타 준비 이벤트는 동기 dispatch 라 listener 가 놓칠 수 있으므로
     // 단어 목록 로드와 카메라 시작을 직접 호출한다. (둘 다 1회만 실행되도록 가드)
