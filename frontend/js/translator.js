@@ -66,8 +66,12 @@ chatInput.addEventListener('keypress', (e) => {
 window.translationModeActive = false;
 let translationTimeout = null;
 
+// 마지막 입력 텍스트 저장 (다시 실행용)
+let _lastSentText = '';
+
 // 백엔드 통신 및 번역
 async function sendMessage(text) {
+  _lastSentText = text;
   chatInput.value = '';
   emotionOutput.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 텍스트 분석 및 모션 생성 중... ("${text}")</span>`;
 
@@ -1149,6 +1153,10 @@ window.ITDATranslator = {
     if (!keyword) return;
     animateAvatar([], keyword);
   },
+  replayLast() {
+    if (_lastSentText) sendMessage(_lastSentText);
+  },
+  getLastText() { return _lastSentText; },
   getVersion() { return window.ITDAMotion?.version || 'v2'; },
   getV2Words() { return Object.keys(MOTION_PROFILES_V2); },
 };
