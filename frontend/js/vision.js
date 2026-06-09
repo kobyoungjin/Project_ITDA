@@ -40,7 +40,13 @@ const CONFIG = {
   HAND_DETECTION_CONFIDENCE: 0.25,  // 더 약한 손/부분 노출도 탐지
   HAND_PRESENCE_CONFIDENCE: 0.25,
   HAND_TRACKING_CONFIDENCE: 0.25,
-  MAX_HANDS: 2,
+  // 후보는 넉넉히 잡고(여러 사람 손 포함), 최종 2개만 사용 — 어깨·팔로 이어지는 손만 통과
+  MAX_HANDS_DETECT: 4,
+  MAX_HANDS_OUTPUT: 2,
+  // 포즈 손목과 손 landmark[0] 사이 정규화 거리 임계 — 초과 시 다른 사람의 손으로 판단
+  POSE_HAND_LINK_THRESHOLD: 0.22,
+  // 손 가림(occlusion) 대응 — 마지막 유효 손 모양을 포즈 손목 이동으로 보정해 예측 (ms)
+  HAND_PREDICT_MAX_MS: 500,
   MIN_CAMERA_WIDTH: 1280,
   MIN_CAMERA_HEIGHT: 720,
 };
@@ -87,14 +93,14 @@ async function init() {
       minTrackingConfidence: CONFIG.FACE_TRACKING_CONFIDENCE,
     });
 
-    // ② HandLandmarker
+    // ② HandLandmarker — 후보를 4개까지 검출하고 포즈와 매칭해 2개만 통과시킴
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
         delegate: 'GPU', // CPU -> GPU 가속
       },
       runningMode: 'VIDEO',
-      numHands: CONFIG.MAX_HANDS,
+      numHands: CONFIG.MAX_HANDS_DETECT,
       minHandDetectionConfidence: CONFIG.HAND_DETECTION_CONFIDENCE,
       minHandPresenceConfidence: CONFIG.HAND_PRESENCE_CONFIDENCE,
       minTrackingConfidence: CONFIG.HAND_TRACKING_CONFIDENCE,
@@ -399,6 +405,151 @@ function sendFrameWS(hands) {
   }));
 }
 
+// ── 손 후보 → 포즈 매칭·근접 우선 선별 ────────────────────────
+// 여러 사람이 있을 때 손이 사람 간 점프하는 문제 해결:
+//   1) 포즈 손목(LM 15/16)과 가까운 손 = "어깨·팔에서 이어진" 손 → 우선
+//   2) 임계 거리 초과 = 다른 사람의 손 → 후순위
+//   3) 동등하면 손 크기(palm size) 큰 쪽 = 카메라에 더 가까운 손 우선
+//   4) 좌·우 손 다양성 확보 (한쪽 손만 두 개 잡히는 것보다 좌·우 한 개씩 선호)
+function _dist2D(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+function _pickPrimaryHands(handResult, poseLandmarks) {
+  if (!handResult?.landmarks || handResult.landmarks.length === 0) {
+    return { landmarks: [], handedness: [] };
+  }
+  const lw = poseLandmarks?.[15] ?? null;
+  const rw = poseLandmarks?.[16] ?? null;
+  const hasPoseWrists = lw && rw;
+
+  const candidates = handResult.landmarks.map((lm, i) => {
+    const handWrist = lm[0];
+    const palmSize = _dist2D(lm[0], lm[9]); // wrist ↔ middle MCP, 클수록 카메라 근접
+    let poseDist = Infinity;
+    if (hasPoseWrists) {
+      poseDist = Math.min(_dist2D(handWrist, lw), _dist2D(handWrist, rw));
+    }
+    return {
+      landmarks: lm,
+      handedness: handResult.handedness[i]?.[0]?.displayName ?? 'Unknown',
+      handednessScore: handResult.handedness[i]?.[0]?.score ?? 0,
+      palmSize,
+      poseDist,
+    };
+  });
+
+  // 정렬 점수: 포즈와 매칭된 손이 항상 우선. 포즈 임계 초과(다른 사람)는 큰 페널티.
+  const T = CONFIG.POSE_HAND_LINK_THRESHOLD;
+  candidates.forEach(c => {
+    if (!hasPoseWrists) {
+      // 포즈가 없으면 손 크기만으로 판단 (가까운 손이 우선)
+      c.score = -c.palmSize;
+    } else if (c.poseDist <= T) {
+      // 포즈와 매칭된 손 — 거리가 가까울수록(=정확히 손목 위) 좋음
+      c.score = c.poseDist;
+    } else {
+      // 임계 초과 — 다른 사람 손으로 보고 페널티 부과
+      c.score = c.poseDist + 1.0;
+    }
+  });
+  candidates.sort((a, b) => a.score - b.score);
+
+  // 좌·우 다양성: 가장 좋은 Left 1개 + Right 1개 우선, 부족하면 다음 후보로 채움
+  const N = CONFIG.MAX_HANDS_OUTPUT;
+  const picked = [];
+  const handednessSeen = new Set();
+  for (const c of candidates) {
+    if (picked.length >= N) break;
+    if (!handednessSeen.has(c.handedness)) {
+      picked.push(c);
+      handednessSeen.add(c.handedness);
+    }
+  }
+  // 슬롯 남으면 점수 순으로 나머지 채움 (같은 손잡이 중복 허용)
+  for (const c of candidates) {
+    if (picked.length >= N) break;
+    if (!picked.includes(c)) picked.push(c);
+  }
+
+  // 포즈가 있으면 손잡이(handedness)를 포즈 손목 근접도로 재할당 — MediaPipe 가 가림 상황에서 잘못 라벨링하는 문제 보정
+  if (hasPoseWrists) {
+    picked.forEach(c => {
+      const dL = _dist2D(c.landmarks[0], lw);
+      const dR = _dist2D(c.landmarks[0], rw);
+      c.handedness = dL < dR ? 'Left' : 'Right';
+    });
+  }
+
+  return {
+    landmarks: picked.map(c => c.landmarks),
+    handedness: picked.map(c => [{ displayName: c.handedness, score: c.handednessScore }]),
+  };
+}
+
+// ── 손 가림(occlusion) 예측 추적 ──────────────────────────────
+// 사이드(Left/Right)별로 마지막 유효 landmark + 그 시점의 포즈 손목 위치를 기억.
+// 다음 프레임에 손이 검출 안 되면 → 포즈 손목 이동량(Δ)으로 마지막 landmark 를 평행이동해 예측.
+// HAND_PREDICT_MAX_MS 이내에서만 유지, 그 후엔 자연스럽게 폐기.
+const handMemory = { Left: null, Right: null }; // {landmarks, ts, poseWrist:{x,y,z}}
+function _predictMissingHands(detected, poseLandmarks, now) {
+  const sides = ['Left', 'Right'];
+  const wrists = { Left: poseLandmarks?.[15] ?? null, Right: poseLandmarks?.[16] ?? null };
+
+  // 검출된 손은 메모리 업데이트 — 포즈 손목이 있을 때만 (없으면 예측 기준이 없음)
+  const detectedSides = new Set();
+  for (let i = 0; i < detected.landmarks.length; i++) {
+    const side = detected.handedness[i]?.[0]?.displayName;
+    if (!sides.includes(side)) continue;
+    detectedSides.add(side);
+    const wrist = wrists[side];
+    if (!wrist) continue;
+    handMemory[side] = {
+      landmarks: detected.landmarks[i].map(p => ({ x: p.x, y: p.y, z: p.z, visibility: p.visibility, presence: p.presence })),
+      ts: now,
+      poseWrist: { x: wrist.x, y: wrist.y, z: wrist.z ?? 0 },
+    };
+  }
+
+  // 검출 안 된 사이드는 메모리 + 현재 포즈 손목으로 예측 시도
+  const augmentedLandmarks = [...detected.landmarks];
+  const augmentedHandedness = [...detected.handedness];
+  const predictedFlags = detected.landmarks.map(() => false);
+
+  for (const side of sides) {
+    if (detectedSides.has(side)) continue;
+    const mem = handMemory[side];
+    if (!mem) continue;
+    if (now - mem.ts > CONFIG.HAND_PREDICT_MAX_MS) {
+      handMemory[side] = null; // 만료 → 메모리 정리
+      continue;
+    }
+    const wrist = wrists[side];
+    if (!wrist) continue; // 포즈 손목이 없으면 평행이동 기준이 없음
+
+    const dx = wrist.x - mem.poseWrist.x;
+    const dy = wrist.y - mem.poseWrist.y;
+    const dz = (wrist.z ?? 0) - mem.poseWrist.z;
+    const shifted = mem.landmarks.map(p => ({
+      x: p.x + dx, y: p.y + dy, z: p.z + dz,
+      visibility: p.visibility, presence: p.presence,
+    }));
+    // 시간 경과에 따른 신뢰도 감쇠 (1.0 → 0)
+    const ageRatio = (now - mem.ts) / CONFIG.HAND_PREDICT_MAX_MS;
+    const score = Math.max(0, 1 - ageRatio) * 0.5; // 검출 손보다 명확히 낮게
+    augmentedLandmarks.push(shifted);
+    augmentedHandedness.push([{ displayName: side, score }]);
+    predictedFlags.push(true);
+  }
+
+  return {
+    landmarks: augmentedLandmarks,
+    handedness: augmentedHandedness,
+    predicted: predictedFlags,
+  };
+}
+
 // ── 메인 처리 루프 ─────────────────────────────────────────────
 async function processFrame(timestamp) {
   if (!isRunning) return;
@@ -428,10 +579,14 @@ async function processFrame(timestamp) {
     }));
   }
 
-  // ② 손 감지 (HandLandmarker)
-  const handResult = handLandmarker.detectForVideo(videoEl, timestamp);
+  // ② 손 감지 (HandLandmarker) — 후보 최대 4개
+  const rawHandResult = handLandmarker.detectForVideo(videoEl, timestamp);
+  // 포즈의 어깨·팔과 이어지고 카메라에 가까운 손 2개만 통과 — 사람 간 점프 방지
+  const filteredHandResult = _pickPrimaryHands(rawHandResult, latestPoseLandmarks);
+  // 가림(overlap)으로 한쪽 손이 빠지면 포즈 손목 기준으로 마지막 모양을 예측 — 0.5초 이내
+  const handResult = _predictMissingHands(filteredHandResult, latestPoseLandmarks, timestamp);
 
-  // ── 시각화 (Drawing) ──
+  // ── 시각화 (Drawing) ── 필터링·예측된 손을 캔버스에 표시
   drawResults(faceResult, handResult, poseResult);
 
   if (handResult.landmarks && handResult.landmarks.length > 0) {
@@ -479,28 +634,32 @@ function drawResults(faceResult, handResult, poseResult) {
     }
   }
 
-  // 3. 손 랜드마크 그리기
+  // 3. 손 랜드마크 그리기 — 예측된 손은 시안색 반투명으로 구분 표시
   if (handResult.landmarks) {
-    for (const landmarks of handResult.landmarks) {
-      // 외곽선 (글로우 효과를 위한 어두운 배경)
+    const predictedFlags = handResult.predicted || [];
+    handResult.landmarks.forEach((landmarks, i) => {
+      const isPredicted = predictedFlags[i] === true;
+      const connColor = isPredicted ? "rgba(0, 242, 254, 0.55)" : "#FF00FF";
+      const pointColor = isPredicted ? "rgba(0, 242, 254, 0.75)" : "#FF00FF";
+      // 외곽선 (글로우 효과)
       drawingUtils.drawConnectors(landmarks, HAND_CONNECTIONS, {
-        color: "rgba(0, 0, 0, 0.5)",
-        lineWidth: 5
+        color: isPredicted ? "rgba(0, 0, 0, 0.25)" : "rgba(0, 0, 0, 0.5)",
+        lineWidth: isPredicted ? 3 : 5,
       });
-      // 실제 관절 선 (네온 느낌의 마젠타/핑크)
+      // 실제/예측 관절 선
       drawingUtils.drawConnectors(landmarks, HAND_CONNECTIONS, {
-        color: "#FF00FF",
-        lineWidth: 2
+        color: connColor,
+        lineWidth: isPredicted ? 1.5 : 2,
       });
       // 관절 포인트
       drawingUtils.drawLandmarks(landmarks, {
-        color: "#FF00FF",
+        color: pointColor,
         lineWidth: 1,
         radius: (data) => {
           return data.from?.z ? DrawingUtils.lerp(data.from.z, -0.15, 0.1, 5, 1) : 3;
         }
       });
-    }
+    });
   }
   // 4. 포즈 관절 점 (어깨=빨강, 팔꿈치=초록, 손목=파랑)
   if (poseResult?.landmarks?.[0]) {
