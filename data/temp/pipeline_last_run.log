@@ -1,0 +1,14 @@
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+=== [Auto-Pipeline] '테스트감사' 영상 가공 및 적재 시작 ===
+  비디오 경로: C:\Users\ComHolic\Documents\GitHub\Project_ITDA\data\temp\uploaded_테스트감사.mp4
+Step 1. 관절 추출 중 (MediaPipe)...
+  추출 완료: 238 프레임
+Step 2. 리타겟팅 보정 적용 중...
+  리타겟팅 완료: algo=v27.4-spine, bones=41
+Step 3. Supabase 데이터베이스 적재 중...
+  Lemma ID: 1126
+  Motion 적재 완료: motion_id = 1124
+Step 4. 최우선 모션(Canonical) 승급 처리 중...
+  Canonical 지정 완료!
+
+SUCCESS: 테스트감사 모션 가공 및 적재 완료! [motion_id=1124]

@@ -45,7 +45,7 @@ def check_api_key():
         downloader = AIHubDownloader()
         files = downloader.list_files()
         if files:
-            print("\n✅ API Key 정상 — 데이터셋 파일 목록 조회 성공")
+            print("\n✅ API Key 정상 - 데이터셋 파일 목록 조회 성공")
             print(f"   다운로드 가능한 파일: {len(files)}개")
         else:
             print("\n⚠️  파일 목록이 비어 있습니다.")
@@ -63,7 +63,7 @@ def run_labels_only(limit: int | None = None):
     원천영상(MP4)은 받지 않으므로 빠르게 처리됩니다.
     """
     print("=" * 60)
-    print("[ITDA] 파이프라인 시작 — 라벨 전용 모드")
+    print("[ITDA] 파이프라인 시작 - 라벨 전용 모드")
     print("=" * 60)
     t0 = time.perf_counter()
 
@@ -100,7 +100,7 @@ def run_full(limit: int | None = None):
     AI Hub 라벨에 keypoints 가 없는 경우 사용합니다.
     """
     print("=" * 60)
-    print("[ITDA] 파이프라인 시작 — 영상 + MediaPipe 추출 모드")
+    print("[ITDA] 파이프라인 시작 - 영상 + MediaPipe 추출 모드")
     print("⚠️  원천영상 다운로드는 수십 GB 일 수 있습니다.")
     print("=" * 60)
 

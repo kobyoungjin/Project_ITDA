@@ -71,19 +71,89 @@ async function sendMessage(text) {
   chatInput.value = '';
   emotionOutput.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 텍스트 분석 및 모션 생성 중... ("${text}")</span>`;
 
-  // [V3 Priority] 사용자 입력 자체가 V3 JSON 에 있으면 RAG 거치지 않고 바로 재생
-  // RAG fuzzy match 로 인해 다른 keyword 가 반환되어 V3 를 놓치는 문제 해결
+  // [1순위] 백엔드 토크나이저로 문장 분절 → 단어 배열 → playSequence 로 순차 재생.
+  //         단어 사전 = 로컬 KSL 인덱스 ∪ Supabase aliases ∪ SYNONYMS (longest-match greedy).
+  //         단일 단어든 다중 단어든 동일 경로로 처리해 일관성 확보.
   if (window.ITDAMotionV3) {
-    const direct = await window.ITDAMotionV3.load(text);
-    if (direct && direct.keyframes?.length) {
-      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${text}</span><br/><span style="font-size:0.75rem; color:var(--text-muted)">실제 KSL 모션 데이터 재생</span>`;
-      animateAvatar([], text);
-      return;   // RAG 경로 건너뜀
+    let tokenResult = null;
+    try {
+      const resTok = await fetch('/api/sign-language/tokenize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (resTok.ok) tokenResult = await resTok.json();
+    } catch (e) {
+      console.warn('[Tokenize] 분절 호출 실패 — 단일 경로 폴백:', e);
+    }
+
+    const playable = tokenResult?.playable_words || [];
+    if (playable.length > 0) {
+      // 각 단어의 source 표시 (Supabase / Local / Synonym)
+      const tokensMeta = (tokenResult.tokens || []).filter(t => t.source !== 'unknown');
+      const sourceBadges = tokensMeta.map(t => {
+        const color = t.source === 'supabase' ? '#7c3aed' : '#00f2fe';
+        const icon = t.source === 'supabase' ? '🔗' : '🏠';
+        return `<span style="color:${color};font-weight:700">${icon} ${t.word}</span>`;
+      }).join(' → ');
+      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.05rem;">✨ ${sourceBadges}</span><br/><span style="font-size:0.75rem; color:var(--text-muted)">${playable.length}개 단어 순차 재생</span>`;
+
+      // 단어별 모션 prefetch.
+      // - source=local: canonical(예: '고맙습니다' → '감사') 로 loadMotion → 로컬 JSON 우선 (손가락 + parent_chain 포함)
+      // - source=supabase: canonical 로 Supabase /motion 호출하여 inline motion 주입
+      // canonical 이 비어있는 케이스(직접 매칭) 는 t.word 사용.
+      // [일괄 로드] 모든 단어의 모션 + 영상 Blob을 병렬로 한 번에 준비
+      emotionOutput.innerHTML = `<span style="color:var(--accent-cyan);">📡 ${playable.length}개 수어 영상 준비 중...</span>`;
+      const items = await Promise.all(tokensMeta.map(async (t) => {
+        const lookupKey = t.word;
+        try {
+          const r = await fetch(`/api/sign-language/supabase/motion/${encodeURIComponent(lookupKey)}`);
+          const j = await r.json();
+          if (j.status === 'success' && j.motion_data) {
+            const md = j.motion_data;
+            // 영상 우선: video_url이 있으면 keyframes를 비워서 영상 경로로 진입
+            if (md.video_url) {
+              md.keyframes = [];
+              // Preloader에 캐시된 Blob이 있으면 즉시 사용
+              const cached = window.ITDAVideoPreloader?.getBlobUrl(lookupKey);
+              if (cached) {
+                md._blobUrl = cached;
+              } else {
+                // 폴백: 직접 다운로드
+                try {
+                  const blobResp = await fetch(md.video_url);
+                  if (blobResp.ok) {
+                    const blob = await blobResp.blob();
+                    md._blobUrl = URL.createObjectURL(blob);
+                  }
+                } catch (_) {}
+              }
+            }
+            return { word: lookupKey, motion: md };
+          }
+        } catch (e) { console.warn(`[Prefetch] ${lookupKey} 실패:`, e.message); }
+        return { word: lookupKey };
+      }));
+
+      // [수정] 모션과 영상을 강제로 분리하던 로직을 삭제했습니다.
+      // 이제 새로 구축한 큐(Queue) 시스템이 단어 순서 그대로(영상 -> 아바타 -> 영상 등) 
+      // 알맞게 섞어서 끊김 없이 순차 재생해 줍니다.
+      await window.ITDAMotionV3.playSequence(items, {
+        gapMs: 0,  // Blob preload + 크로스페이드로 gap 불필요
+        onWord: (w, i, total) => {
+          const before = playable.slice(0, i).map(x => `<span style="opacity:0.4">${x}</span>`).join(' \u2192 ');
+          const cur = `<strong style="color:var(--accent-cyan)">${w}</strong>`;
+          const after = playable.slice(i + 1).map(x => `<span style="opacity:0.4">${x}</span>`).join(' \u2192 ');
+          const parts = [before, cur, after].filter(Boolean).join(' \u2192 ');
+          emotionOutput.innerHTML = `<span style="font-size:1.05rem">${parts}</span><br/><span style="font-size:0.75rem;color:var(--text-muted)">${i + 1} / ${total}</span>`;
+        }
+      });
+      return;
     }
   }
 
   try {
-    const res = await fetch('http://localhost:8000/api/sign-language/search', {
+    const res = await fetch('/api/sign-language/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: text, context: "" })
@@ -101,7 +171,7 @@ async function sendMessage(text) {
 
       // [참고 영상 PIP 제어]
       const refPip = document.getElementById('ref-pip');
-      const refVid = document.getElementById('ref-video');
+      const refVid = document.getElementById('ref-video-0');
       if (data.video_url && data.video_url.startsWith('http')) {
         refPip.style.display = 'block';
         refVid.src = data.video_url;
@@ -112,20 +182,33 @@ async function sendMessage(text) {
 
       // 아바타 애니메이션 트리거 (감정 + 키워드 기반 모션)
       // RAG 엔진에서 완전히 동떨어진 단어로 판별하여 감정 배열이 비어있다면 동작 생략
+      // [Tier1] 사용자 원문(text)도 함께 전달 → V3 검색은 원문 → keyword 순서로 시도하여
+      //         RAG 가 "감사" → "고맙습니다" 로 바꿔도 로컬 V3 의 감사.json 을 잡을 수 있음.
       if (data.emotions && data.emotions.length > 0) {
-        animateAvatar(data.emotions, data.keyword);
+        animateAvatar(data.emotions, data.keyword, text);
       } else if (data.keyword !== text) {
-        animateAvatar(data.emotions, data.keyword);
+        animateAvatar(data.emotions, data.keyword, text);
       }
     }
   } catch (err) {
     console.error("[Search Error]", err);
-    // [단독 모드 변환] 
-    let fallbackKeyword = getAllKeywords().find(k => text.includes(k) || (k === '고맙습니다' && text.includes('감사')));
-    
+    // [단독 모드 변환] 백엔드 다운/오류 시 V1·V2 키워드와 사용자 입력의 부분 일치를 시도.
+    // (예: "감사합니다" → "고맙습니다" 프로필 재생, "고맙다" → "고맙습니다")
+    const SYNONYMS = { '감사': '고맙습니다', '고맙': '고맙습니다', '미안': '미안합니다', '죄송': '미안합니다', '사랑': '사랑합니다' };
+    let fallbackKeyword = getAllKeywords().find(k => text.includes(k));
+    if (!fallbackKeyword) {
+      for (const [kw, target] of Object.entries(SYNONYMS)) {
+        if (text.includes(kw)) { fallbackKeyword = target; break; }
+      }
+    }
+
     if (fallbackKeyword) {
-      emotionOutput.innerHTML = `<span style="color:#00F2FE; font-weight:800;">[로컬 매칭] : ${fallbackKeyword}</span>`;
-      animateAvatar(['행복'], fallbackKeyword);
+      if (text.includes('고맙') || text.includes('감사')) {
+        emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ 고맙습니다</span><br/><span style="font-size:0.8rem; color:var(--text-muted)">감사한 마음을 전합니다.</span> <span class="t-emotion-badge" style="background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">행복</span>`;
+      } else {
+        emotionOutput.innerHTML = `<span style="color:#00F2FE; font-weight:800;">[로컬 매칭] : ${fallbackKeyword}</span>`;
+      }
+      animateAvatar(['행복'], fallbackKeyword, text);
     } else {
       emotionOutput.innerHTML = `<span style="color:#ffb8b8">"${text}"에 해당하는 수어 동작을 찾지 못했어요. 다른 단어나 짧은 문장으로 입력해 보세요.</span>`;
       // 모르는 단어일 경우 어색한 임의 동작을 하지 않고 대기 상태 유지
@@ -861,35 +944,60 @@ const EMOTION_MORPH_MAP = {
 
 /**
  * 3D 수어 애니메이션 엔진 (Quaternion Slerp 기반)
+ * @param {string[]} emotions    감정 라벨 (얼굴 morph 선처리)
+ * @param {string}   keyword     RAG 가 매핑한 정식 KSL 키워드
+ * @param {string}  [originalText] 사용자가 실제로 입력한 원문 (V3 lookup 우선순위 1)
  */
-async function animateAvatar(emotions, keyword) {
+async function animateAvatar(emotions, keyword, originalText) {
   const avatar = window.ITDAAvatar5;
   if (!avatar) return;
 
   // [Debug] Idle 애니메이션이 팔 본을 덮어쓰는 것을 방지하기 위해 번역 재생 직전 정지
   avatar.stopIdle?.();
 
-  // [Option A / V3] MediaPipe 로 추출된 keyframe JSON 이 있으면 우선 재생
-  // 감정 morph 는 V2 EMOTION_MORPH_MAP 을 그대로 적용 (선처리)
+  // [Option A / V3] MediaPipe/OpenPose 로 추출된 keyframe JSON 이 있으면 우선 재생.
+  //   조회 순서: 사용자 원문 → RAG 키워드. RAG 가 "감사" → "고맙습니다" 로 바꿔치기 해도
+  //   로컬 V3 의 감사.json (OpenPose-AIHub 360fps 데이터) 을 먼저 잡도록 함.
   if (window.ITDAMotionV3 && window.ITDAMotion?.version !== 'v1') {
-    try {
-      const motion = await window.ITDAMotionV3.load(keyword);
-      if (motion && motion.keyframes?.length) {
-        // 감정 선처리 (V2 와 동일 방식)
-        if (emotions?.length) {
-          for (const emName of emotions) {
-            const effect = EMOTION_MORPH_MAP[emName];
-            if (effect) for (const [m, v] of Object.entries(effect)) {
-              if (typeof v === 'number') avatar.setMorphTarget(m, v);
+    const candidates = [];
+    if (originalText && originalText !== keyword) candidates.push(originalText);
+    if (keyword) candidates.push(keyword);
+
+    for (const cand of candidates) {
+      try {
+        const motion = await window.ITDAMotionV3.load(cand);
+        if (motion && motion.keyframes?.length) {
+          // 감정 선처리 (V2 와 동일 방식)
+          if (emotions?.length) {
+            for (const emName of emotions) {
+              const effect = EMOTION_MORPH_MAP[emName];
+              if (effect) for (const [m, v] of Object.entries(effect)) {
+                if (typeof v === 'number') avatar.setMorphTarget(m, v);
+              }
             }
           }
+          window.translationModeActive = true;
+          console.info(`[Motion] V3 재생: "${cand}" (요청 keyword="${keyword}", 원문="${originalText ?? keyword}")`);
+          await window.ITDAMotionV3.play(cand);
+          return;  // V3 재생 완료 — V2 경로 건너뜀
         }
-        window.translationModeActive = true;
-        await window.ITDAMotionV3.play(keyword);
-        return;  // V3 재생 완료 — V2 경로 건너뜀
+      } catch (e) {
+        console.warn(`[Motion] V3 로드 실패 (${cand}), 다음 후보 시도:`, e.message);
       }
-    } catch (e) {
-      console.warn('[Motion] V3 로드 실패, V2 폴백:', e.message);
+    }
+
+    // [2026-05-31] 모션 없는 단어 → V3 엔진의 play() 사용 (영상 자동 감지)
+    for (const cand of candidates) {
+      try {
+        if (window.ITDAMotionV3) {
+          const motion = await window.ITDAMotionV3.load(cand);
+          if (motion && motion.video_url) {
+            console.info(`[Video] V3 영상 재생: "${cand}"`);
+            await window.ITDAMotionV3.play(cand);
+            return;
+          }
+        }
+      } catch (_) {}
     }
   }
 
@@ -1115,3 +1223,71 @@ window.ITDADebug = {
 };
 
 console.info('[Debug] ITDADebug 준비됨. 콘솔에서 ITDADebug.listBones("arm") 또는 ITDADebug.rotate("RightArm","z",-0.5) 시도.');
+
+// ══════════════════════════════════════════════════════════════
+// [Supabase] External DB Motion Simulation
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Supabase DB에서 특정 단어의 모션 데이터를 가져와 아바타로 재생합니다.
+ * 사용 예: playSupabaseMotion('가족')
+ */
+async function playSupabaseMotion(word) {
+  if (!window.ITDAMotionV3) {
+    console.error('[Supabase] Motion engine (V3) not loaded.');
+    return;
+  }
+
+  const emotionOutput = document.getElementById('emotion-output');
+  if (emotionOutput) {
+    emotionOutput.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🔍 Supabase에서 "${word}" 데이터를 불러오는 중...</span>`;
+  }
+
+  try {
+    const res = await fetch(`/api/sign-language/supabase/motion/${encodeURIComponent(word)}`);
+    const result = await res.json();
+
+    if (result.status === 'success' && result.motion_data) {
+      console.info(`[Supabase] Success: Found motion for "${word}" (resolved: ${result.word})`);
+      if (emotionOutput) {
+        const note = result.resolved_from && result.resolved_from !== result.word
+          ? `(${result.resolved_from} → ${result.word})` : '';
+        emotionOutput.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">🔗 Supabase: ${result.word} ${note}</span><br/><span style="font-size:0.75rem; color:var(--text-muted)">외부 DB 연동 데이터 시뮬레이션 중</span>`;
+      }
+
+      // V3 엔진을 통해 직접 데이터 주입 및 재생 — 시퀀스 안전성을 위해 await
+      await window.ITDAMotionV3.playDirect(result.motion_data, result.word);
+    } else {
+      console.warn(`[Supabase] ${result.message || 'Data not found'}`);
+      if (emotionOutput) {
+        emotionOutput.innerHTML = `<span style="color:#ffb8b8">Supabase에서 "${word}" 데이터를 찾지 못했습니다.</span>`;
+      }
+    }
+  } catch (err) {
+    console.error('[Supabase Error]', err);
+    if (emotionOutput) {
+      emotionOutput.innerHTML = `<span style="color:#ff4757">Supabase 연동 중 오류가 발생했습니다. (백엔드 확인 필요)</span>`;
+    }
+  }
+}
+
+// 전역 노출
+window.playSupabaseMotion = playSupabaseMotion;
+
+/**
+ * Supabase에 저장된 모든 단어 목록을 가져와 콘솔에 출력합니다.
+ */
+async function listSupabaseWords() {
+  try {
+    const res = await fetch('/api/sign-language/supabase/words');
+    const result = await res.json();
+    if (result.status === 'success') {
+      console.log('[Supabase] 저장된 단어 목록:', result.words);
+      return result.words;
+    }
+  } catch (err) {
+    console.error('[Supabase List Error]', err);
+  }
+  return [];
+}
+window.listSupabaseWords = listSupabaseWords;

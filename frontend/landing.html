@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITDA(잇다) — AI 수어 통역 플랫폼</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: A4; margin: 0; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      background: #050810;
+      color: #f8fafc;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── 배경 ── */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 15%, rgba(124,58,237,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 80% 85%, rgba(0,242,254,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 30% 30% at 50% 50%, rgba(0,230,160,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page { position: relative; z-index: 1; padding: 32px 40px; }
+
+    /* ── 헤더 ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .logo-area { display: flex; align-items: center; gap: 12px; }
+    .banner {
+      text-align: center;
+      padding: 24px 0 12px;
+    }
+    .banner img {
+      max-width: 100%;
+      height: auto;
+      max-height: 300px;
+      object-fit: contain;
+    }
+    .logo-img {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+    .logo-text { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
+    .logo-text span { color: #00f2fe; }
+    .logo-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .header-badge {
+      font-size: 10px; color: #00e6a0; border: 1px solid rgba(0,230,160,0.3);
+      padding: 4px 10px; border-radius: 20px; background: rgba(0,230,160,0.08);
+    }
+
+    /* ── 히어로 ── */
+    .hero {
+      text-align: center;
+      padding: 36px 0 28px;
+    }
+    .hero h1 {
+      font-size: 32px; font-weight: 900; line-height: 1.3;
+      background: linear-gradient(135deg, #f8fafc 0%, #00f2fe 50%, #7c3aed 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 13px; color: #94a3b8; margin-top: 10px; line-height: 1.7;
+      max-width: 480px; margin-left: auto; margin-right: auto;
+    }
+
+    /* ── 핵심 수치 ── */
+    .stats {
+      display: flex; justify-content: center; gap: 32px;
+      padding: 20px 0;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-size: 28px; font-weight: 900; color: #00f2fe;
+      font-family: 'Inter', sans-serif;
+    }
+    .stat-label { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+    /* ── 기능 카드 ── */
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 16px 0;
+    }
+    .feature-card {
+      background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .feature-card .icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 10px;
+    }
+    .feature-card:nth-child(1) .icon { background: rgba(124,58,237,0.15); }
+    .feature-card:nth-child(2) .icon { background: rgba(0,242,254,0.12); }
+    .feature-card:nth-child(3) .icon { background: rgba(0,230,160,0.12); }
+    .feature-card:nth-child(4) .icon { background: rgba(255,159,67,0.12); }
+    .feature-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .feature-card p { font-size: 11px; color: #94a3b8; line-height: 1.6; }
+
+    /* ── 파이프라인 ── */
+    .pipeline {
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin: 16px 0;
+    }
+    .pipeline h2 { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: #00f2fe; }
+    .pipe-flow {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 6px; flex-wrap: nowrap;
+    }
+    .pipe-step {
+      flex: 1;
+      text-align: center;
+      background: rgba(124,58,237,0.08);
+      border: 1px solid rgba(124,58,237,0.15);
+      border-radius: 10px;
+      padding: 10px 6px;
+      min-width: 0;
+    }
+    .pipe-step .step-icon { font-size: 20px; }
+    .pipe-step .step-text { font-size: 9px; color: #c4b5fd; margin-top: 4px; line-height: 1.4; }
+    .pipe-arrow { color: #7c3aed; font-size: 16px; flex-shrink: 0; }
+
+    /* ── 기술 스택 ── */
+    .tech {
+      display: flex; gap: 20px; padding: 12px 0;
+    }
+    .tech-group { flex: 1; }
+    .tech-group h4 { font-size: 11px; color: #7c3aed; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .tech-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tech-tag {
+      font-size: 9px; padding: 3px 8px; border-radius: 6px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      color: #cbd5e1;
+    }
+
+    /* ── 팀/푸터 ── */
+    .footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: 16px;
+    }
+    .footer-left { font-size: 11px; color: #64748b; line-height: 1.6; }
+    .footer-right { text-align: right; }
+    .footer-right .qr-placeholder {
+      width: 64px; height: 64px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: #475569;
+    }
+
+    /* ── 데이터 현황 바 ── */
+    .data-bar {
+      display: flex; gap: 12px; padding: 14px 0;
+    }
+    .data-item {
+      flex: 1;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .data-item .d-label { font-size: 10px; color: #94a3b8; }
+    .data-item .d-bar {
+      height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);
+      margin: 6px 0 4px; overflow: hidden;
+    }
+    .data-item .d-fill { height: 100%; border-radius: 3px; }
+    .data-item .d-num { font-size: 10px; color: #cbd5e1; }
+
+    @media print {
+      body { background: #050810 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 배너 이미지 -->
+  <div class="banner">
+    <img src="./images/frontend_images_banner.png" alt="ITDA 배너" />
+  </div>
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="logo-area">
+      <img src="./images/frontend_images_icon.png" alt="ITDA 아이콘" class="logo-img" />
+      <div>
+        <div class="logo-text"><span>ITDA</span> 잇다</div>
+        <div class="logo-sub">Integrating The Deaf and All</div>
+      </div>
+    </div>
+    <div class="header-badge">2026 캡스톤 프로젝트</div>
+  </div>
+
+  <!-- 히어로 -->
+  <div class="hero">
+    <h1>청각장애인과 모든 사람을<br/>하나로 잇다</h1>
+    <p>AI 기반 실시간 한국수어(KSL) 양방향 통역 플랫폼.<br/>
+      음성/텍스트를 수어 영상으로 변환하고, 카메라로 수어를 인식하여 텍스트로 출력합니다.</p>
+  </div>
+
+  <!-- 핵심 수치 -->
+  <div class="stats">
+    <div class="stat-item">
+      <div class="stat-num">2,131</div>
+      <div class="stat-label">수어 단어 DB</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">1,203</div>
+      <div class="stat-label">투명 배경 영상</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">15</div>
+      <div class="stat-label">카메라 인식 수어</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">0.4s</div>
+      <div class="stat-label">평균 응답 속도</div>
+    </div>
+  </div>
+
+  <!-- 기능 카드 -->
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">A</div>
+      <h3>텍스트/음성 &rarr; 수어 영상</h3>
+      <p>문장을 단어 단위로 분절(토크나이저)하여 순차적으로 투명 배경 수어 영상을 재생합니다. 더블 버퍼링 크로스페이드로 끊김 없는 연속 재생.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">B</div>
+      <h3>카메라 수어 &rarr; 텍스트</h3>
+      <p>MediaPipe로 손/팔/얼굴 관절을 실시간 추출하고, 수형+위치+이동 조합으로 수어를 인식하여 텍스트로 출력합니다.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">C</div>
+      <h3>RAG 감정 검색 엔진</h3>
+      <p>FAISS 벡터 DB + 동의어/불규칙 활용 매핑으로 사용자 입력을 정확한 수어 단어로 연결합니다. NFC 정규화로 한글 인코딩 이슈 해결.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">D</div>
+      <h3>자동 데이터 파이프라인</h3>
+      <p>한국수어사전 영상 자동 수집 &rarr; rembg 배경 제거 &rarr; Supabase/B2 업로드 &rarr; DB 적재까지 완전 자동화된 배치 파이프라인.</p>
+    </div>
+  </div>
+
+  <!-- 파이프라인 -->
+  <div class="pipeline">
+    <h2>시스템 파이프라인</h2>
+    <div class="pipe-flow">
+      <div class="pipe-step">
+        <div class="step-icon">+</div>
+        <div class="step-text">텍스트/음성<br/>입력</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="step-icon">%</div>
+        <div class="step-text">토크나이저<br/>문장 분절</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="step-icon">@</div>
+        <div class="step-text">데이터베이스<br/>영상 조회</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="step-icon">*</div>
+        <div class="step-text">투명 영상<br/>순차 재생</div>
+      </div>
+      <div class="pipe-arrow">|</div>
+      <div class="pipe-step">
+        <div class="step-icon">#</div>
+        <div class="step-text">카메라<br/>관절 추출</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="step-icon">~</div>
+        <div class="step-text">수형/포즈<br/>분석</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="step-icon">=</div>
+        <div class="step-text">수어 인식<br/>텍스트 출력</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 데이터 현황 -->
+  <div class="data-bar">
+    <div class="data-item">
+      <div class="d-label">투명 영상 (즉시 재생)</div>
+      <div class="d-bar"><div class="d-fill" style="width:56%; background:linear-gradient(90deg,#7c3aed,#00f2fe)"></div></div>
+      <div class="d-num">1,203 / 2,131 (56%)</div>
+    </div>
+    <div class="data-item">
+      <div class="d-label">배경 제거 진행중</div>
+      <div class="d-bar"><div class="d-fill" style="width:44%; background:linear-gradient(90deg,#ff9f43,#ff6baf)"></div></div>
+      <div class="d-num">928개 처리 중</div>
+    </div>
+    <div class="data-item">
+      <div class="d-label">클라우드 저장소</div>
+      <div class="d-bar"><div class="d-fill" style="width:92%; background:linear-gradient(90deg,#00e6a0,#00f2fe)"></div></div>
+      <div class="d-num">922 / 1,000 MB</div>
+    </div>
+  </div>
+
+  <!-- 기술 스택 -->
+  <div class="tech">
+    <div class="tech-group">
+      <h4>화면 (프론트엔드)</h4>
+      <div class="tech-tags">
+        <span class="tech-tag">Three.js (3D 아바타)</span>
+        <span class="tech-tag">MediaPipe (관절 추출)</span>
+        <span class="tech-tag">음성 인식 API</span>
+        <span class="tech-tag">웹소켓 실시간 통신</span>
+      </div>
+    </div>
+    <div class="tech-group">
+      <h4>서버 (백엔드)</h4>
+      <div class="tech-tags">
+        <span class="tech-tag">FastAPI (API 서버)</span>
+        <span class="tech-tag">FAISS (벡터 검색)</span>
+        <span class="tech-tag">AI 임베딩 모델</span>
+        <span class="tech-tag">SLM 에이전트</span>
+        <span class="tech-tag">배경 제거 (rembg)</span>
+      </div>
+    </div>
+    <div class="tech-group">
+      <h4>데이터/인프라</h4>
+      <div class="tech-tags">
+        <span class="tech-tag">Supabase (DB/저장소)</span>
+        <span class="tech-tag">Backblaze B2 (영상 저장)</span>
+        <span class="tech-tag">AI Hub (수어 데이터)</span>
+        <span class="tech-tag">문화데이터광장 API</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 푸터 -->
+  <div class="footer">
+    <div class="footer-left">
+      <strong>잇다(ITDA) 프로젝트</strong> &mdash; 충남 당진<br/>
+      AI 기반 한국수어 양방향 통역 캡스톤 프로젝트<br/>
+      <span style="color:#475569">2026년 6월</span>
+    </div>
+    <div class="footer-right">
+      <div class="qr-placeholder">QR Code</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

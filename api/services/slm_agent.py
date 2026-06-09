@@ -43,6 +43,15 @@ RULE_HINTS = [
     (("OK",),         "가슴",   None,    "좋아하다"),
     (("PALM", "PALM"),"얼굴",   None,    "사랑합니다"),
     (("PALM",),       "가슴",   "아래",  "괜찮아요"),
+    
+    # [추가] 핵심 일상 어휘
+    (("POINT", "POINT"), "가슴", None,   "수어"),        # 수어 (검지 맞대고 돌리기)
+    (("POINT",),         "얼굴", "위",   "학교"),        # 학교
+    (("POINT",),         "얼굴", "아래", "어머니"),      # 어머니 (볼 터치)
+    (("FIST",),          "얼굴", "위",   "아버지"),      # 아버지 (이마 터치)
+    (("PALM",),          "가슴", None,   "나"),          # 나
+    (("POINT",),         "가슴", None,   "너"),          # 너
+    (("PALM", "PALM"),   "가슴", "아래", "밥"),          # 밥 (먹는 동작)
 ]
 
 
@@ -82,9 +91,11 @@ def _clean_single_word(text: str) -> str:
 
 
 class SlmAgent:
-    def __init__(self, model_name: str = "gemma3:4b"):
+    def __init__(self, model_name: str = "qwen3:4b", timeout_fast: int = 30, timeout_rag: int = 30):
         self.model_name = model_name
         self.api_url = "http://localhost:11434/api/generate"
+        self.timeout_fast = timeout_fast
+        self.timeout_rag = timeout_rag
 
     async def _call_ollama(self, prompt: str, timeout: int = 7) -> str:
         try:
@@ -117,7 +128,7 @@ class SlmAgent:
             "정답:"
         )
 
-        raw_text = await self._call_ollama(prompt)
+        raw_text = await self._call_ollama(prompt, timeout=self.timeout_fast)
         word = _clean_single_word(raw_text)
 
         # SLM 응답이 비었거나 수상하면 규칙 기반 폴백
@@ -147,7 +158,7 @@ class SlmAgent:
             "위 내용을 바탕으로 친근하고 자연스러운 한 문장(최대 40자)으로 다듬어 주세요.\n"
             "문장:"
         )
-        result = await self._call_ollama(prompt, timeout=10)
+        result = await self._call_ollama(prompt, timeout=self.timeout_rag)
         result = result.strip() if result else ""
         return result or warm or keyword or "대기 중"
 

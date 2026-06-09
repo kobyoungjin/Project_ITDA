@@ -34,6 +34,8 @@ from pathlib import Path
 from typing import Optional
 
 from api.tools.skeleton_extractor import extract_from_label_frame
+from api.tools.handshape_mapper import analyze_frames
+from api.tools.location_movement_analyzer import analyze_location_movement
 
 # ── 설정 ──────────────────────────────────────────────────────
 OUTPUT_DIR  = Path(__file__).resolve().parents[2] / "api" / "data" / "ksl_motions"
@@ -53,6 +55,36 @@ def _max_bone_delta(prev: dict, curr: dict) -> float:
                 max_d = d
     return max_d
 
+
+def _calculate_motion_features(keyframes: list[dict]) -> dict:
+    """프레임 간 각도 변화량 기반으로 최대 각속도와 평균 각도 변화량을 계산합니다."""
+    if len(keyframes) < 2:
+        return {"max_velocity": 0.0, "avg_angle_change": 0.0}
+        
+    max_vel = 0.0
+    total_angle_change = 0.0
+    valid_steps = 0
+    
+    for i in range(1, len(keyframes)):
+        prev = keyframes[i-1]
+        curr = keyframes[i]
+        dt = curr["time"] - prev["time"]
+        if dt <= 0.001: continue
+        
+        delta = _max_bone_delta(prev["bones"], curr["bones"])
+        vel = delta / dt
+        if vel > max_vel:
+            max_vel = vel
+            
+        total_angle_change += delta
+        valid_steps += 1
+        
+    avg_angle = total_angle_change / valid_steps if valid_steps > 0 else 0.0
+    
+    return {
+        "max_velocity": round(max_vel, 3),
+        "avg_angle_change": round(avg_angle, 3)
+    }
 
 def _smooth_bones(keyframes: list[dict], alpha: float = 0.35) -> list[dict]:
     """
@@ -136,12 +168,35 @@ def convert_record(record: dict) -> Optional[dict]:
     # 복귀 프레임 추가
     duration = len(frames) / fps
     keyframes = _add_return_frame(keyframes, duration)
+    
+    # [언어학적 특징 추출]
+    handshapes = analyze_frames(frames)
+    loc_mov = analyze_location_movement(frames)
+    
+    linguistic_features = {
+        "handshape": handshapes,
+        "location": loc_mov["location"],
+        "movement": loc_mov["movement"],
+        "nms": {
+            "facial_expression": "중립",
+            "head_tilt": "없음"
+        }
+    }
+    
+    # [모션 시계열 특징 추출]
+    features_summary = _calculate_motion_features(keyframes)
 
     return {
         "id":        action,
-        "fps":       fps,
-        "duration":  round(duration, 3),
-        "keyframes": keyframes,
+        "gloss":     action,
+        "version":   "v4_linguistic",
+        "linguistic_features": linguistic_features,
+        "motion_data": {
+            "fps":       fps,
+            "duration":  round(duration, 3),
+            "features_summary": features_summary,
+            "keyframes": keyframes,
+        }
     }
 
 

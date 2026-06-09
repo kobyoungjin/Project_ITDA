@@ -15,6 +15,16 @@ class Settings(BaseSettings):
     # AI Hub Validation Data Path
     AI_HUB_DATA_PATH: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "morpheme")
 
+    # Supabase (Sign Language Data)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+    SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # Backblaze B2 (외부 영상 스토리지)
+    B2_KEY_ID: str = os.getenv("B2_KEY_ID", "")
+    B2_APP_KEY: str = os.getenv("B2_APP_KEY", "")
+    B2_BUCKET_NAME: str = os.getenv("B2_BUCKET_NAME", "")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

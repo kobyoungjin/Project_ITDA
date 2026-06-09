@@ -36,18 +36,25 @@ async def vision_socket(ws: WebSocket):
     await ws.accept()
     session_id: str = f"anon_{int(time.time())}"
     try:
-        raw_first = await ws.receive_text()
-        data = json.loads(raw_first)
-        session_id = data.get("session_id", session_id)
+        try:
+            raw_first = await ws.receive_text()
+            data = json.loads(raw_first)
+            session_id = data.get("session_id", session_id)
+        except (WebSocketDisconnect, RuntimeError):
+            return
+
         await manager.connect(session_id, ws)
         await _handle(session_id, data)
 
         while True:
-            raw = await ws.receive_text()
-            await _handle(session_id, json.loads(raw))
+            try:
+                raw = await ws.receive_text()
+                await _handle(session_id, json.loads(raw))
+            except (WebSocketDisconnect, RuntimeError):
+                break
 
-    except WebSocketDisconnect:
-        pass
+    except Exception as e:
+        logger.error(f"[vision_socket] Unexpected error: {e}")
     finally:
         manager.disconnect(session_id)
 
@@ -99,9 +106,9 @@ async def _handle(session_id: str, raw: dict):
 
         # ──────── [3단계: 하이브리드 번역 파이프라인] ────────
 
-        # Track 1: 기기 내 SLM (Ollama) 초고속 1차 예측 진행 (Latency Hiding)
-        from api.services.slm_agent import slm_agent
-        fast_pred = await slm_agent.predict_fast(raw)
+        # Track 1: Rule-based 1차 예측 (Ollama 비활성화 — 웹캠 인식팀 담당)
+        from api.services.slm_agent import _rule_based_predict
+        fast_pred = _rule_based_predict(meta)
 
         # [P2] 모션 phase 기반 게이팅:
         #   moving / settling → Draft 만 송출하고 RAG+Track3 생략 (서버 부하 및 UI 깜빡임 방지)
@@ -130,8 +137,8 @@ async def _handle(session_id: str, raw: dict):
         search_keyword = fast_pred if fast_pred else "정지 상태"
         rag_data = rag_engine.retrieve_with_emotion(search_keyword)
 
-        # Track 3: 1차 예측 + RAG 문맥 합성을 통한 최종 온기 보정
-        final_text = await slm_agent.predict_with_rag(fast_pred, rag_data)
+        # Track 3: RAG 결과 직접 사용 (Ollama 비활성화)
+        final_text = rag_data.get('warm_translation') or rag_data.get('keyword') or fast_pred
 
         rag_result = {
             "type": "final",

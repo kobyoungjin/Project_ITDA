@@ -85,10 +85,10 @@ function applyFaceBlendshapes(blendshapes) {
     targetScores[emotion] = wSum > 0 ? total / wSum : 0;
   }
 
-  // 2. 감정 스무딩 연산 (아바타 리타겟팅 미적용 - 사용자 요청: 텍스트 수어만 표기)
+  // 2. 감정 스무딩 연산
   for (const [emotion, target] of Object.entries(targetScores)) {
     emotionState[emotion] += (target - emotionState[emotion]) * 0.2;
-    // avatar.setMorphTarget(emotion, emotionState[emotion]); // 카메라 따라하기 비활성화
+    avatar.setMorphTarget(emotion, emotionState[emotion]); 
   }
 
   // 3. 감정 HUD 업데이트
@@ -97,8 +97,8 @@ function applyFaceBlendshapes(blendshapes) {
 
 // ── 손 관절 → 아바타 Bone 회전 적용 ───────────────────────────
 function applyHandLandmarks(hands) {
-  // 사용자 요청: 웹캠 동작을 아바타가 따라 하지 않도록 비활성화 (텍스트 수어 번역만 동작)
-  return;
+  const avatar = window.ITDAAvatar5;
+  if (!avatar || window.translationModeActive) return; 
 
   for (const hand of hands) {
     const side = hand.handedness; // 'Left' | 'Right'
@@ -188,7 +188,7 @@ function getArmBones(side, bones) {
 const _zBuf = {};
 function angleBetween(parent, child) {
   const dx = -(child.x - parent.x);
-  const dy = child.y - parent.y;
+  const dy = -(child.y - parent.y);
   const rawDz = -(child.z - parent.z);
   const key = `${parent.x.toFixed(3)},${parent.y.toFixed(3)}`;
   const prev = _zBuf[key] ?? rawDz;
@@ -213,8 +213,8 @@ function bendAngle(a, b, c) {
 let _lastPoseActive = 0;
 
 function applyPoseLandmarks(poseLandmarks) {
-  // 사용자 요청: 웹캠 동작을 아바타가 따라 하지 않도록 비활성화
-  return;
+  const avatar = window.ITDAAvatar5;
+  if (!avatar || window.translationModeActive) return;
 
   if (!poseLandmarks) {
     // 미인식 시 차렷 자세로 복귀
@@ -317,10 +317,12 @@ function applySingleArm(boneSide, lms, avatar, dataSide) {
   }
 }
 
-// ── 이벤트 구독 ───────────────────────────────────────────────
+// ── 이벤트 구독 (미러링 비활성화됨) ───────────
+/* [2026-05-07] 실시간 미러링 기능 제외 요청으로 비활성화
 window.addEventListener('itda:face:results', (e) => applyFaceBlendshapes(e.detail.blendshapes));
 window.addEventListener('itda:hands:results', (e) => applyHandLandmarks(e.detail.hands));
 window.addEventListener('itda:pose:results', (e) => applyPoseLandmarks(e.detail.landmarks));
+*/
 
 // ── 전역 노출 ─────────────────────────────────────────────────
 window.ITDARetargeting5 = {

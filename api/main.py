@@ -16,7 +16,12 @@ app = FastAPI(
 # 안티그래비티 규칙: 프론트엔드 포트(3000)를 위한 CORS 허용
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:8000"],
+    allow_origins=[
+        "http://localhost:3000", "http://127.0.0.1:3000",
+        "http://localhost:5500", "http://127.0.0.1:5500",
+        "http://localhost:8000",
+        "https://*.vercel.app",  # Vercel 배포용
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

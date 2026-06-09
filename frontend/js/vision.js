@@ -111,7 +111,7 @@ async function init() {
     drawingUtils = new DrawingUtils(canvasCtx);
     
     setStatus('✅ 실행 중');
-    // connectWebSocket(); // [비활성화] 사용자 요청에 따라 백엔드 비전 소켓 연결 시도 원천 차단
+    connectWebSocket(); // [활성화] 백엔드 비전 소켓 연결 및 RAG 분석 시작
     window.dispatchEvent(new CustomEvent('itda:vision:ready'));
 
   } catch (err) {

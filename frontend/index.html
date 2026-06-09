@@ -1,628 +1,964 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>잇다(ITDA) — 5단계: 얼굴 표정 + 손동작 동기화</title>
-  <meta name="description" content="MediaPipe FaceLandmarker + Hands로 수어 비수지 기호(표정)와 수지 동작(손)을 3D 아바타에 실시간 동기화 — 잇다 프로젝트 5단계" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ITDA — 소리가 없어도, 우리는 이어집니다</title>
+  <meta name="description" content="인공지능 수어 통역 서비스 ITDA" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
+    rel="stylesheet" />
 
   <style>
-    /* ── 루트 변수 ────────────────────────────────────── */
+    /* ── Design System: Warm Connection ─────────────────── */
     :root {
-      --bg-deep:    #050810;
-      --bg-glass:   rgba(15, 23, 42, 0.75);
-      --bg-card:    rgba(15, 23, 42, 0.9);
-      --accent-cyan:   #00f2fe;
-      --accent-purple: #7c3aed;
-      --accent-green:  #00e6a0;
-      --accent-orange: #ff9f43;
-      --accent-pink:   #ff6baf;
-      --text-main:  #f8fafc;
-      --text-muted: #94a3b8;
-      --border:     rgba(255, 255, 255, 0.08);
-      --shadow-lg:  0 20px 50px rgba(0, 0, 0, 0.7);
+      --surface: #fff8f6;
+      --surface-dim: #ead6d1;
+      --surface-container: #ffe9e4;
+      --surface-container-high: #f9e4df;
+      --on-surface: #241916;
+      --on-surface-variant: #57423d;
+      --primary: #a33d23;
+      --primary-container: #e76f51;
+      --on-primary: #ffffff;
+      --on-primary-container: #590f00;
+      --secondary: #625d5b;
+      --secondary-container: #e9e1dd;
+      --tertiary: #006a63;
+      --tertiary-container: #00a49a;
+      --outline: #8a716c;
+      --outline-variant: #dec0b9;
+      --inverse-surface: #3a2e2b;
+      --inverse-on-surface: #ffede9;
+      --error: #ba1a1a;
+      --white: #ffffff;
+      --text-base: #2e2520;
+      --text-muted: #78716c;
+      --shadow-card: 0px 4px 20px rgba(46, 37, 32, 0.06);
+      --rounded-sm: 0.25rem;
+      --rounded: 0.5rem;
+      --rounded-md: 0.75rem;
+      --rounded-lg: 1rem;
+      --rounded-xl: 1.5rem;
+      --rounded-2xl: 1rem;
+      --rounded-full: 9999px;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
-      font-family: 'Inter', 'Noto Sans KR', sans-serif;
-      background: var(--bg-deep);
-      color: var(--text-main);
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--surface);
+      color: var(--text-base);
       height: 100vh;
-      margin: 0;
-      overflow: hidden;
       display: flex;
-      justify-content: center; /* 앱 컨테이너 중앙 정렬 */
+      justify-content: center;
       align-items: center;
+      overflow: hidden;
     }
 
     #app-container {
       width: 100%;
-      max-width: 450px; /* 모바일 해상도 고정 */
+      max-width: 430px;
       height: 100%;
       max-height: 100vh;
       position: relative;
       display: flex;
       flex-direction: column;
-      background: var(--bg-deep);
-      box-shadow: 0 0 80px rgba(0,0,0,0.6);
-      border-left: 1px solid var(--border);
-      border-right: 1px solid var(--border);
-      z-index: 10;
+      background: var(--surface);
       overflow: hidden;
     }
 
-    /* 배경 그라디언트 */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background:
-        radial-gradient(ellipse 50% 60% at 15% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 85% 80%, rgba(0, 242, 254, 0.10) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
+    .hidden {
+      display: none !important;
     }
 
-    /* ── 헤더 ─────────────────────────────────────────── */
-    header {
-      position: relative; z-index: 10;
-      padding: 0.85rem 1.5rem;
-      background: var(--bg-glass);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
+    /* ── Landing Page ──────────────────────────────────── */
+    #landing-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 2rem;
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-container) 100%);
+    }
+
+    .landing-logo {
+      width: 160px;
+      height: 160px;
+      position: relative;
+    }
+
+    .landing-logo svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ITDA petal-style logo */
+    .petal {
+      transition: transform 0.3s ease;
+    }
+
+    .landing-logo:hover .petal {
+      transform: scale(1.05);
+      transform-origin: center;
+    }
+
+    .landing-title {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.2;
+      text-align: center;
+      color: var(--on-surface);
+      letter-spacing: -0.02em;
+    }
+
+    .landing-subtitle {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .btn-start {
+      width: 100%;
+      max-width: 300px;
+      padding: 1rem;
+      border: none;
+      border-radius: var(--rounded-xl);
+      background: var(--primary-container);
+      color: var(--on-primary);
+      font-family: inherit;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(231, 111, 81, 0.3);
+    }
+
+    .btn-start:hover {
+      background: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(231, 111, 81, 0.4);
+    }
+
+    .btn-start:active {
+      transform: translateY(0);
+    }
+
+    .landing-lang {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ── Main App View ─────────────────────────────────── */
+    #app-view {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* ── Header ────────────────────────────────────────── */
+    .app-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      background: var(--white);
+      border-bottom: 1px solid var(--outline-variant);
+      z-index: 20;
     }
 
-    .logo {
-      display: flex; align-items: center; gap: 0.6rem;
-      font-size: 1.15rem; font-weight: 800; letter-spacing: -0.04em;
-    }
-    .logo-icon {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-      display: flex; align-items: center; justify-content: center; font-size: 15px;
-    }
-    .logo em { color: var(--accent-cyan); font-style: normal; }
-
-    .header-right { display: flex; align-items: center; gap: 0.6rem; }
-    .badge {
-      padding: 0.2rem 0.65rem; border-radius: 99px;
-      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
-    }
-    .badge-step   { background: rgba(124,58,237,.2); color: #c4b5fd; border: 1px solid rgba(124,58,237,.3); }
-    .badge-status { background: rgba(0,242,254,.1);  color: var(--accent-cyan); border: 1px solid rgba(0,242,254,.25); }
-
-    /* ── 메인 레이아웃 ────────────────────────────────── */
-    main {
-      flex: 1; position: relative; z-index: 1; overflow: hidden;
+    .app-header-left {
       display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    /* ── Three.js 캔버스 ─────────────────────────────── */
-    #three-canvas {
-      flex: 1; display: block;
+    .btn-back {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--on-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--rounded);
     }
 
-    /* ── 웹캠 PIP ─────────────────────────────────────── */
-    #cam-pip {
-      position: absolute;
-      top: 1.2rem; right: 1.2rem;
-      width: 240px;
-      border-radius: 14px;
+    .btn-back:hover {
+      background: var(--surface-container);
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary-container);
+    }
+
+    .status-dot::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary-container);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .btn-settings {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--rounded);
+    }
+
+    .btn-settings:hover {
+      background: var(--surface-container);
+    }
+
+    /* ── Mode Toggle ───────────────────────────────────── */
+    .mode-toggle-bar {
+      display: flex;
+      padding: 0.5rem 1.25rem;
+      gap: 0.5rem;
+      background: var(--white);
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 0.6rem;
+      border: none;
+      border-radius: var(--rounded-lg);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .mode-tab.active {
+      background: var(--primary-container);
+      color: var(--on-primary);
+      box-shadow: 0 2px 8px rgba(231, 111, 81, 0.3);
+    }
+
+    .mode-tab:not(.active) {
+      background: var(--secondary-container);
+      color: var(--on-surface-variant);
+    }
+
+    .mode-tab:not(.active):hover {
+      background: var(--surface-dim);
+    }
+
+    /* ── Content Area ──────────────────────────────────── */
+    .content-area {
+      flex: 1;
+      position: relative;
       overflow: hidden;
-      border: 2px solid var(--border);
-      box-shadow: var(--shadow-lg);
-      background: #000;
-      transition: border-color 0.3s, transform 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
     }
-    #cam-pip:hover { border-color: var(--accent-cyan); transform: scale(1.03); }
-    #cam-pip video { width: 100%; display: block; transform: scaleX(-1); aspect-ratio: 4/3; object-fit: cover; }
-    #vision-canvas {
-      position: absolute;
-      inset: 0;
+
+    /* ── Voice-to-Sign Mode (screen1) ──────────────────── */
+    #voice-to-sign {
       width: 100%;
       height: 100%;
-      pointer-events: none;
-      transform: scaleX(-1); /* Mirror as video */
-    }
-    .pip-label {
-      position: absolute; top: 0.5rem; left: 0.5rem;
-      background: rgba(0,0,0,.6);
-      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; color: #fff;
-      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem 1.25rem;
+      gap: 1rem;
+      position: relative;
     }
 
-    /* ── 수어 참조 영상 (AI Hub) PIP ─────────────────── */
-    #ref-pip {
+    #voice-to-sign .translation-card {
       position: absolute;
-      top: 18rem; right: 1.2rem;
-      width: 240px;
-      border-radius: 14px;
-      overflow: hidden;
-      border: 2px solid var(--accent-purple);
-      box-shadow: var(--shadow-lg);
-      background: #000;
-      display: none; /* 필요할 때만 노출 */
-      z-index: 15;
-    }
-    #ref-pip video { width: 100%; display: block; aspect-ratio: 16/9; object-fit: contain; }
-    .ref-label {
-      position: absolute; top: 0.5rem; left: 0.5rem;
-      background: var(--accent-purple);
-      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; color: #fff;
-      z-index: 5;
-    }
-    #btn-close-ref {
-        position: absolute; top: 0.4rem; right: 0.4rem;
-        background: rgba(0,0,0,0.5); border: none; color: white; cursor: pointer;
-        width: 20px; height: 20px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center;
-        z-index: 6;
+      bottom: 0;
+      left: 0;
+      right: 0;
     }
 
-    /* ── HUD 왼쪽 상단 ────────────────────────────────── */
-    .hud {
-      position: absolute; top: 1.2rem; left: 1.2rem;
-      display: flex; flex-direction: column; gap: 0.4rem;
-      pointer-events: none;
-    }
-    .hud-item {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: var(--accent-cyan);
-      background: rgba(5, 8, 16, 0.65);
-      padding: 3px 10px; border-radius: 6px;
-      border: 1px solid rgba(0,242,254,.15);
-    }
-
-    /* ── 간단한 우측 상단 상태 분석창 ───────────────────────── */
-    #mini-status {
-      position: absolute; top: 4.5rem; left: 1.2rem;
-      background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px);
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;
-      z-index: 30; box-shadow: var(--shadow-lg); font-size: 0.7rem; color: var(--text-main);
-      pointer-events: none;
-    }
-    .mini-row {
-      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-    }
-    .mini-label { color: var(--text-muted); font-weight: 600; }
-    .mini-val { font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan); font-weight: bold; }
-    .mini-val em { font-style: normal; }
-
-    /* ── [P0 HUD] handshape 배지 · motion 신호등 ───────────── */
-    .hs-badge {
-      display: inline-block;
-      padding: 2px 7px;
-      margin-right: 3px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.68rem;
-      font-weight: 700;
-      background: rgba(0, 242, 254, 0.12);
-      border: 1px solid rgba(0, 242, 254, 0.4);
-      color: var(--accent-cyan);
-    }
-    .hs-badge.unknown { color: #94a3b8; border-color: rgba(148,163,184,0.4); background: rgba(148,163,184,0.08); }
-    .region-chip {
-      font-size: 0.65rem; color: var(--text-muted); margin-left: 4px;
-    }
-    .motion-dot {
-      display: inline-block; width: 9px; height: 9px; border-radius: 50%;
-      background: #64748b; box-shadow: 0 0 3px rgba(0,0,0,0.5);
-      transition: background-color .25s, box-shadow .25s;
-      vertical-align: middle; margin-right: 5px;
-    }
-    .motion-dot.idle     { background: #64748b; }                                /* ⚪ 회색 */
-    .motion-dot.moving   { background: #facc15; box-shadow: 0 0 6px #facc15aa; } /* 🟡 노랑 */
-    .motion-dot.settling { background: #fb923c; box-shadow: 0 0 6px #fb923caa; } /* 🟠 주황 */
-    .motion-dot.stable   { background: #22c55e; box-shadow: 0 0 10px #22c55e; } /* 🟢 초록 */
-    @keyframes motion-stable-pulse {
-      0%   { box-shadow: 0 0 10px #22c55e; transform: scale(1.0); }
-      40%  { box-shadow: 0 0 22px #22c55e; transform: scale(1.6); }
-      100% { box-shadow: 0 0 10px #22c55e; transform: scale(1.0); }
-    }
-    .motion-dot.stable.flash { animation: motion-stable-pulse 0.7s ease-out 1; }
-
-    /* ── [⑥ Education] 모드 토글 & 학습 카드 ─────────────── */
-    #mode-toggle {
+    .live-badge {
       display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      background: rgba(15, 23, 42, 0.4);
-    }
-    .mode-btn {
-      background: transparent; color: var(--text-muted);
-      border: 0; padding: 5px 12px;
-      font-family: inherit; font-size: 0.72rem; font-weight: 700;
-      cursor: pointer; transition: all .15s;
-    }
-    .mode-btn:hover { color: var(--text-main); }
-    .mode-btn.active {
-      background: rgba(0, 242, 254, 0.15);
-      color: var(--accent-cyan);
-      box-shadow: inset 0 0 8px rgba(0, 242, 254, 0.25);
-    }
-
-    #lesson-card {
-      position: absolute; top: 4.5rem; right: 1.2rem;
-      width: 260px;
-      background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(14px);
-      border: 1px solid var(--border); border-radius: 12px;
-      padding: 0.9rem 1rem; z-index: 35;
-      box-shadow: var(--shadow-lg);
-      color: var(--text-main);
-      font-size: 0.78rem;
-    }
-    .lesson-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
-    .lesson-emoji { font-size: 2rem; line-height: 1; }
-    .lesson-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
-    .lesson-word  { font-size: 1.2rem; font-weight: 800; color: var(--accent-cyan); }
-    .lesson-hint  {
-      font-size: 0.7rem; color: var(--text-muted); line-height: 1.45;
-      padding: 0.5rem 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 0.6rem;
-    }
-    .lesson-status {
-      font-size: 0.76rem; font-weight: 700;
-      padding: 0.4rem 0.6rem; border-radius: 6px; text-align: center;
-      transition: all .2s;
-    }
-    .lesson-status[data-state="idle"]    { background: rgba(100,116,139,0.25); color: #94a3b8; }
-    .lesson-status[data-state="trying"]  { background: rgba(250,204,21,0.2);   color: #fde68a; }
-    .lesson-status[data-state="success"] {
-      background: rgba(34,197,94,0.25); color: #86efac;
-      animation: lesson-success-pulse 0.8s ease-out 1;
-    }
-    @keyframes lesson-success-pulse {
-      0% { transform: scale(1); }
-      40% { transform: scale(1.08); box-shadow: 0 0 18px rgba(34,197,94,0.7); }
-      100% { transform: scale(1); }
-    }
-    .lesson-nav { display: flex; gap: 0.4rem; margin-top: 0.7rem; justify-content: space-between; }
-    .lesson-nav-btn {
-      flex: 1; background: rgba(0, 242, 254, 0.08);
-      border: 1px solid rgba(0,242,254,0.25);
-      color: var(--accent-cyan);
-      padding: 0.35rem 0; border-radius: 6px;
-      cursor: pointer; font-size: 0.85rem;
-      transition: all .15s;
-    }
-    .lesson-nav-btn:hover { background: rgba(0, 242, 254, 0.2); }
-
-    /* ── [Tier1] 모션 엔진 V2/V1 토글 ───────────────────── */
-    #motion-version-toggle {
-      display: inline-flex; gap: 4px;
-    }
-    .mv-btn {
-      background: rgba(15, 23, 42, 0.6);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 1px 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.65rem; font-weight: 700;
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .mv-btn:hover { color: var(--text-main); }
-    .mv-btn.active {
-      background: rgba(0, 242, 254, 0.2);
-      color: var(--accent-cyan);
-      border-color: rgba(0, 242, 254, 0.5);
-      box-shadow: inset 0 0 6px rgba(0, 242, 254, 0.2);
-    }
-
-    /* ── 번역 패널 (하단 중앙) ───────────────────────── */
-    #translation-panel {
-      position: absolute;
-      bottom: 1.2rem; left: 50%;
-      transform: translateX(-50%);
-      width: 72%; max-width: 700px;
-      background: var(--bg-glass);
-      backdrop-filter: blur(24px);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.1rem 1.5rem;
-      box-shadow: var(--shadow-lg);
-      display: flex; gap: 2rem; align-items: flex-start;
-    }
-    .t-group { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
-    .t-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
-    .t-output { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
-    #slm-output {
-      font-size: 0.95rem; line-height: 1.4;
-      max-height: 4.2rem; overflow: hidden;
-      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-    }
-    .t-output em { color: var(--accent-cyan); font-style: normal; border-bottom: 2px solid currentColor; }
-    .t-emotion-badge {
-      display: inline-block;
-      margin-left: 0.5rem;
-      padding: 2px 8px;
-      border-radius: 99px;
-      font-size: 0.65rem;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: var(--rounded-full);
+      background: rgba(231, 111, 81, 0.1);
+      color: var(--primary-container);
+      font-size: 12px;
       font-weight: 700;
-      opacity: 0.9;
     }
 
-    /* ── 음성 및 텍스트 입력 패널 ────────────────────── */
-    .input-group {
-      display: flex; gap: 0.5rem; width: 100%; margin-bottom: 0.4rem;
-      padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .text-input {
-      flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0.5rem 0.8rem;
-      color: var(--text-main); font-family: inherit; font-size: 0.9rem;
-    }
-    .text-input:focus { outline: none; border-color: var(--accent-cyan); }
-    .btn-action {
-      width: 36px; height: 36px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; border: none; font-size: 1rem; transition: all 0.2s;
-    }
-    .btn-mic { background: rgba(124, 58, 237, 0.2); color: #c4b5fd; border: 1px solid rgba(124, 58, 237, 0.4); }
-    .btn-mic.recording { background: rgba(255, 71, 87, 0.3); color: #ff4757; border-color: rgba(255, 71, 87, 0.6); animation: pulse 1.5s infinite; }
-    .btn-send { background: var(--accent-cyan); color: #000; border: none; font-weight: bold; }
-    .btn-send:hover, .btn-mic:hover { transform: translateY(-2px); }
-    
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); } 70% { box-shadow: 0 0 0 8px rgba(255,71,87,0); } 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0); } }
-
-    /* ── 컨트롤 (하단 우측) ───────────────────────────── */
-    .controls {
-      position: absolute; bottom: 1.2rem; right: 1.2rem;
-      display: flex; flex-direction: column; gap: 0.6rem;
-    }
-    .btn-circle {
-      width: 46px; height: 46px; border-radius: 50%;
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: white; font-size: 1.15rem; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(8px);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .btn-circle:hover {
-      background: var(--accent-purple);
-      border-color: transparent;
-      transform: translateY(-3px);
-      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
-    }
-
-    /* ── 비전 상태 오버레이 ──────────────────────────── */
-    #vision-overlay {
-      position: absolute; inset: 0;
-      background: rgba(5,8,16,.92);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 1rem; z-index: 50;
-      transition: opacity 0.5s;
-    }
-    #vision-overlay.hidden { opacity: 0; pointer-events: none; }
-    .loading-spinner {
-      width: 48px; height: 48px;
-      border: 3px solid rgba(0,242,254,.15);
-      border-top-color: var(--accent-cyan);
+    .live-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: 0.9rem; color: var(--text-muted); }
-    #vision-status { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-cyan); }
-
-    /* ── 모델 로드 완료 인디케이터 ────────────────────── */
-    #model-status {
-      position: absolute; top: 1.2rem; left: 50%; transform: translateX(-50%);
-      background: rgba(0,230,160,.1);
-      border: 1px solid rgba(0,230,160,.3);
-      border-radius: 99px;
-      padding: 3px 14px;
-      font-size: 0.7rem; color: var(--accent-green);
-      font-weight: 600; letter-spacing: 0.05em;
-      opacity: 0; transition: opacity 0.5s;
-    }
-    #model-status.loaded { opacity: 1; }
-
-    /* ── 모바일 상속 및 미디어 쿼리 ────────────────────── */
-    @media (max-width: 768px) {
-      header { padding: 0.6rem 1rem; }
-      .logo { font-size: 1rem; gap: 0.4rem; }
-      .logo-icon { width: 26px; height: 26px; font-size: 13px; }
-      .badge-step { display: none; }
-      .badge-status { font-size: 0.6rem; padding: 0.15rem 0.5rem; }
-
-      #cam-pip {
-        top: auto; bottom: 8.5rem; right: 0.8rem;
-        width: 140px; border-radius: 12px;
-        z-index: 20;
-      }
-      .hud { top: 0.8rem; left: 0.8rem; gap: 0.2rem; }
-      .hud-item { font-size: 0.65rem; padding: 2px 8px; }
-
-      #cam-pip {
-        bottom: 7.5rem; right: 0.8rem; width: 100px;
-      }
-      #mini-status {
-        top: 3.5rem; right: 0.8rem; padding: 0.5rem;
-      }
-
-      #translation-panel {
-        bottom: 0px; left: 0px; transform: none;
-        width: 100%; max-width: none;
-        border-radius: 0; border: none; border-top: 1px solid var(--border);
-        padding: 1rem 1.2rem;
-        flex-direction: column; gap: 0.6rem;
-      }
-      .t-output { font-size: 1rem; }
-      .controls { bottom: 8.5rem; right: 0.8rem; display: none; } 
+      background: var(--primary-container);
     }
 
-    @media (max-width: 480px) {
-      #mini-status { font-size: 0.65rem; gap: 0.2rem; }
-      #cam-pip { width: 90px; bottom: 7.5rem; }
-      #translation-panel { padding: 0.8rem 1rem; }
+    /* Video circle player */
+    .video-circle {
+      width: 320px;
+      height: 400px;
+      border-radius: 20%;
+      overflow: hidden;
+      border: 4px solid var(--surface-dim);
+      box-shadow: 0 8px 40px rgba(46, 37, 32, 0.1);
+      position: relative;
+      background: var(--surface-container);
+      flex-shrink: 0;
+      padding-bottom: 10%;
+    }
+
+    .video-circle video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-circle-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 0.5rem;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Audio waveform placeholder */
+    .audio-wave {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      height: 32px;
+      padding: 0 1rem;
+      margin-bottom: 20%;
+    }
+
+    .audio-wave-bar {
+      width: 3px;
+      height: 8px;
+      background: var(--primary-container);
+      border-radius: 2px;
+      animation: wave-anim 0.8s ease-in-out infinite alternate;
+    }
+
+    .audio-wave-bar:nth-child(1) {
+      animation-delay: 0s;
+      height: 12px;
+    }
+
+    .audio-wave-bar:nth-child(2) {
+      animation-delay: 0.1s;
+      height: 20px;
+    }
+
+    .audio-wave-bar:nth-child(3) {
+      animation-delay: 0.2s;
+      height: 16px;
+    }
+
+    .audio-wave-bar:nth-child(4) {
+      animation-delay: 0.3s;
+      height: 24px;
+    }
+
+    .audio-wave-bar:nth-child(5) {
+      animation-delay: 0.15s;
+      height: 18px;
+    }
+
+    .audio-wave-bar:nth-child(6) {
+      animation-delay: 0.25s;
+      height: 14px;
+    }
+
+    .audio-wave-bar:nth-child(7) {
+      animation-delay: 0.05s;
+      height: 10px;
+    }
+
+    .audio-wave.idle .audio-wave-bar {
+      animation: none;
+      height: 4px;
+      opacity: 0.4;
+    }
+
+    @keyframes wave-anim {
+      to {
+        height: 4px;
+      }
+    }
+
+    /* ── Sign-to-Voice Mode (screen2) ──────────────────── */
+    #sign-to-voice {
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+    }
+
+    .camera-area {
+      flex: 1;
+      position: relative;
+      background: var(--inverse-surface);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-area video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .camera-frame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 70%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: var(--rounded-xl);
+      pointer-events: none;
+    }
+
+    .camera-frame::before,
+    .camera-frame::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-color: var(--on-primary);
+      border-style: solid;
+    }
+
+    .camera-frame::before {
+      top: -1px;
+      left: -1px;
+      border-width: 3px 0 0 3px;
+      border-radius: 4px 0 0 0;
+    }
+
+    .camera-frame::after {
+      bottom: -1px;
+      right: -1px;
+      border-width: 0 3px 3px 0;
+      border-radius: 0 0 4px 0;
+    }
+
+    .camera-hint {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 0.4rem 1rem;
+      border-radius: var(--rounded-full);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* ── Translation Result Card ───────────────────────── */
+    .translation-card {
+      background: var(--white);
+      border-radius: var(--rounded-xl) var(--rounded-xl) 0 0;
+      padding: 1.25rem;
+      box-shadow: 0 -4px 20px rgba(46, 37, 32, 0.08);
+    }
+
+    .translation-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .translation-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--on-surface);
+      line-height: 1.5;
+    }
+
+    .translation-text .highlight {
+      color: var(--primary-container);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ── Bottom Input Bar ──────────────────────────────── */
+    .input-bar {
+      padding: 0.75rem 1.25rem;
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+      background: var(--white);
+      border-top: 1px solid var(--outline-variant);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .input-field-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    #chat-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--outline-variant);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--on-surface);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #chat-input:focus {
+      border-color: var(--primary-container);
+    }
+
+    #chat-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn-mic-new {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary-container);
+      color: var(--on-primary);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(231, 111, 81, 0.3);
+      flex-shrink: 0;
+    }
+
+    .btn-mic-new:hover {
+      background: var(--primary);
+      transform: scale(1.05);
+    }
+
+    .btn-mic-new.recording {
+      background: var(--error);
+      animation: pulse-mic 1.5s infinite;
+    }
+
+    @keyframes pulse-mic {
+      0% {
+        box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.4);
+      }
+
+      70% {
+        box-shadow: 0 0 0 12px rgba(186, 26, 26, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(186, 26, 26, 0);
+      }
+    }
+
+    .btn-send-new {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: var(--inverse-surface);
+      color: var(--inverse-on-surface);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-send-new:hover {
+      background: var(--on-surface);
+      transform: scale(1.05);
+    }
+
+    /* ── Emotion / Status Output ───────────────────────── */
+    #emotion-output {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      padding: 0 0.25rem;
+      min-height: 1.5em;
+    }
+
+    /* ── Preload Bar ───────────────────────────────────── */
+    #preload-bar {
+      display: none;
+      padding: 0.5rem 1.25rem;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--white);
+    }
+
+    .preload-track {
+      height: 3px;
+      background: var(--surface-container);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    #preload-fill {
+      height: 100%;
+      background: var(--primary-container);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* ── Ref Video (inside .video-circle, double-buffered) ── */
+    #ref-pip {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      border-radius: 20%;
+      overflow: hidden;
+    }
+
+    #ref-pip.video-mode-active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #ref-pip.video-mode-active video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #btn-close-ref {
+      display: none;
+    }
+
+    /* ── Vision Overlay (loading) ──────────────────────── */
+    #vision-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 50;
+      transition: opacity 0.4s;
+    }
+
+    #vision-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--surface-dim);
+      border-top-color: var(--primary-container);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-text {
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    #vision-status {
+      font-size: 13px;
+      color: var(--primary-container);
+      font-weight: 500;
+    }
+
+    /* ── Three.js canvas (hidden in video-first mode) ──── */
+    #three-canvas {
+      display: none;
+    }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 430px) {
+      #app-container {
+        max-width: 100%;
+      }
+
+      .video-circle {
+        width: 220px;
+        height: 220px;
+      }
+    }
+
+    @media (min-height: 800px) {
+      .video-circle {
+        width: 320px;
+        height: 400px;
+      }
     }
   </style>
 </head>
+
 <body>
 
-  <!-- ── 앱 컨테이너 (모바일 사이즈 고정) ────────────────── -->
   <div id="app-container">
-    
-    <!-- ── 헤더 ──────────────────────────────────────────── -->
-    <header>
-      <div class="logo">
-        <div class="logo-icon">✋</div>
-        ITDA <em>SIGN</em>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- LANDING VIEW                                       -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <div id="landing-view">
+      <div class="landing-logo">
+        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- ITDA flower/petal logo -->
+          <ellipse class="petal" cx="100" cy="72" rx="28" ry="38" fill="#5B9BD5" transform="rotate(0 100 100)"
+            opacity="0.9" />
+          <ellipse class="petal" cx="127" cy="85" rx="28" ry="38" fill="#4A8AC4" transform="rotate(72 100 100)"
+            opacity="0.85" />
+          <ellipse class="petal" cx="117" cy="115" rx="28" ry="38" fill="#3A7AB3" transform="rotate(144 100 100)"
+            opacity="0.8" />
+          <ellipse class="petal" cx="83" cy="115" rx="28" ry="38" fill="#2E6DA2" transform="rotate(216 100 100)"
+            opacity="0.8" />
+          <ellipse class="petal" cx="73" cy="85" rx="28" ry="38" fill="#4A8AC4" transform="rotate(288 100 100)"
+            opacity="0.85" />
+          <circle cx="100" cy="98" r="16" fill="#fff" />
+          <text x="100" y="104" text-anchor="middle" font-family="Noto Sans KR" font-size="13" font-weight="900"
+            fill="#3A7AB3">ITDA</text>
+        </svg>
       </div>
-      <div class="header-right">
-        <!-- [⑥ Education] 번역 / 학습 모드 토글 -->
-        <div id="mode-toggle">
-          <button class="mode-btn active" data-mode="translate">🔁 번역</button>
-          <button class="mode-btn" data-mode="learn">🎓 학습</button>
+
+      <div class="landing-title">소리가 없어도,<br />우리는 이어집니다</div>
+      <div class="landing-subtitle">인공지능 수어 통역 서비스 ITDA</div>
+
+      <button class="btn-start" id="btn-start">시작하기</button>
+
+      <div class="landing-lang">🌐 한국어 (KSL)</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- MAIN APP VIEW                                      -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <div id="app-view">
+
+      <!-- Header -->
+      <div class="app-header">
+        <div class="app-header-left">
+          <button class="btn-back" id="btn-back-landing" title="홈으로">✕</button>
+          <span class="status-dot" id="phase-badge">ITDA</span>
         </div>
-        <span class="badge badge-step">STEP 5</span>
-        <span class="badge badge-status" id="phase-badge">표정 동기화 · 초기화 중…</span>
-      </div>
-    </header>
-
-    <!-- ── 메인 ──────────────────────────────────────────── -->
-    <main>
-      <!-- Three.js 캔버스 -->
-      <canvas id="three-canvas"></canvas>
-
-
-      <!-- HUD -->
-      <div class="hud">
-        <div class="hud-item" id="fps-display">FPS: --</div>
-        <div class="hud-item" id="joint-status">Joints: LOADING</div>
+        <button class="btn-settings" title="설정">⚙</button>
       </div>
 
-      <!-- 웹캠 PIP -->
-      <div id="cam-pip">
-        <div class="pip-label">📷 실시간 카메라</div>
-        <video id="vision-video" autoplay muted playsinline></video>
-        <canvas id="vision-canvas"></canvas>
+      <!-- Mode Toggle -->
+      <div class="mode-toggle-bar">
+        <button class="mode-tab active" data-mode="voice-to-sign" id="tab-v2s">
+          <span>🗣️</span> 음성→수어
+        </button>
+        <button class="mode-tab" data-mode="sign-to-voice" id="tab-s2v">
+          <span>🤟</span> 수어→음성
+        </button>
       </div>
 
-      <!-- AI Hub 참조 영상 PIP -->
-      <div id="ref-pip">
-        <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
-        <button id="btn-close-ref">✕</button>
-        <video id="ref-video" controls muted></video>
-      </div>
+      <!-- Content -->
+      <div class="content-area">
 
-      <!-- [⑥ Education] 학습 카드 (기본 숨김, 학습 모드 전환 시 표시) -->
-      <div id="lesson-card" style="display:none;">
-        <div class="lesson-header">
-          <span class="lesson-emoji" id="lesson-emoji">🎓</span>
-          <div>
-            <div class="lesson-label">목표 단어</div>
-            <div class="lesson-word" id="lesson-word">—</div>
+        <!-- ── Voice-to-Sign Mode ──────────────────────── -->
+        <div id="voice-to-sign">
+          <span class="live-badge">LIVE AI</span>
+
+          <!-- Video circle for sign language playback -->
+          <div class="video-circle" id="video-circle">
+            <video id="ref-video-circle" muted playsinline></video>
+            <!-- ref-pip: motion_loader_v3.js가 수어 영상을 여기에 재생 -->
+            <div id="ref-pip">
+              <button id="btn-close-ref">✕</button>
+              <video id="ref-video-0" muted playsinline style="display:block;"></video>
+              <video id="ref-video-1" muted playsinline style="display:none;"></video>
+            </div>
+          </div>
+
+          <!-- Audio waveform -->
+          <div class="audio-wave idle" id="audio-wave">
+            <div class="audio-wave-bar"></div>
+            <div class="audio-wave-bar"></div>
+            <div class="audio-wave-bar"></div>
+            <div class="audio-wave-bar"></div>
+            <div class="audio-wave-bar"></div>
+            <div class="audio-wave-bar"></div>
+            <div class="audio-wave-bar"></div>
+          </div>
+
+          <!-- Translation result -->
+          <div class="translation-card">
+            <div id="emotion-output" style="min-height:2em;">
+              <em style="color:var(--text-muted); font-style:normal;">번역할 내용을 입력하거나 마이크를 눌러 말해보세요</em>
+            </div>
+
+            <!-- Preload progress -->
+            <div id="preload-bar">
+              <span id="preload-text"></span>
+              <div class="preload-track">
+                <div id="preload-fill"></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="lesson-hint" id="lesson-hint">단어를 선택하세요</div>
-        <div class="lesson-status" id="lesson-status" data-state="idle">대기 중</div>
-        <div class="lesson-nav">
-          <button id="lesson-prev" class="lesson-nav-btn" title="이전 단어">◀</button>
-          <button id="lesson-stop" class="lesson-nav-btn" title="학습 종료">⏹</button>
-          <button id="lesson-next" class="lesson-nav-btn" title="다음 단어">▶</button>
-        </div>
-      </div>
 
-      <!-- 간단한 우측 상단 상태 분석창 -->
-      <div id="mini-status">
-        <div class="mini-row">
-          <span class="mini-label">인식 중인 손:</span>
-          <span class="mini-val" id="mini-hand-output">0개 ✋</span>
-        </div>
-        <!-- [P0 HUD] 수형(handshape) 배지 -->
-        <div class="mini-row">
-          <span class="mini-label">수형:</span>
-          <span class="mini-val" id="mini-handshape-output">
-            <span class="hs-badge unknown">대기</span>
-          </span>
-        </div>
-        <!-- [P0 HUD] 손목 위치 구역 (얼굴/가슴/허리) -->
-        <div class="mini-row">
-          <span class="mini-label">손 위치:</span>
-          <span class="mini-val" id="mini-pose-output" style="font-size:0.68rem;">—</span>
-        </div>
-        <!-- [P2 HUD] 모션 신호등 -->
-        <div class="mini-row">
-          <span class="mini-label">모션:</span>
-          <span class="mini-val" id="mini-motion-output" style="font-size:0.68rem;">
-            <span class="motion-dot idle"></span>idle
-          </span>
-        </div>
-        <div class="mini-row">
-          <span class="mini-label">감지된 표정:</span>
-          <span class="mini-val" id="mini-emotion-output">중립 😐</span>
-        </div>
-        <!-- [③ STT] 현재 음성 인식 소스 표시 -->
-        <div class="mini-row">
-          <span class="mini-label">🎤 STT:</span>
-          <span class="mini-val" id="mini-stt-source" style="font-size:0.68rem;">초기화 중…</span>
-        </div>
-        <!-- [Tier1] 모션 엔진 버전 토글 (V2 해부학 ↔ V1 레거시 비교) -->
-        <div class="mini-row">
-          <span class="mini-label">🦴 모션:</span>
-          <span class="mini-val" id="motion-version-toggle" style="display:inline-flex; gap:4px; pointer-events:auto;">
-            <button class="mv-btn active" data-v="v2" title="해부학 정밀 프로필">V2</button>
-            <button class="mv-btn" data-v="v1" title="레거시 프로필">V1</button>
-          </span>
-        </div>
-        <div class="mini-row" style="flex-direction: column; align-items: flex-start; gap: 0.2rem; margin-top: 0.3rem;">
-          <span class="mini-label">🗣️ 음성/텍스트 응답</span>
-          <span class="mini-val" id="emotion-output" style="font-size:0.75rem; line-height:1.3; color:var(--text-main); font-weight:normal; max-width: 140px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-family: inherit;">
-            <em style="color:var(--text-muted); font-style:normal;">입력을 기다리고 있습니다...</em>
-          </span>
-        </div>
-      </div>
-
-      <!-- 번역 패널 (하단) -->
-      <div id="translation-panel">
-        
-        <!-- 양방향 텍스트/음성 입력 -->
-        <div class="input-group">
-          <input type="text" id="chat-input" class="text-input" placeholder="번역할 내용을 입력하세요..." />
-          <button id="btn-mic" class="btn-action btn-mic" title="음성 인식">🎤</button>
-          <button id="btn-send" class="btn-action btn-send" title="전송">➤</button>
-        </div>
-
-        <!-- RAG 수어 예측 결과 (Vision) -->
-        <div class="t-group">
-          <div class="t-label">비전(캠) 분석 → 수어 예측 (SLM-RAG)</div>
-          <div class="t-output" id="slm-output">
-            <em style="color:var(--text-muted)">수어 동작을 하면 분석 결과가 나타납니다.</em>
+        <!-- ── Sign-to-Voice Mode ──────────────────────── -->
+        <div id="sign-to-voice">
+          <div class="camera-area">
+            <video id="vision-video" autoplay muted playsinline></video>
+            <canvas id="vision-canvas"
+              style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1);"></canvas>
+            <div class="camera-frame"></div>
+            <span class="camera-hint" id="camera-hint">인식 대기</span>
+          </div>
+          <div class="translation-card">
+            <div class="translation-label">번역 결과</div>
+            <div class="translation-text" id="slm-output">
+              <em style="color:var(--text-muted); font-style:normal;">수어 동작을 하면 결과가 나타납니다</em>
+            </div>
           </div>
         </div>
+
+        <!-- ref-pip은 .video-circle 안에 배치됨 -->
+
+        <!-- Vision loading overlay -->
+        <div id="vision-overlay" class="hidden">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">모델 로딩 중...</div>
+          <div id="vision-status">초기화 준비 중</div>
+        </div>
+
+        <!-- Three.js canvas (hidden) -->
+        <canvas id="three-canvas"></canvas>
       </div>
 
-      <!-- 컨트롤 버튼 -->
-      <div class="controls">
-        <button class="btn-circle" id="btn-play-word" title="WORD0001 재생" style="background: var(--accent-cyan); color: #000;">▶</button>
-        <button class="btn-circle" id="btn-reset" title="아바타 리셋">🔄</button>
-        <button class="btn-circle" id="btn-cam"   title="카메라 뷰 리셋">🎥</button>
+      <!-- Bottom Input Bar -->
+      <div class="input-bar">
+        <div class="input-field-wrap">
+          <input type="text" id="chat-input" placeholder="번역할 내용을 입력하세요..." />
+        </div>
+        <button class="btn-send-new" id="btn-send" title="전송">➤</button>
+        <button class="btn-mic-new" id="btn-mic" title="음성 인식">🎤</button>
       </div>
 
-      <!-- 비전 로딩 오버레이 -->
-      <div id="vision-overlay">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">MediaPipe 모델 로딩 중...</div>
-        <div id="vision-status">초기화 준비 중</div>
-      </div>
-    </main>
+    </div><!-- end app-view -->
 
-  </div> <!-- end of app-container -->
+  </div><!-- end app-container -->
 
-  <!-- ── Three.js Import Map ─────────────────────────── -->
+  <!-- ── Hidden elements for JS module compatibility ──── -->
+  <!-- These IDs are referenced by existing JS modules but not shown in new design -->
+  <div style="display:none;">
+    <div id="cam-pip"></div>
+    <div id="mini-status">
+      <span id="mini-hand-output"></span>
+      <span id="mini-handshape-output"></span>
+      <span id="mini-pose-output"></span>
+      <span id="mini-motion-output"></span>
+      <span id="mini-emotion-output"></span>
+      <span id="mini-source-output"></span>
+      <span id="mini-stt-source"></span>
+    </div>
+    <div id="fps-display"></div>
+    <div id="joint-status"></div>
+    <div id="mode-toggle">
+      <button class="mode-btn active" data-mode="translate"></button>
+      <button class="mode-btn" data-mode="learn"></button>
+    </div>
+    <div id="lesson-card">
+      <span id="lesson-emoji"></span>
+      <div id="lesson-word"></div>
+      <div id="lesson-hint"></div>
+      <div id="lesson-status" data-state="idle"></div>
+      <button id="lesson-prev"></button>
+      <button id="lesson-stop"></button>
+      <button id="lesson-next"></button>
+    </div>
+    <button id="btn-play-word"></button>
+    <button id="btn-reset"></button>
+    <button id="btn-cam"></button>
+  </div>
+
+  <!-- ── Three.js Import Map ──────────────────────────── -->
   <script type="importmap">
     {
       "imports": {
@@ -632,275 +968,156 @@
     }
   </script>
 
-  <!-- ── 모듈 로딩 순서: avatar → retargeting → vision ── -->
-  <!-- [캐시버스팅] 모든 주요 JS 에 v 쿼리 파라미터 부여. 코드 수정 시 아래 버전만 올리면 브라우저 강제 fetch -->
-  <script type="module" src="./js/avatar.js?v=20260422c"></script>
-  <script type="module" src="./js/retargeting.js?v=20260422c"></script>
-  <script type="module" src="./js/vision.js?v=20260422c"></script>
+  <!-- ── Module Scripts ───────────────────────────────── -->
+  <script type="module" src="./js/avatar.js?v=20260609b"></script>
 
-  <!-- ── [③ STT] Web Speech primary + Whisper fallback ── -->
-  <!-- translator.js 가 window.ITDAStt 를 참조하므로 먼저 로드 -->
-  <script src="./js/stt/audio_capture.js?v=20260422c"></script>
-  <script src="./js/stt/stt_client.js?v=20260422c"></script>
-  <script src="./js/stt/stt-adapter.js?v=20260422c"></script>
+  <script src="./js/stt/audio_capture.js?v=20260609b"></script>
+  <script src="./js/stt/stt_client.js?v=20260609b"></script>
+  <script src="./js/stt/stt-adapter.js?v=20260609b"></script>
 
-  <!-- ── 텍스트/음성 양방향 번역 스크립트 ──────────────── -->
-  <script type="module" src="./js/translator.js?v=20260422c"></script>
+  <script type="module" src="./js/translator.js?v=20260609b"></script>
+  <script type="module" src="./js/handshape_loader.js?v=20260609b"></script>
+  <script type="module" src="./js/motion_loader_v3.js?v=20260609b"></script>
+  <script type="module" src="./js/video_preloader.js?v=20260609b"></script>
+  <script type="module" src="./js/education.js?v=20260609b"></script>
 
-  <!-- ── [2단계] 수형 라이브러리 로더 (motion_loader_v3 이전에 로드) ── -->
-  <script type="module" src="./js/handshape_loader.js?v=20260424d"></script>
-
-  <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
-  <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
-  <script type="module" src="./js/motion_loader_v3.js?v=20260424d"></script>
-
-  <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
-  <script type="module" src="./js/education.js"></script>
-
-  <!-- ── UI 제어 스크립트 ────────────────────────────── -->
+  <!-- ── App Logic ────────────────────────────────────── -->
   <script type="module">
-    // MediaPipe 준비 완료 → 로딩 오버레이 해제
+    // ── Landing → App transition ──
+    document.getElementById('btn-start').addEventListener('click', () => {
+      document.getElementById('landing-view').style.display = 'none';
+      const appView = document.getElementById('app-view');
+      appView.style.display = 'flex';
+    });
+
+    document.getElementById('btn-back-landing').addEventListener('click', () => {
+      document.getElementById('app-view').style.display = 'none';
+      document.getElementById('landing-view').style.display = 'flex';
+    });
+
+    // ── Mode tab switching ──
+    const tabs = document.querySelectorAll('.mode-tab');
+    const v2sView = document.getElementById('voice-to-sign');
+    const s2vView = document.getElementById('sign-to-voice');
+
+    function switchMode(mode) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+      if (mode === 'voice-to-sign') {
+        v2sView.style.display = 'flex';
+        s2vView.style.display = 'none';
+      } else {
+        v2sView.style.display = 'none';
+        s2vView.style.display = 'flex';
+      }
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => switchMode(t.dataset.mode)));
+
+    // ── Audio wave animation ──
+    const waveEl = document.getElementById('audio-wave');
+    window.addEventListener('itda:stt:state', (e) => {
+      if (e.detail === 'listening') {
+        waveEl.classList.remove('idle');
+      } else {
+        waveEl.classList.add('idle');
+      }
+    });
+
+    // ── Mic button ──
+    const micBtn = document.getElementById('btn-mic');
+    micBtn.addEventListener('click', () => {
+      if (window.ITDAStt) {
+        window.ITDAStt.toggle();
+        micBtn.classList.toggle('recording');
+        const wave = document.getElementById('audio-wave');
+        wave.classList.toggle('idle');
+      }
+    });
+
+    // ── Vision overlay auto-hide (vision.js disabled) ──
+    if (!document.querySelector('script[src*="vision.js"]')) {
+      const overlay = document.getElementById('vision-overlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
     window.addEventListener('itda:vision:ready', () => {
-      document.getElementById('vision-overlay').classList.add('hidden');
-      document.getElementById('phase-badge').textContent = '✅ 얼굴 + 손동작 동기화 중';
+      document.getElementById('vision-overlay')?.classList.add('hidden');
     });
 
-    // 아바타 준비 완료 알림
-    window.addEventListener('itda:avatar:ready', () => {
-      document.getElementById('phase-badge').textContent = '표정 동기화 · 모델 로드 완료';
+    // ── Preload progress ──
+    window.addEventListener('itda:preload:progress', (e) => {
+      const { loaded, total } = e.detail;
+      const bar = document.getElementById('preload-bar');
+      const text = document.getElementById('preload-text');
+      const fill = document.getElementById('preload-fill');
+      if (bar) bar.style.display = 'block';
+      if (text) text.textContent = `수어 영상 준비 중... ${loaded}/${total}`;
+      if (fill) fill.style.width = `${(loaded / total * 100).toFixed(0)}%`;
+    });
+    window.addEventListener('itda:preload:complete', () => {
+      const bar = document.getElementById('preload-bar');
+      const text = document.getElementById('preload-text');
+      if (text) text.textContent = '수어 영상 준비 완료!';
+      setTimeout(() => { if (bar) bar.style.display = 'none'; }, 2000);
     });
 
-    // 감정 Morph Target 값을 HUD 퍼센트에 반영
-    window.addEventListener('itda:face:results', (e) => {
-      const bs = e.detail.blendshapes;
-      const bsMap = Object.fromEntries(bs.map(b => [b.categoryName, b.score]));
-
-      // 주요 Blendshape 값 → 감정 표시
-      const angry     = ((bsMap.browLowererLeft ?? 0) + (bsMap.browLowererRight ?? 0)) / 2;
-      const surprised = ((bsMap.eyeWideLeft    ?? 0) + (bsMap.eyeWideRight    ?? 0) + (bsMap.jawOpen ?? 0)) / 3;
-      const sad       = ((bsMap.mouthFrownLeft ?? 0) + (bsMap.mouthFrownRight ?? 0) + (bsMap.browInnerUp ?? 0)) / 3;
-
-      updateEmotionBar('angry',     angry);
-      updateEmotionBar('surprised', surprised);
-      updateEmotionBar('sad',       sad);
-
-      // 주요 감정 결정
-      const dominant = [
-        { name: '분노 😠', value: angry,     color: '#ff4757', label: 'Angry'     },
-        { name: '놀람 😲', value: surprised,  color: '#ffd93d', label: 'Surprised' },
-        { name: '슬픔 😢', value: sad,        color: '#4a90d9', label: 'Sad'       },
-      ].reduce((a, b) => a.value > b.value ? a : b);
-
-      const miniEmotionEl = document.getElementById('mini-emotion-output');
-      if (miniEmotionEl) {
-        miniEmotionEl.innerHTML = dominant.value > 0.08 
-            ? `<em style="color:${dominant.color}">${dominant.name}</em>`
-            : `<em>중립 😐</em>`;
+    // ── Ref video close ──
+    document.getElementById('btn-close-ref').addEventListener('click', () => {
+      document.getElementById('ref-pip').style.display = 'none';
+      for (const vid of [document.getElementById('ref-video-0'), document.getElementById('ref-video-1')]) {
+        if (vid) { vid.pause(); vid.src = ''; }
       }
     });
 
-    // 손 감지 수 업데이트
-    window.addEventListener('itda:hands:results', (e) => {
-      const count = e.detail.hands.length;
-      const miniHandEl = document.getElementById('mini-hand-output');
-      if (miniHandEl) {
-        miniHandEl.textContent = count > 0 ? `${count}개 🤝` : '0개 ✋';
-      }
+    // ── Stub handlers for compatibility ──
+    document.getElementById('btn-play-word')?.addEventListener('click', () => {
+      window.ITDAMotionV3?.play('WORD0001');
     });
-
-    // [P0 HUD] 백엔드 Handshape 분석 결과 → 수형 배지 갱신
-    // ws_vision 가 VisionAck.hand_analyses 로 송신 → vision.js 가 itda:hands:analysis 로 브로드캐스트
-    window.addEventListener('itda:hands:analysis', (e) => {
-      const analyses = e.detail || [];
-      const el = document.getElementById('mini-handshape-output');
-      if (!el) return;
-      if (analyses.length === 0) {
-        el.innerHTML = '<span class="hs-badge unknown">대기</span>';
-        return;
-      }
-      // 손별 수형 배지. handedness 아이콘(L/R)과 함께 표시.
-      const html = analyses.map(a => {
-        const icon = a.handedness === 'Right' ? 'R' : a.handedness === 'Left' ? 'L' : '?';
-        const cls = (a.handshape && a.handshape !== 'UNKNOWN') ? 'hs-badge' : 'hs-badge unknown';
-        return `<span class="${cls}" title="${a.handedness}">${icon}·${a.handshape || 'UNKNOWN'}</span>`;
-      }).join('');
-      el.innerHTML = html;
-    });
-
-    // [P0 HUD] 백엔드 Pose 분석 결과 → 손목 구역 · 팔꿈치 각도 표시
-    window.addEventListener('itda:pose:analysis', (e) => {
-      const p = e.detail;
-      const el = document.getElementById('mini-pose-output');
-      if (!el) return;
-      if (!p) { el.textContent = '—'; return; }
-      // 예: "R:얼굴(125°) · L:가슴(170°)"
-      el.innerHTML = `<span>R:${p.wrist_region_R}(${Math.round(p.elbow_bend_R)}°)</span>` +
-                     `<span class="region-chip">L:${p.wrist_region_L}(${Math.round(p.elbow_bend_L)}°)</span>`;
-    });
-
-    // [P2 HUD] Motion phase 신호등
-    const MOTION_LABELS = { idle:'대기', moving:'움직임', settling:'감속', stable:'완료 ✓' };
-    window.addEventListener('itda:motion:phase', (e) => {
-      const phase = e.detail?.phase || 'idle';
-      const el = document.getElementById('mini-motion-output');
-      if (!el) return;
-      // stable(=1회성 번역 확정 트리거) 상태에만 플래시 클래스 부여
-      const flashCls = phase === 'stable' ? ' flash' : '';
-      el.innerHTML = `<span class="motion-dot ${phase}${flashCls}"></span>${MOTION_LABELS[phase] || phase}`;
-    });
-
-    // [⑥ Education] 모드 토글 + 학습 카드 제어
-    const modeBtns    = document.querySelectorAll('#mode-toggle .mode-btn');
-    const lessonCard  = document.getElementById('lesson-card');
-    const lessonWord  = document.getElementById('lesson-word');
-    const lessonEmoji = document.getElementById('lesson-emoji');
-    const lessonHint  = document.getElementById('lesson-hint');
-    const lessonStatus= document.getElementById('lesson-status');
-    let currentMode   = 'translate';
-    let lessonIndex   = 0;
-
-    function _activateWord(idx) {
-      if (!window.ITDAEducation) return;
-      const words = window.ITDAEducation.getWords();
-      if (!words.length) return;
-      lessonIndex = ((idx % words.length) + words.length) % words.length;
-      window.ITDAEducation.start(words[lessonIndex]);
-    }
-
-    function _setMode(mode) {
-      currentMode = mode;
-      modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-      if (mode === 'learn') {
-        lessonCard.style.display = 'block';
-        _activateWord(lessonIndex);
-      } else {
-        lessonCard.style.display = 'none';
-        window.ITDAEducation?.stop();
-      }
-    }
-
-    modeBtns.forEach(b => b.addEventListener('click', () => _setMode(b.dataset.mode)));
-    document.getElementById('lesson-prev').addEventListener('click', () => _activateWord(lessonIndex - 1));
-    document.getElementById('lesson-next').addEventListener('click', () => _activateWord(lessonIndex + 1));
-    document.getElementById('lesson-stop').addEventListener('click', () => _setMode('translate'));
-
-    // 학습 피드백 이벤트 → 카드 UI 갱신
-    window.addEventListener('itda:lesson:feedback', (e) => {
-      const d = e.detail || {};
-      if (d.status === 'started') {
-        lessonWord.textContent  = d.word;
-        lessonEmoji.textContent = d.emoji || '🎓';
-        lessonHint.textContent  = d.hint || '';
-        lessonStatus.dataset.state = 'idle';
-        lessonStatus.textContent = '시도해 보세요 ✍️';
-      } else if (d.status === 'trying') {
-        lessonStatus.dataset.state = 'trying';
-        lessonStatus.textContent = '🟡 ' + (d.message || '조금만 더!');
-      } else if (d.status === 'success') {
-        lessonStatus.dataset.state = 'success';
-        lessonStatus.textContent = '🟢 ' + (d.message || '정답!');
-      } else if (d.status === 'stopped') {
-        lessonStatus.dataset.state = 'idle';
-        lessonStatus.textContent = '대기 중';
-      }
-    });
-
-    // [Tier1] 모션 엔진 V2/V1 토글 — 마지막 재생 단어를 재생하며 비교
-    window.ITDAMotion = window.ITDAMotion || { version: 'v2' };
-    let _lastPlayedWord = null;
-    window.addEventListener('itda:motion:played', (e) => {
-      _lastPlayedWord = e.detail?.keyword || null;
-    });
-    document.querySelectorAll('.mv-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const v = btn.dataset.v;
-        window.ITDAMotion.version = v;
-        document.querySelectorAll('.mv-btn').forEach(b => b.classList.toggle('active', b === btn));
-        console.info(`[Motion Engine] 버전 전환 → ${v}${v === 'v2' ? ' (해부학 정밀)' : ' (레거시)'}`);
-        // 최근에 재생한 단어가 있으면 자동 재생해 A/B 비교가 즉시 체감되게 함
-        if (_lastPlayedWord && window.ITDATranslator?.replay) {
-          window.ITDATranslator.replay(_lastPlayedWord);
-        }
-      });
-    });
-
-    // [③ STT] 소스 배지 초기화 및 상태 반영
-    const STT_SOURCE_LABELS = {
-      'web-speech': '🌐 Browser (Web Speech)',
-      'whisper':    '🖥️ Server (Whisper)',
-    };
-    function _updateSttBadge(state = 'idle') {
-      const el = document.getElementById('mini-stt-source');
-      if (!el) return;
-      const src = window.ITDAStt?.getSource?.() || 'web-speech';
-      const label = STT_SOURCE_LABELS[src] || src;
-      const indicator = state === 'listening' ? ' 🔴' : state === 'error' ? ' ⚠️' : '';
-      el.textContent = label + indicator;
-    }
-    // stt-adapter 가 이미 로드됐을 수도, 아직일 수도 있음 — 둘 다 대응
-    if (window.ITDAStt) _updateSttBadge();
-    else window.addEventListener('load', () => _updateSttBadge(), { once: true });
-    window.addEventListener('itda:stt:state', (e) => _updateSttBadge(e.detail));
-
-    // ── 백엔드 RAG + SLM 결과 수신 및 UI 렌더링 ──
-    window.addEventListener('itda:rag:result', (e) => {
-      const result = e.detail.rag_result;
-      if (!result) return;
-      const emotionsHtml = result.emotions ? result.emotions.map(em => `<span class="t-emotion-badge" style="background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">${em}</span>`).join(' ') : '';
-      
-      const outputEl = document.getElementById('slm-output');
-      if (outputEl) {
-        if (result.type === 'draft') {
-          outputEl.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 예측 중: ${result.text}</span>`;
-        } else if (result.type === 'final') {
-          outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.1rem;">✨ ${result.text}</span> ${emotionsHtml}`;
-        }
-      }
-    });
-
-    // FPS HUD
-    window.addEventListener('itda:fps:update', (e) => {
-      document.getElementById('fps-display').textContent = `FPS: ${e.detail.fps.toFixed(0)}`;
-    });
-
-    function updateEmotionBar(emotion, value) {
-      const clipped = Math.min(1, Math.max(0, value));
-      const pct = (clipped * 100).toFixed(1);
-      const barEl = document.getElementById(`emotion-${emotion}`);
-      const pctEl = document.getElementById(`pct-${emotion}`);
-      if (barEl) barEl.style.width = pct + '%';
-      if (pctEl) pctEl.textContent = Math.round(parseFloat(pct)) + '%';
-    }
-
-    // 컨트롤 버튼
-    document.getElementById('btn-play-word').addEventListener('click', () => {
-      if (window.ITDAMotionV3) {
-        window.ITDAMotionV3.play('WORD0001');
-      } else {
-        console.warn('ITDAMotionV3가 아직 로드되지 않았습니다.');
-      }
-    });
-
-    document.getElementById('btn-reset').addEventListener('click', () => {
+    document.getElementById('btn-reset')?.addEventListener('click', () => {
       window.ITDAAvatar5?.reset();
     });
 
-    document.getElementById('btn-cam').addEventListener('click', () => {
-      // OrbitControls target 초기화는 avatar.js 내부이므로 페이지 재로드로 대체
-      window.location.reload();
+    // ── Education mode (hidden, for JS compat) ──
+    const modeBtns = document.querySelectorAll('#mode-toggle .mode-btn');
+    modeBtns.forEach(b => b.addEventListener('click', () => { }));
+    document.getElementById('lesson-prev')?.addEventListener('click', () => { });
+    document.getElementById('lesson-next')?.addEventListener('click', () => { });
+    document.getElementById('lesson-stop')?.addEventListener('click', () => { });
+
+    window.addEventListener('itda:lesson:feedback', (e) => {
+      const d = e.detail || {};
+      const el = document.getElementById('lesson-status');
+      if (el && d.status) el.dataset.state = d.status;
     });
 
-    // 참조 영상 닫기
-    document.getElementById('btn-close-ref').addEventListener('click', () => {
-      document.getElementById('ref-pip').style.display = 'none';
-      const v = document.getElementById('ref-video');
-      v.pause();
-      v.src = "";
+    // ── RAG result display ──
+    window.addEventListener('itda:rag:result', (e) => {
+      const result = e.detail?.rag_result;
+      if (!result) return;
+      const outputEl = document.getElementById('slm-output');
+      if (outputEl) {
+        outputEl.innerHTML = result.type === 'final'
+          ? `<span style="font-weight:800;">${result.text}</span>`
+          : `<em style="color:var(--text-muted);">${result.text}</em>`;
+      }
     });
 
-    // 자동 시작
-    window.ITDAVision5?.init();
+    // ── FPS (hidden) ──
+    window.addEventListener('itda:fps:update', (e) => {
+      const el = document.getElementById('fps-display');
+      if (el) el.textContent = `FPS: ${e.detail.fps.toFixed(0)}`;
+    });
+
+    // ── Motion version ──
+    window.ITDAMotion = window.ITDAMotion || { version: 'v2' };
+
+    // ── STT badge ──
+    function _updateSttBadge() { }
+    if (window.ITDAStt) _updateSttBadge();
+
+    // ── Emotion bar compat ──
+    function updateEmotionBar() { }
   </script>
 
 </body>
+
 </html>

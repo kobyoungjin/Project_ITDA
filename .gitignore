@@ -40,6 +40,12 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Project specific
-data/ksl_motions/*.json
-!data/ksl_motions/.gitkeep
+# Project specific — 대용량 모션 JSON (3.6GB)
+frontend/data/ksl_motions/*.json
+!frontend/data/ksl_motions/index.json
+!frontend/data/ksl_motions/_mapping.json
+
+# temp/build artifacts
+temp_bg_removal/*.mp4
+temp_bg_removal/*.webm
+temp_bg_removal/frames/

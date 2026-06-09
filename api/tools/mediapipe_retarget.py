@@ -116,51 +116,64 @@ def quat_distance(a: np.ndarray, b: np.ndarray) -> float:
 # ════════════════════════════════════════════════════════════════
 
 # T-pose 에서 각 본이 "가리키는" 방향 (bone's primary axis in world space at rest).
-# [실측 기반 / 2026-04-24] sonyr.glb GLB 에서 pygltflib 로 추출:
-#   - 캐릭터의 오른쪽 팔/손/손가락 = world -X 방향 (RightArm pos x=-0.16)
-#   - 캐릭터의 왼쪽  팔/손/손가락 = world +X 방향
-# AI Hub 데이터(signer 정면 카메라)와 좌표계 일치 (signer 오른쪽 = -X)
+# [실측 기반 / 2026-05-22] sonyr.glb GLB 에서 pygltflib 로 parent→child 벡터 추출.
+#   - 팔/전완: 거의 순수 ±X (미세한 Z 성분은 무시 가능)
+#   - 엄지: 3D 대각선 방향 (Thumb1 ≈ -0.66X, -0.26Y, +0.70Z)
+#   - 검지~새끼: 거의 ±X 이지만 본마다 미세한 Y/Z 편차 존재
+#   - Hand: Index1 방향 기반 (≈ -0.96X, -0.05Y, +0.28Z)
 REST_DIRECTIONS = {
-    # 상완 + 전완
-    "RightArm":     np.array([-1.0, 0.0, 0.0]),
-    "LeftArm":      np.array([+1.0, 0.0, 0.0]),
-    "RightForeArm": np.array([-1.0, 0.0, 0.0]),
-    "LeftForeArm":  np.array([+1.0, 0.0, 0.0]),
-    # 손목
-    "RightHand":    np.array([-1.0, 0.0, 0.0]),
-    "LeftHand":     np.array([+1.0, 0.0, 0.0]),
-    # 손가락 — Right 쪽 (world -X 로 뻗음)
-    "RightHandThumb1":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandThumb2":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandThumb3":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandIndex1":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandIndex2":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandIndex3":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandMiddle1": np.array([-1.0, 0.0, 0.0]),
-    "RightHandMiddle2": np.array([-1.0, 0.0, 0.0]),
-    "RightHandMiddle3": np.array([-1.0, 0.0, 0.0]),
-    "RightHandRing1":   np.array([-1.0, 0.0, 0.0]),
-    "RightHandRing2":   np.array([-1.0, 0.0, 0.0]),
-    "RightHandRing3":   np.array([-1.0, 0.0, 0.0]),
-    "RightHandPinky1":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandPinky2":  np.array([-1.0, 0.0, 0.0]),
-    "RightHandPinky3":  np.array([-1.0, 0.0, 0.0]),
-    # Left 쪽 (world +X 로 뻗음)
-    "LeftHandThumb1":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandThumb2":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandThumb3":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandIndex1":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandIndex2":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandIndex3":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandMiddle1": np.array([+1.0, 0.0, 0.0]),
-    "LeftHandMiddle2": np.array([+1.0, 0.0, 0.0]),
-    "LeftHandMiddle3": np.array([+1.0, 0.0, 0.0]),
-    "LeftHandRing1":   np.array([+1.0, 0.0, 0.0]),
-    "LeftHandRing2":   np.array([+1.0, 0.0, 0.0]),
-    "LeftHandRing3":   np.array([+1.0, 0.0, 0.0]),
-    "LeftHandPinky1":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandPinky2":  np.array([+1.0, 0.0, 0.0]),
-    "LeftHandPinky3":  np.array([+1.0, 0.0, 0.0]),
+    # ── 상완 + 전완 ──────────────────────────────────────────────
+    "RightArm":     np.array([-0.99973, 0.0, -0.02302]),
+    "LeftArm":      np.array([+0.99973, 0.0, -0.02302]),
+    "RightForeArm": np.array([-0.99966, 0.0, +0.02617]),
+    "LeftForeArm":  np.array([+0.99966, 0.0, +0.02617]),
+    # ── 손목 (Hand → Index1 MCP 방향) ────────────────────────────
+    "RightHand":    np.array([-0.95805, -0.05208, +0.28183]),
+    "LeftHand":     np.array([+0.95805, -0.05208, +0.28183]),
+    # ── 엄지 — GLB 실측: 대각선 방향 (수어 정확도에 핵심) ────────
+    "RightHandThumb1":  np.array([-0.66156, -0.26247, +0.70246]),
+    "RightHandThumb2":  np.array([-0.86001, -0.45754, +0.22593]),
+    "RightHandThumb3":  np.array([-0.86001, -0.45754, +0.22593]),
+    # ── 검지 ─────────────────────────────────────────────────────
+    "RightHandIndex1":  np.array([-0.99997, -0.00760, -0.00063]),
+    "RightHandIndex2":  np.array([-0.99999, +0.00103, +0.00335]),
+    "RightHandIndex3":  np.array([-0.99999, +0.00103, +0.00335]),
+    # ── 중지 ─────────────────────────────────────────────────────
+    "RightHandMiddle1": np.array([-0.99937, -0.03518, -0.00369]),
+    "RightHandMiddle2": np.array([-0.99962, -0.02720, -0.00375]),
+    "RightHandMiddle3": np.array([-0.99962, -0.02720, -0.00375]),
+    # ── 약지 ─────────────────────────────────────────────────────
+    "RightHandRing1":   np.array([-0.99864, -0.04747, -0.02172]),
+    "RightHandRing2":   np.array([-0.99920, -0.03218, -0.02360]),
+    "RightHandRing3":   np.array([-0.99920, -0.03218, -0.02360]),
+    # ── 새끼 ─────────────────────────────────────────────────────
+    "RightHandPinky1":  np.array([-0.99825, +0.00795, -0.05853]),
+    "RightHandPinky2":  np.array([-0.99840, -0.00897, -0.05591]),
+    "RightHandPinky3":  np.array([-0.99840, -0.00897, -0.05591]),
+    # ── Left 엄지 ────────────────────────────────────────────────
+    "LeftHandThumb1":  np.array([+0.66156, -0.26246, +0.70246]),
+    "LeftHandThumb2":  np.array([+0.86001, -0.45754, +0.22593]),
+    "LeftHandThumb3":  np.array([+0.86001, -0.45754, +0.22593]),
+    # ── Left 검지 ────────────────────────────────────────────────
+    "LeftHandIndex1":  np.array([+0.99997, -0.00759, -0.00063]),
+    "LeftHandIndex2":  np.array([+0.99999, +0.00102, +0.00335]),
+    "LeftHandIndex3":  np.array([+0.99999, +0.00102, +0.00335]),
+    # ── Left 중지 ────────────────────────────────────────────────
+    "LeftHandMiddle1": np.array([+0.99937, -0.03518, -0.00369]),
+    "LeftHandMiddle2": np.array([+0.99962, -0.02719, -0.00375]),
+    "LeftHandMiddle3": np.array([+0.99962, -0.02719, -0.00375]),
+    # ── Left 약지 ────────────────────────────────────────────────
+    "LeftHandRing1":   np.array([+0.99864, -0.04747, -0.02172]),
+    "LeftHandRing2":   np.array([+0.99920, -0.03218, -0.02360]),
+    "LeftHandRing3":   np.array([+0.99920, -0.03218, -0.02360]),
+    # ── Left 새끼 ────────────────────────────────────────────────
+    "LeftHandPinky1":  np.array([+0.99825, +0.00795, -0.05853]),
+    "LeftHandPinky2":  np.array([+0.99840, -0.00896, -0.05590]),
+    "LeftHandPinky3":  np.array([+0.99840, -0.00896, -0.05590]),
+    # ── 상체 ─────────────────────────────────────────────────────
+    "Spine":           np.array([0.0, +0.99999, -0.00350]),
+    "Neck":            np.array([0.0, +0.97802, +0.20852]),
+    "Head":            np.array([0.0, +0.97802, +0.20852]),
 }
 
 
@@ -233,8 +246,11 @@ def _build_full_parent_chain() -> dict:
     - 손가락 마디 3 (Thumb3): 마디 2 의 자식
     """
     chain = {
-        "RightArm": None,
-        "LeftArm": None,
+        "Spine": None,
+        "Neck": "Spine",
+        "Head": "Neck",
+        "RightArm": "Spine",  # [Fix] Spine 회전 시 팔이 이중 회전되는 현상 방지
+        "LeftArm": "Spine",   # [Fix] Spine 회전 시 팔이 이중 회전되는 현상 방지
         "RightForeArm": "RightArm",
         "LeftForeArm": "LeftArm",
         "RightHand": "RightForeArm",
@@ -308,7 +324,8 @@ def retarget_pose_frame(pose_landmarks: dict) -> dict:
     """
     required = ["left_shoulder", "right_shoulder",
                 "left_elbow", "right_elbow",
-                "left_wrist", "right_wrist"]
+                "left_wrist", "right_wrist",
+                "mid_hip", "neck", "nose"]
     for key in required:
         if key not in pose_landmarks:
             return {}
@@ -326,8 +343,22 @@ def retarget_pose_frame(pose_landmarks: dict) -> dict:
     ls, le, lw = map(to_np, [pose_landmarks["left_shoulder"],
                              pose_landmarks["left_elbow"],
                              pose_landmarks["left_wrist"]])
+    mh, n, nz = map(to_np, [pose_landmarks["mid_hip"],
+                            pose_landmarks["neck"],
+                            pose_landmarks["nose"]])
 
     bones = {}
+    
+    # 1) 상체 (Spine, Neck)
+    # Spine: MidHip -> Neck
+    # Neck: Neck -> Nose
+    spine_target = vec_normalize(n - mh)
+    neck_target  = vec_normalize(nz - n)
+    
+    bones["Spine"] = quat_to_dict(quat_from_unit_vectors(REST_DIRECTIONS["Spine"], spine_target))
+    bones["Neck"]  = quat_to_dict(quat_from_unit_vectors(REST_DIRECTIONS["Neck"], neck_target))
+
+    # 2) 팔 (Arm, ForeArm)
     bones.update(retarget_arm_chain(rs, re, rw, "Right"))
     bones.update(retarget_arm_chain(ls, le, lw, "Left"))
     return bones
@@ -486,6 +517,9 @@ def extract_landmarks_from_video(video_path: str | Path,
                     "right_elbow":    {"x": lm[P.RIGHT_ELBOW].x,    "y": lm[P.RIGHT_ELBOW].y,    "z": lm[P.RIGHT_ELBOW].z},
                     "left_wrist":     {"x": lm[P.LEFT_WRIST].x,     "y": lm[P.LEFT_WRIST].y,     "z": lm[P.LEFT_WRIST].z},
                     "right_wrist":    {"x": lm[P.RIGHT_WRIST].x,    "y": lm[P.RIGHT_WRIST].y,    "z": lm[P.RIGHT_WRIST].z},
+                    "mid_hip":        {"x": (lm[P.LEFT_HIP].x + lm[P.RIGHT_HIP].x)/2, "y": (lm[P.LEFT_HIP].y + lm[P.RIGHT_HIP].y)/2, "z": (lm[P.LEFT_HIP].z + lm[P.RIGHT_HIP].z)/2},
+                    "neck":           {"x": (lm[P.LEFT_SHOULDER].x + lm[P.RIGHT_SHOULDER].x)/2, "y": (lm[P.LEFT_SHOULDER].y + lm[P.RIGHT_SHOULDER].y)/2, "z": (lm[P.LEFT_SHOULDER].z + lm[P.RIGHT_SHOULDER].z)/2},
+                    "nose":           {"x": lm[P.NOSE].x, "y": lm[P.NOSE].y, "z": lm[P.NOSE].z},
                 }
                 frames_out.append({
                     "time": round((frame_no - start_frame) / fps, 4),
@@ -691,6 +725,9 @@ def _openpose_pose_to_dict(pose_flat: list) -> dict:
         "right_elbow":    pt(BODY25["RElbow"]),
         "left_wrist":     pt(BODY25["LWrist"]),
         "right_wrist":    pt(BODY25["RWrist"]),
+        "mid_hip":        pt(BODY25["MidHip"]),
+        "neck":           pt(BODY25["Neck"]),
+        "nose":           pt(BODY25["Nose"]),
     }
 
 

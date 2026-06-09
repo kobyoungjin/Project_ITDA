@@ -73,6 +73,27 @@ def analyze_hand_kps(kps_flat: List[float]) -> List[List[float]]:
     
     return fingers_angles
 
+def analyze_hand_kps_from_list(hand_kps: List[List[float]]) -> List[List[float]]:
+    """AI Hub Label JSON 포맷 ([[x, y, conf], ...]) 에서 손가락 각도 추출"""
+    if not hand_kps or len(hand_kps) < 21: return None
+    
+    pts = []
+    for pt in hand_kps:
+        # x, y, z 순, z가 없으면 0.0
+        x = pt[0] if len(pt) > 0 else 0.0
+        y = pt[1] if len(pt) > 1 else 0.0
+        z = pt[2] if len(pt) > 2 else 0.0
+        pts.append(np.array([x, y, z]))
+        
+    fingers_angles = []
+    for start_idx in [5, 9, 13, 17]:
+        mcp = get_flexion_angle(pts[0], pts[start_idx], pts[start_idx+1])
+        pip = get_flexion_angle(pts[start_idx], pts[start_idx+1], pts[start_idx+2])
+        dip = get_flexion_angle(pts[start_idx+1], pts[start_idx+2], pts[start_idx+3])
+        fingers_angles.append([mcp, pip, dip])
+        
+    return fingers_angles
+
 def calculate_distance(angles1, angles2):
     """두 수형 각도 세트 간의 L2 거리 계산"""
     a1 = np.array(angles1).flatten()
@@ -114,6 +135,32 @@ def process_word_dir(keypoint_dir: Path) -> str:
     
     # 최빈값(Mode) 반환
     return max(set(all_frame_matches), key=all_frame_matches.count)
+
+def analyze_frames(frames: List[Dict]) -> Dict[str, str]:
+    """AI Hub 메모리 프레임 리스트를 분석하여 양손의 대표 수형을 추출합니다."""
+    right_matches = []
+    left_matches = []
+    
+    for frame in frames:
+        kp = frame.get("keypoints", {})
+        rhand = kp.get("right_hand", kp.get("rightHand", []))
+        lhand = kp.get("left_hand", kp.get("leftHand", []))
+        
+        if rhand:
+            angles = analyze_hand_kps_from_list(rhand)
+            if angles: right_matches.append(find_best_match(angles))
+            
+        if lhand:
+            angles = analyze_hand_kps_from_list(lhand)
+            if angles: left_matches.append(find_best_match(angles))
+            
+    r_shape = max(set(right_matches), key=right_matches.count) if right_matches else "5지"
+    l_shape = max(set(left_matches), key=left_matches.count) if left_matches else "5지"
+    
+    return {
+        "right": r_shape,
+        "left": l_shape
+    }
 
 if __name__ == "__main__":
     # 사용 예시 (Batch 처리용)
