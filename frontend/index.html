@@ -1016,8 +1016,28 @@
 
   <!-- ── App Logic ────────────────────────────────────── -->
   <script type="module">
+    // ── 모바일 비디오 unlock (한 번만 실행) ──
+    // 사용자 제스처 시점에 모든 video를 play→pause하여 브라우저의 autoplay 정책을 해제.
+    // 이후 프로그래밍 방식 play()가 src 변경 후에도 허용됨.
+    let _videosUnlocked = false;
+    function unlockAllVideos() {
+      if (_videosUnlocked) return;
+      _videosUnlocked = true;
+      document.querySelectorAll('video').forEach(v => {
+        v.muted = true;
+        const p = v.play();
+        if (p) p.then(() => v.pause()).catch(() => {});
+      });
+      console.info('[ITDA] 모바일 비디오 unlock 완료');
+    }
+
+    // 백업: 어떤 터치든 첫 번째 터치에서 unlock
+    document.addEventListener('touchstart', () => unlockAllVideos(), { once: true });
+    document.addEventListener('click', () => unlockAllVideos(), { once: true });
+
     // ── Landing → App transition ──
     document.getElementById('btn-start').addEventListener('click', () => {
+      unlockAllVideos();
       document.getElementById('landing-view').style.display = 'none';
       const appView = document.getElementById('app-view');
       appView.style.display = 'flex';

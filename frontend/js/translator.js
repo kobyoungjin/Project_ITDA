@@ -51,14 +51,15 @@ window.addEventListener('itda:stt:transcript', (e) => {
   sendMessage(text);
 });
 
-// 모바일 비디오 자동재생 unlock: 사용자 터치 시점에 video.play() 한번 호출
+// 모바일 비디오 자동재생 unlock: 모든 video 엘리먼트를 사용자 제스처로 활성화
 function _unlockVideos() {
-  for (const id of ['ref-video-0', 'ref-video-1']) {
-    const v = document.getElementById(id);
-    if (v && v.paused) {
-      v.play().then(() => v.pause()).catch(() => {});
+  document.querySelectorAll('video').forEach(v => {
+    if (v.paused) {
+      v.muted = true;
+      const p = v.play();
+      if (p) p.then(() => v.pause()).catch(() => {});
     }
-  }
+  });
 }
 
 btnSend.addEventListener('click', () => {
