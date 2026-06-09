@@ -84,6 +84,7 @@ let _lastSentText = '';
 
 // 백엔드 통신 및 번역
 async function sendMessage(text) {
+  _unlockVideos();
   _lastSentText = text;
   chatInput.value = '';
   emotionOutput.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">🤔 텍스트 분석 및 모션 생성 중... ("${text}")</span>`;
