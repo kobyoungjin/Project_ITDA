@@ -4,7 +4,6 @@ import logging
 import time
 
 from api.core.websockets_schema import VisionFrame, VisionAck, HandAnalysis, PoseAnalysis
-from api.services.rag_engine import rag_engine
 from api.services.handshape_analyzer import analyze_hand, describe_for_slm
 from api.services.pose_analyzer import analyze_pose
 
@@ -133,18 +132,14 @@ async def _handle(session_id: str, raw: dict):
             # 손이 움직이는 동안에는 Draft만 보내고 종료
             return
 
-        # Track 2: 1단계 RAG 데이터베이스 스캔 (모션 완료 시에만)
-        search_keyword = fast_pred if fast_pred else "정지 상태"
-        rag_data = rag_engine.retrieve_with_emotion(search_keyword)
-
-        # Track 3: RAG 결과 직접 사용 (Ollama 비활성화)
-        final_text = rag_data.get('warm_translation') or rag_data.get('keyword') or fast_pred
+        # Track 2: Rule-based 예측 결과를 직접 사용 (RAG 제거됨)
+        final_text = fast_pred if fast_pred else "정지 상태"
 
         rag_result = {
             "type": "final",
             "text": final_text,
-            "emotions": rag_data.get('emotions', []),
-            "video_url": rag_data.get('video_url', ''),
+            "emotions": [],
+            "video_url": "",
             "motion_phase": motion_phase,
         }
 
