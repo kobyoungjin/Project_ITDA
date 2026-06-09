@@ -47,16 +47,29 @@ window.addEventListener('itda:stt:transcript', (e) => {
   if (!text) return;
   chatInput.value = text;
   console.info(`[STT] (${source}) "${text}"`);
+  _unlockVideos();
   sendMessage(text);
 });
 
+// 모바일 비디오 자동재생 unlock: 사용자 터치 시점에 video.play() 한번 호출
+function _unlockVideos() {
+  for (const id of ['ref-video-0', 'ref-video-1']) {
+    const v = document.getElementById(id);
+    if (v && v.paused) {
+      v.play().then(() => v.pause()).catch(() => {});
+    }
+  }
+}
+
 btnSend.addEventListener('click', () => {
+  _unlockVideos();
   const text = chatInput.value.trim();
   if (text) sendMessage(text);
 });
 
 chatInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
+    _unlockVideos();
     const text = chatInput.value.trim();
     if (text) sendMessage(text);
   }
