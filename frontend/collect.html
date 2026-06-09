@@ -153,9 +153,10 @@
     </table>
   </div>
 
+  <script src="./js/config.js?v=20260609a"></script>
   <script type="module">
-    // 페이지를 서빙한 호스트를 그대로 사용 (localhost/127.0.0.1 혼선 방지)
-    const API = `http://${location.hostname || 'localhost'}:8000/api/collect`;
+    // 백엔드 엔드포인트는 ITDAConfig 중앙 설정에서 (운영/로컬 자동 분기)
+    const API = `${window.ITDAConfig.API_HTTP}/api/collect`;
     const SAMPLE_INTERVAL_MS = 100; // 0.1초마다 1프레임 수집
     const TARGET_SAMPLES = 100;     // 단어당 목표 샘플 수
 

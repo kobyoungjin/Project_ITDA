@@ -647,6 +647,9 @@
   </div> <!-- end of app-container -->
 
   <!-- ── Three.js Import Map ─────────────────────────── -->
+  <!-- [P0] 백엔드 URL 중앙 설정 — 다른 모든 스크립트보다 먼저 로드되어야 함 -->
+  <script src="./js/config.js?v=20260609a"></script>
+
   <script type="importmap">
     {
       "imports": {
@@ -1321,7 +1324,7 @@
     if (selModel) {
       // 1. 초기 모델 상태 백엔드에서 조회 후 반영
       //    UI에서 '기본 모델(16단어/main)'을 제거했으므로 백엔드가 'main' 상태면 'dialogue' 로 자동 전환한다.
-      const _apiBase = `http://${location.hostname || '127.0.0.1'}:8000`;
+      const _apiBase = window.ITDAConfig?.API_HTTP || `http://${location.hostname || '127.0.0.1'}:8000`;
       fetch(`${_apiBase}/api/collect/get-model-type`)
         .then(res => res.json())
         .then(async (data) => {
@@ -1356,7 +1359,7 @@
       selModel.addEventListener('change', async (e) => {
         const selectedModel = e.target.value;
         try {
-          const res = await fetch(`http://${location.hostname || '127.0.0.1'}:8000/api/collect/select-model`, {
+          const res = await fetch(`${window.ITDAConfig?.API_HTTP || `http://${location.hostname || '127.0.0.1'}:8000`}/api/collect/select-model`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model_type: selectedModel })

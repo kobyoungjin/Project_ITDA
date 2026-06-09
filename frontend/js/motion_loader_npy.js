@@ -49,7 +49,7 @@ async function loadJoints(word) {
     // 2. 백엔드 실시간 생성 요청 (NEW)
     console.info(`[JointLoader] '${word}' 데이터를 찾을 수 없어 실시간 생성을 시도합니다...`);
     try {
-        const resolveResp = await fetch(`http://${location.hostname || 'localhost'}:8000/api/sign-language/resolve-motion`, {
+        const resolveResp = await fetch(`${(window.ITDAConfig?.API_HTTP) || `http://${location.hostname || 'localhost'}:8000`}/api/sign-language/resolve-motion`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: word })

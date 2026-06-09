@@ -18,7 +18,7 @@
  */
 
 (() => {
-  const WS_URL = `ws://${location.hostname}:8000/api/ws/stt`;
+  const WS_URL = `${(window.ITDAConfig?.API_WS) || `ws://${location.hostname || '127.0.0.1'}:8000`}/api/ws/stt`;
 
   // ── 1순위: Web Speech API ──────────────────────────────────
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

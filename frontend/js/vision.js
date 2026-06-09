@@ -190,7 +190,7 @@ async function switchCamera() {
 // ── WebSocket 연동 상태 ───────────────────────────────────────
 // 페이지를 서빙한 호스트를 그대로 사용해 origin 과 WS 대상의 IPv4/IPv6 혼선을 방지.
 // file:// 로 직접 열었을 때만 127.0.0.1 로 폴백.
-const WS_URL = `ws://${location.hostname || '127.0.0.1'}:8000/api/ws/vision`;
+const WS_URL = `${(window.ITDAConfig?.API_WS) || `ws://${location.hostname || '127.0.0.1'}:8000`}/api/ws/vision`;
 let ws = null;
 let sessionId = crypto.randomUUID();
 let frameCounter = 0;

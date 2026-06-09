@@ -1,0 +1,35 @@
+# Docker 빌드 컨텍스트에서 제외 — Vercel 정적 파일·테스트 데이터·문서 등
+node_modules/
+package.json
+package-lock.json
+vercel.json
+.vercelignore
+.git/
+.gitignore
+.env
+.env.*
+__pycache__/
+*.pyc
+
+# 백엔드와 무관한 프론트엔드 빌드 산출물·문서
+frontend/README_Mediapipe.md
+frontend/collect.html
+
+# 큰 학습 데이터(컨테이너 디스크 절약) — 운영에 필요한 dialogue 만 남김
+api/data/ksl_training/*.bak
+api/data/ksl_training/ksl_dataset.csv
+api/data/ksl_training/joint_cache/
+api/data/ksl_training/*.npy
+
+# 개발 진행서·문서
+개발진행서_*.md
+번역역할.md
+ksl_word_categories.md
+README.md
+no_cache_server.py
+start_backend.bat
+start_frontend.bat
+scripts/
+
+# 백엔드 임시 작업 — 운영 무관
+api/scratch/

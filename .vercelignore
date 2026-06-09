@@ -29,6 +29,12 @@ node_modules/
 package-lock.json
 package.json
 
+# 백엔드 배포 전용 파일 — Vercel 빌드에 불필요
+Dockerfile
+.dockerignore
+backend-requirements.txt
+README_HF_SPACE.md
+
 # 기타
 .git/
 .gitignore

@@ -1,6 +1,9 @@
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import anyio
 import uvicorn
 from api.core.config import settings
@@ -34,14 +37,36 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 안티그래비티 규칙: 프론트엔드 포트(3000)를 위한 CORS 허용
+# CORS — 로컬 개발(3000/5500/8000) + 운영 도메인(환경변수로 확장)
+# 사용 예: ITDA_CORS_ORIGINS="https://project-itda.vercel.app,https://*.vercel.app"
+_default_origins = [
+    "http://localhost:3000", "http://127.0.0.1:3000",
+    "http://localhost:5500", "http://127.0.0.1:5500",
+    "http://localhost:8000",
+]
+_env_origins = [o.strip() for o in os.environ.get("ITDA_CORS_ORIGINS", "").split(",") if o.strip()]
+# Vercel 프리뷰/프로덕션 도메인은 와일드카드 패턴으로 일괄 허용 (정규식)
+_origin_regex = os.environ.get(
+    "ITDA_CORS_ORIGIN_REGEX",
+    r"^https://([a-z0-9-]+\.)*vercel\.app$",
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:8000"],
+    allow_origins=_default_origins + _env_origins,
+    allow_origin_regex=_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 정적 파일 — 모션 JSON(1.8GB)을 프론트엔드(Vercel)에서 직접 fetch 할 수 있게 마운트
+# /static/motions/<word>.json → frontend/data/ksl_motions/<word>.json
+_motions_dir = Path(__file__).resolve().parent.parent / "frontend" / "data" / "ksl_motions"
+if _motions_dir.exists():
+    app.mount("/static/motions", StaticFiles(directory=str(_motions_dir)), name="motions")
+    print(f"[ITDA Backend] 모션 정적 마운트: /static/motions → {_motions_dir}")
+else:
+    print(f"[ITDA Backend] ⚠️ 모션 디렉토리 없음 — /static/motions 마운트 스킵: {_motions_dir}")
 
 # 모듈화된 라우터 붙이기
 app.include_router(

@@ -7,7 +7,7 @@
  *   take 가 많을수록 데이터 다양성이 커지고 누수 없는 평가도 가능해진다.
  */
 
-const API_BASE = `http://${location.hostname || '127.0.0.1'}:8000/api/collect`;
+const API_BASE = `${(window.ITDAConfig?.API_HTTP) || `http://${location.hostname || '127.0.0.1'}:8000`}/api/collect`;
 
 const state = {
     isRecording: false,
