@@ -325,6 +325,31 @@
       position: relative;
     }
 
+    .btn-replay {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 1rem;
+      border-radius: var(--rounded-full);
+      background: var(--white);
+      border: 1px solid var(--outline-variant);
+      color: var(--primary-container);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-replay:hover {
+      background: var(--surface-container);
+      border-color: var(--primary-container);
+    }
+
+    .btn-replay:active {
+      transform: scale(0.95);
+    }
+
     #voice-to-sign .translation-card {
       position: absolute;
       bottom: 0;
@@ -828,7 +853,7 @@
           <button class="btn-back" id="btn-back-landing" title="홈으로">✕</button>
           <span class="status-dot" id="phase-badge">ITDA</span>
         </div>
-        <button class="btn-settings" title="설정">⚙</button>
+        <button class="btn-back" id="btn-back-from-app" title="뒤로가기" onclick="history.back()">←</button>
       </div>
 
       <!-- Mode Toggle -->
@@ -846,7 +871,7 @@
 
         <!-- ── Voice-to-Sign Mode ──────────────────────── -->
         <div id="voice-to-sign">
-          <span class="live-badge">LIVE AI</span>
+          <button class="btn-replay" id="btn-replay" title="다시 실행">🔄 다시 실행</button>
 
           <!-- Video circle for sign language playback -->
           <div class="video-circle" id="video-circle">
@@ -1069,6 +1094,21 @@
       document.getElementById('ref-pip').style.display = 'none';
       for (const vid of [document.getElementById('ref-video-0'), document.getElementById('ref-video-1')]) {
         if (vid) { vid.pause(); vid.src = ''; }
+      }
+    });
+
+    // ── 다시 실행 버튼 ──
+    let _lastPlayedItems = null;
+    window.addEventListener('itda:motion:played', (e) => {
+      _lastPlayedItems = e.detail?.items || e.detail?.keyword || null;
+    });
+    document.getElementById('btn-replay')?.addEventListener('click', () => {
+      if (_lastPlayedItems && window.ITDAMotionV3) {
+        if (Array.isArray(_lastPlayedItems)) {
+          window.ITDAMotionV3.playSequence(_lastPlayedItems, { gapMs: 0 });
+        } else {
+          window.ITDAMotionV3.play(_lastPlayedItems);
+        }
       }
     });
 
