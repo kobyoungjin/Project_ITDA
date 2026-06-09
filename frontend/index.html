@@ -329,16 +329,19 @@
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      padding: 0.4rem 1rem;
+      padding: 0.6rem 1.2rem;
       border-radius: var(--rounded-full);
       background: var(--white);
       border: 1px solid var(--outline-variant);
       color: var(--primary-container);
       font-family: inherit;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
 
     .btn-replay:hover {
@@ -1099,11 +1102,17 @@
     });
 
     // ── 다시 실행 버튼: 마지막 번역 텍스트를 다시 전송 ──
-    document.getElementById('btn-replay')?.addEventListener('click', () => {
-      if (window.ITDATranslator?.replayLast) {
-        window.ITDATranslator.replayLast();
-      }
-    });
+    const replayBtn = document.getElementById('btn-replay');
+    if (replayBtn) {
+      const doReplay = (e) => {
+        e.preventDefault();
+        if (window.ITDATranslator?.replayLast) {
+          window.ITDATranslator.replayLast();
+        }
+      };
+      replayBtn.addEventListener('click', doReplay);
+      replayBtn.addEventListener('touchend', doReplay);
+    }
 
     // ── 뒤로가기 버튼: 랜딩 페이지로 ──
     document.getElementById('btn-back-from-app')?.addEventListener('click', () => {
