@@ -2,10 +2,16 @@
 # 사용처: 백엔드 + 모션 정적 파일(frontend/data/ksl_motions/) 통합 서빙
 FROM python:3.11-slim
 
-# 시스템 의존성 (faiss / numpy / opencv 등이 요구할 수 있음)
+# 시스템 의존성 — OpenCV/MediaPipe 의 네이티브 라이브러리 요구사항 포함
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgomp1 \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgthread-2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Hugging Face Spaces 는 컨테이너를 사용자 1000 으로 실행
