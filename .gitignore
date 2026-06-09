@@ -65,3 +65,5 @@ api/data/faiss.index
 frontend/data/ksl_motions/
 
 api/data/ksl_training/*.bak
+
+api/data/ksl_training/*.bak
