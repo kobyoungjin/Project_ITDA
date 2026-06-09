@@ -1,0 +1,42 @@
+# Python 백엔드 — Vercel에서는 배포하지 않음 (별도 호스트 필요)
+api/
+scripts/
+no_cache_server.py
+*.py
+*.pyc
+__pycache__/
+
+# 학습 데이터 / 모델 파일 — 대용량, 정적 호스팅에 불필요
+**/*.csv
+**/*.pkl
+**/*.bak
+
+# 대용량 모션 데이터 — Vercel 정적 호스팅 부적합 (1.8GB)
+# 백엔드 API 또는 외부 CDN으로 제공 권장
+frontend/data/ksl_motions/
+frontend/data/joint_cache/
+
+# 개발 문서 / 설정
+개발진행서_*.md
+번역역할.md
+ksl_word_categories.md
+start_backend.bat
+start_frontend.bat
+README.md
+
+# 노드 모듈 / 락 파일
+node_modules/
+package-lock.json
+package.json
+
+# 백엔드 배포 전용 파일 — Vercel 빌드에 불필요
+Dockerfile
+.dockerignore
+backend-requirements.txt
+README_HF_SPACE.md
+
+# 기타
+.git/
+.gitignore
+.env
+.env.*

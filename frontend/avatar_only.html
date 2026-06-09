@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITDA - 아바타 전용 뷰 (학습 단어 목록)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #050810;
+      --accent-cyan: #00f2fe;
+      --accent-purple: #7c3aed;
+      --text-main: #f8fafc;
+      --border: rgba(255, 255, 255, 0.1);
+      --card-bg: rgba(30, 41, 59, 0.5);
+    }
+    body {
+      margin: 0; padding: 0; background: var(--bg-deep); color: var(--text-main);
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      overflow: hidden; height: 100vh; display: flex; flex-direction: column;
+    }
+    header {
+      padding: 0.8rem 1.5rem; background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;
+      z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .status-badge {
+      padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700;
+      background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan);
+    }
+    .control-btn {
+      padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card-bg); color: var(--text-main); cursor: pointer;
+      font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .control-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-cyan); transform: translateY(-1px); }
+    .control-btn.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+
+    main { flex: 1; position: relative; display: flex; overflow: hidden; min-height: 0; min-width: 0; }
+
+    /* 반응형 — 좁은 창에서도 깨지지 않게 */
+    @media (max-width: 1100px) {
+      #sidebar      { width: 240px; min-width: 240px; }
+      #sidebar-right { width: 260px; min-width: 260px; }
+      #sidebar-right-toggle { right: 260px; }
+      #sidebar-right-toggle.collapsed-state { right: 0; }
+    }
+    @media (max-width: 800px) {
+      #sidebar      { width: 200px; min-width: 200px; }
+      #sidebar-right { width: 240px; min-width: 240px; }
+      #sidebar-right-toggle { right: 240px; }
+      header { flex-wrap: wrap; gap: 0.5rem; padding: 0.6rem 0.9rem; }
+      header > div:last-child { gap: 0.4rem !important; flex-wrap: wrap; }
+      .control-btn { padding: 6px 10px; font-size: 0.78rem; }
+    }
+    @media (max-width: 600px) {
+      /* 매우 좁은 폭 — 헤더 버튼 컴팩트화 */
+      header > div:first-child { font-size: 1.05rem !important; }
+      .control-btn { padding: 5px 8px; font-size: 0.72rem; }
+      .control-btn span { font-size: 0.85em; }
+      #sidebar      { width: 180px; min-width: 180px; }
+      #sidebar-right { width: 220px; min-width: 220px; }
+      #sidebar-right-toggle { right: 220px; }
+    }
+    
+    /* 사이드바 개선 (스크린샷 세로 정렬 문제 해결) */
+    #sidebar {
+      width: 280px; 
+      min-width: 280px; /* 찌그러짐 방지 */
+      flex-shrink: 0; 
+      background: rgba(10, 15, 30, 0.98);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      backdrop-filter: blur(20px);
+      z-index: 10;
+    }
+    
+    .sidebar-header {
+      padding: 1.5rem 1rem 0.8rem 1rem;
+      position: sticky; top: 0; background: rgba(10, 15, 30, 1);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+      z-index: 5;
+    }
+    .sidebar-header h3 {
+      font-size: 1rem; color: var(--accent-cyan); margin: 0 0 0.6rem 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* 단어 검색 입력 */
+    .word-search-wrap {
+      position: relative;
+    }
+    #word-search-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 7px 30px 7px 30px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      box-sizing: border-box;
+    }
+    #word-search-input::placeholder { color: var(--text-muted); }
+    #word-search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.15);
+    }
+    .word-search-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 8px; top: 50%; transform: translateY(-50%);
+      font-size: 0.8rem;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    #word-search-clear {
+      position: absolute;
+      right: 6px; top: 50%; transform: translateY(-50%);
+      background: transparent; border: none;
+      color: var(--text-muted); cursor: pointer;
+      font-size: 0.9rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: none;
+    }
+    #word-search-clear:hover { color: var(--accent-cyan); background: rgba(255,255,255,0.06); }
+    #word-search-clear.show { display: block; }
+    #word-search-meta {
+      font-size: 0.66rem;
+      color: var(--text-muted);
+      padding: 4px 2px 0 2px;
+      min-height: 14px;
+    }
+    #word-search-meta .hit { color: var(--accent-cyan); font-weight: 700; }
+    #word-search-meta .miss { color: #f59e0b; font-weight: 700; }
+
+    /* 검색 일치 단어 강조 */
+    .word-item.search-hit,
+    .new-word-item.search-hit {
+      outline: 2px solid var(--accent-cyan);
+      outline-offset: 1px;
+      background: rgba(0, 242, 254, 0.18);
+      color: var(--accent-cyan);
+      animation: search-flash 1.2s ease-out 1;
+    }
+    @keyframes search-flash {
+      0%   { box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.6); }
+      60%  { box-shadow: 0 0 0 10px rgba(0, 242, 254, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
+    }
+    /* 검색 부분 일치 단어 — 일치하는 글자 강조 */
+    .word-item mark, .new-word-item mark {
+      background: rgba(0, 242, 254, 0.35);
+      color: var(--accent-cyan);
+      padding: 0 2px;
+      border-radius: 3px;
+      font-weight: 800;
+    }
+    /* 검색 필터 OFF 인 단어들은 흐리게 (옵션 모드일 때만) */
+    .word-list.filtered .word-item:not(.search-match) {
+      display: none;
+    }
+    
+    .word-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0 1rem 2rem 1rem;
+    }
+
+    /* ── 탭 UI (새 단어 ↔ 기존 단어 전환) ─────────────────── */
+    .word-tabs {
+      display: flex;
+      gap: 0.35rem;
+      margin: 0 1rem 0.8rem 1rem;
+      padding: 0.28rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .word-tab {
+      flex: 1;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 7px 9px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.74rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .word-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+    .word-tab.active {
+      background: rgba(0, 242, 254, 0.13);
+      color: var(--accent-cyan);
+      border-color: rgba(0, 242, 254, 0.35);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+    }
+    .tab-badge {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      font-size: 0.62rem; font-weight: 800;
+      padding: 1px 7px; border-radius: 999px;
+      min-width: 16px; text-align: center;
+    }
+    .word-tab.active .tab-badge {
+      background: var(--accent-cyan);
+      color: #000;
+    }
+    /* 패널 — 활성 탭만 표시 (active 가 아니면 무조건 숨김) */
+    .word-panel:not(.active) { display: none !important; }
+    .word-panel.active { animation: panel-in 0.25s ease-out 1; }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 🆕 새로 추가된 단어 패널 — 탭 안 컨테이너 */
+    #new-words-section {
+      margin: 0 1rem 1rem 1rem;
+      padding: 0;
+    }
+    .new-words-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.4rem; margin-bottom: 0.55rem;
+    }
+    .new-words-title {
+      font-size: 0.72rem; font-weight: 800; color: var(--accent-cyan);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .new-words-title .badge {
+      background: var(--accent-cyan); color: #000;
+      font-size: 0.68rem; font-weight: 800;
+      padding: 1px 7px; border-radius: 999px;
+      min-width: 18px; text-align: center;
+    }
+    .new-words-mark {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      padding: 3px 8px; border-radius: 6px;
+      font-size: 0.68rem; cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .new-words-mark:hover {
+      background: rgba(0, 242, 254, 0.15);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .new-words-list {
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .new-words-empty {
+      color: var(--text-muted); font-style: italic;
+      text-align: center; padding: 1.5rem 0.5rem;
+      font-size: 0.8rem;
+    }
+    .new-word-item {
+      padding: 9px 12px;
+      border-radius: 9px;
+      background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0, 242, 254, 0.30);
+      color: var(--accent-cyan);
+      font-size: 0.9rem; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+    .new-word-item::before {
+      content: 'NEW';
+      font-size: 0.6rem;
+      background: var(--accent-cyan); color: #000;
+      padding: 1px 6px; border-radius: 4px;
+      font-weight: 800;
+    }
+    .new-word-item:hover {
+      background: rgba(0, 242, 254, 0.18);
+      transform: translateX(3px);
+    }
+    .new-word-item.playing {
+      background: linear-gradient(90deg, var(--accent-cyan), #00d2ff);
+      color: #000;
+    }
+    
+    .word-item {
+      padding: 14px 16px; 
+      border-radius: 12px; 
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05); 
+      cursor: pointer; 
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 0.95rem; 
+      font-weight: 500;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .word-item:hover { 
+      background: rgba(0, 242, 254, 0.08); 
+      border-color: rgba(0, 242, 254, 0.4); 
+      color: var(--accent-cyan);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .word-item.playing { 
+      background: linear-gradient(90deg, var(--accent-cyan), #00d2ff); 
+      color: #000; 
+      font-weight: 700; 
+      border-color: transparent;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+    }
+
+    #three-container { flex: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(circle at center, #0f172a 0%, #050810 100%); }
+    #three-canvas { width: 100%; height: 100%; display: block; }
+
+    /* ── 인식 결과 표시 (아바타는 동작하지 않고 텍스트로만 알림) ── */
+    #recognition-display {
+      position: absolute;
+      top: 1rem; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 99px;
+      padding: 6px 18px;
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      max-width: 80%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 4px 16px rgba(0, 242, 254, 0.15);
+    }
+    #recognition-display.show { opacity: 1; }
+    #recognition-display.sentence {
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 8px 22px;
+      max-width: 90%;
+      white-space: normal;
+      text-align: center;
+    }
+
+    /* ── 수어 영상 오버레이 (학습 단어 클릭 시 표시) ───── */
+    #video-overlay {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px; max-width: 80%;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 16px;
+      padding: 1rem;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      backdrop-filter: blur(20px);
+    }
+    #video-overlay.active { display: block; }
+    #video-overlay video {
+      width: 100%; border-radius: 8px; background: #000;
+      display: block;
+    }
+    .video-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.6rem;
+    }
+    .video-title { font-size: 1.05rem; font-weight: 700; color: var(--accent-cyan); }
+    .video-close {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: #fff;
+      width: 30px; height: 30px;
+      border-radius: 50%; cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+    }
+    .video-close:hover { background: rgba(255,71,87,0.3); border-color: #f43f5e; }
+
+    /* 우측 사이드바 — 수집 모드 (카메라 + 패널) */
+    #sidebar-right {
+      width: 300px;
+      min-width: 300px;
+      flex-shrink: 0;
+      background: rgba(10, 15, 30, 0.98);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      backdrop-filter: blur(20px);
+      z-index: 10;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-left-width 0.3s ease;
+    }
+    /* 접힌 상태 — 폭 0으로 줄임. 토글 버튼은 항상 보이게 유지 */
+    #sidebar-right.collapsed {
+      width: 0;
+      min-width: 0;
+      border-left-width: 0;
+      pointer-events: none; /* 안쪽 입력 받지 않게 */
+    }
+    #sidebar-right.collapsed > * {
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    #sidebar-right > * {
+      opacity: 1;
+      transition: opacity 0.2s ease 0.1s;
+    }
+    #sidebar-right::-webkit-scrollbar { width: 6px; }
+    #sidebar-right::-webkit-scrollbar-track { background: transparent; }
+    #sidebar-right::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #sidebar-right::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+    /* 접기/펴기 토글 버튼 — 오른쪽 가장자리에 고정 */
+    #sidebar-right-toggle {
+      position: fixed;
+      top: 50%;
+      right: 300px; /* 사이드바 폭과 동일 */
+      transform: translateY(-50%);
+      width: 24px;
+      height: 64px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+      color: var(--accent-cyan);
+      cursor: pointer;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  background 0.15s ease, color 0.15s ease;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.25);
+    }
+    #sidebar-right-toggle:hover {
+      background: rgba(0, 242, 254, 0.15);
+      color: #fff;
+    }
+    #sidebar-right-toggle.collapsed-state {
+      right: 0;
+    }
+    #sidebar-right-toggle .arrow {
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+    #sidebar-right-toggle.collapsed-state .arrow {
+      transform: rotate(180deg);
+    }
+    
+    /* Custom Scrollbar */
+    #sidebar::-webkit-scrollbar { width: 6px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #sidebar::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ── collect-card 가 쓰는 추가 색 변수 ───────────────────── */
+    :root {
+      --accent-green: #00e6a0;
+      --text-muted: #94a3b8;
+    }
+
+    /* ── 카메라 미니 프리뷰 — 사이드바 안 (vision.js 가 사용) ── */
+    #camera-mini {
+      position: relative;
+      margin: 0.8rem 1rem 0.5rem 1rem;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      background: #000;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    #camera-mini video, #camera-mini canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    #camera-mini canvas { pointer-events: none; }
+    #vision-status {
+      position: absolute; bottom: 4px; left: 6px;
+      font-size: 0.62rem; color: var(--accent-cyan);
+      background: rgba(0,0,0,0.55);
+      padding: 1px 6px; border-radius: 4px;
+      z-index: 2;
+    }
+
+    /* ── 수집 패널 — 사이드바 안 ───────────────────────────── */
+    #collect-card {
+      position: relative;
+      margin: 0 1rem 1rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem;
+      color: var(--text-main);
+    }
+    .collect-label {
+      font-size: 0.62rem;
+      color: var(--accent-green);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 0.3rem;
+    }
+    .collect-input {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+      font-family: inherit;
+    }
+    .collect-stats {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    .btn-collect {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border: none;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-collect-start { background: #ef4444; color: #fff; }
+    .btn-collect-stop  { background: #64748b; color: #fff; display: none; }
+    .btn-collect-start:hover { background: #dc2626; }
+  </style>
+</head>
+<body>
+  <div id="error-log" style="position:fixed; top:0; left:0; width:100%; max-height:30%; overflow-y:auto; background:rgba(255,0,0,0.8); color:white; font-size:12px; z-index:9999; pointer-events:none;"></div>
+  <script>
+    window.addEventListener('error', function(e) {
+      const el = document.getElementById('error-log');
+      if (el) el.innerHTML += (e.error ? e.error.stack : e.message) + '<br><hr>';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const el = document.getElementById('error-log');
+      if (el) el.innerHTML += 'Unhandled Promise: ' + (e.reason ? (e.reason.stack || e.reason) : 'Unknown') + '<br><hr>';
+    });
+  </script>
+  <header>
+    <div style="font-weight: 900; font-size: 1.3rem; letter-spacing: -0.5px;">ITDA <span style="color:var(--accent-cyan)">MOTION STUDIO</span></div>
+    <div style="display: flex; gap: 0.8rem; align-items: center;">
+      <button id="btn-toggle-guide" class="control-btn"><span>🔄</span> 동작 가이드: OFF</button>
+      <button id="btn-toggle-video" class="control-btn"><span>▶</span> 영상 보기: OFF</button>
+      <button id="btn-toggle-skeleton" class="control-btn"><span>💀</span> 스켈레톤 모델: OFF</button>
+      <div id="ws-status" class="status-badge">대기 중</div>
+    </div>
+  </header>
+  <main>
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <h3><span>📚</span> 학습된 단어 목록</h3>
+        <div class="word-search-wrap">
+          <input
+            type="text"
+            id="word-search-input"
+            placeholder="단어 검색 (예: 안녕)"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="학습 단어 검색"
+          />
+          <button id="word-search-clear" title="검색 지우기" aria-label="검색 지우기">✕</button>
+        </div>
+        <div id="word-search-meta"></div>
+      </div>
+
+      <!-- 탭 선택 — 새 단어 / 기존 단어 -->
+      <div class="word-tabs" role="tablist" aria-label="단어 목록 탭">
+        <button class="word-tab" id="tab-new" role="tab" aria-controls="new-words-section" data-tab="new">
+          🆕 새 단어
+          <span class="tab-badge" id="new-words-count">0</span>
+        </button>
+        <button class="word-tab active" id="tab-all" role="tab" aria-controls="learned-words-list" data-tab="all">
+          📚 기존 단어
+          <span class="tab-badge" id="all-words-count">0</span>
+        </button>
+      </div>
+
+      <!-- 🆕 새로 추가된 단어 패널 -->
+      <section id="new-words-section" class="word-panel" role="tabpanel" aria-labelledby="tab-new" data-panel="new">
+        <div class="new-words-head">
+          <div class="new-words-title">
+            <span>🆕 새로 추가된 단어</span>
+          </div>
+          <button class="new-words-mark" id="btn-mark-seen" title="모든 새 단어를 본 것으로 표시">모두 확인</button>
+        </div>
+        <div id="new-words-list" class="new-words-list"></div>
+      </section>
+
+      <!-- 📚 기존 단어 패널 -->
+      <div id="learned-words-list" class="word-list word-panel active" role="tabpanel" aria-labelledby="tab-all" data-panel="all">
+        <div style="color: #64748b; font-size: 0.85rem; padding: 1rem; text-align: center;">데이터를 불러오고 있습니다...</div>
+      </div>
+    </div>
+    <div id="three-container">
+      <canvas id="three-canvas"></canvas>
+
+      <!-- 인식된 단어/문장 텍스트 표시 (아바타 자동 재생 대신) -->
+      <div id="recognition-display"></div>
+
+      <!-- 학습 단어 클릭 시 표시되는 수어 영상 오버레이 -->
+      <div id="video-overlay">
+        <div class="video-header">
+          <div class="video-title" id="video-title">단어</div>
+          <button class="video-close" id="btn-close-video" title="닫기">✕</button>
+        </div>
+        <video id="ref-video-player" controls playsinline></video>
+      </div>
+    </div>
+    <!-- 우측 사이드바 접기/펴기 토글 — 사이드바 왼쪽 가장자리에 고정 -->
+    <button id="sidebar-right-toggle" type="button" title="수집 패널 접기/펴기" aria-label="수집 패널 접기/펴기" aria-controls="sidebar-right" aria-expanded="true">
+      <span class="arrow">›</span>
+    </button>
+
+    <div id="sidebar-right">
+      <!-- 카메라 미리보기 (vision.js 가 vision-video/canvas/status 를 사용) -->
+      <div id="camera-mini">
+        <video id="vision-video" autoplay muted playsinline></video>
+        <canvas id="vision-canvas"></canvas>
+        <div id="vision-status">카메라 준비 중…</div>
+      </div>
+
+      <!-- 수집 패널 (collect_ui.js 가 멀티-take 흐름 제어) -->
+      <div id="collect-card">
+        <div class="collect-label">Collection Mode</div>
+        <div style="font-size: 1rem; font-weight: 800; margin-bottom: 0.6rem; color: var(--accent-green);">동작 여러 번 찍어 수집</div>
+
+        <input type="text" id="collect-word-input" class="collect-input" placeholder="학습할 단어 입력 (예: 안녕)">
+
+        <div class="collect-stats">
+          <span id="collect-take-summary" style="color: var(--accent-cyan); font-weight: 700;">Take 0개 · 총 0개 샘플</span>
+        </div>
+        <div id="collect-take-list" style="display:flex; flex-direction:column; gap:3px; max-height:96px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.72rem; color:var(--text-muted);"></div>
+
+        <button id="btn-collect-start" class="btn-collect btn-collect-start">🔴 이번 동작 녹화</button>
+        <button id="btn-collect-stop" class="btn-collect btn-collect-stop">■ 녹화 중지</button>
+        <div id="collect-take-status" style="font-size:0.7rem; color:var(--text-muted); margin:0.4rem 0; line-height:1.45;">단어를 입력하고 같은 동작을 여러 번 녹화하세요. 많이 찍을수록 정확해집니다.</div>
+
+        <button id="btn-collect-train" style="width: 100%; background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.75rem; margin-top: 0.2rem;">⚙️ KNN 모델 훈련</button>
+
+        <div style="border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <div style="display: flex; gap: 0.4rem;">
+            <input type="text" id="collect-url-input" class="collect-input" style="margin-bottom:0; flex:1;" placeholder="영상 URL (sldict / YouTube)">
+            <button id="btn-collect-url" style="background: var(--accent-cyan); color: #000; border: none; padding: 0 10px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.7rem;">추출</button>
+          </div>
+          <input type="file" id="collect-video-file" accept="video/*" style="display: none;">
+          <button id="btn-collect-video" style="width: 100%; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan); padding: 6px; border-radius: 8px; cursor: pointer; font-size: 0.7rem;">📂 내 PC 영상 파일 학습</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- [P0] 백엔드 URL 중앙 설정 — 다른 모든 스크립트보다 먼저 로드되어야 함 -->
+  <script src="./js/config.js?v=20260609a"></script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="./js/avatar.js?v=20260521k"></script>
+  <script type="module" src="./js/retargeting.js?v=20260521j"></script>
+  <script type="module" src="./js/handshape_loader.js?v=20260521j"></script>
+  <script type="module" src="./js/motion_loader_v3.js?v=20260521j"></script>
+  <script type="module" src="./js/motion_loader_npy.js?v=20260521j"></script>
+
+  <!-- 수집 모드(멀티-take)를 이 페이지에서도 동작시키기 위해 vision + collect_ui 로드 -->
+  <script type="module" src="./js/vision.js?v=20260522"></script>
+  <script type="module" src="./js/collect_ui.js?v=20260522"></script>
+
+  <script type="module">
+    const statusEl = document.getElementById('ws-status');
+    const overlay = document.getElementById('overlay');
+    const wordText = document.getElementById('word-text');
+    const wordListEl = document.getElementById('learned-words-list');
+    const skeletonBtn = document.getElementById('btn-toggle-skeleton');
+    const guideBtn = document.getElementById('btn-toggle-guide');
+    
+    let isSkeletonMode = true;   // 기본값: 스켈레톤 모드
+    let isGuideMode = false;
+    let isVideoMode = false;     // ON 시 단어 클릭하면 영상 오버레이 표시
+    const videoBtn = document.getElementById('btn-toggle-video');
+
+    // 아바타 로드 완료 시 자동으로 스켈레톤 모드 전환
+    window.addEventListener('itda:avatar:ready', () => {
+      const avatar = window.ITDAAvatar5;
+      if (!avatar) return;
+      avatar.setViewMode('skeleton');
+      if (skeletonBtn) {
+        skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: ON';
+        skeletonBtn.classList.add('active');
+      }
+    });
+
+    const API_HOST = location.hostname || '127.0.0.1';
+    // [P0] 중앙 설정 — 운영/로컬 백엔드 URL 자동 분기
+    const API_BASE = window.ITDAConfig?.API_HTTP || `${API_BASE}`;
+
+    // ── 새 단어 추적 (localStorage 영속화) ────────────────────────
+    // 이전에 본 단어를 모델별로 저장해두고, 단어 목록을 새로 불러올 때마다 diff 를 계산해
+    // "새로 추가된 단어" 섹션에 따로 표시한다.
+    function _seenKey() {
+      // 현재 활성 모델이 무엇이든 같은 키로 묶어도 무방하지만, 모델 전환을 분리 추적하기 위해 model_type 별로 저장.
+      return 'itda:avatar:seen_words:' + (window._currentModelType || 'default');
+    }
+    function _loadSeen() {
+      try {
+        const raw = localStorage.getItem(_seenKey());
+        const arr = raw ? JSON.parse(raw) : null;
+        return new Set(Array.isArray(arr) ? arr : []);
+      } catch (e) { return new Set(); }
+    }
+    function _saveSeen(set) {
+      try { localStorage.setItem(_seenKey(), JSON.stringify([...set])); }
+      catch (e) { /* quota 등 무시 */ }
+    }
+
+    const newSection      = document.getElementById('new-words-section');
+    const newListEl       = document.getElementById('new-words-list');
+    const newCountBadge   = document.getElementById('new-words-count');
+    const allCountBadge   = document.getElementById('all-words-count');
+    const btnMarkSeen     = document.getElementById('btn-mark-seen');
+    const searchInput     = document.getElementById('word-search-input');
+    const searchClearBtn  = document.getElementById('word-search-clear');
+    const searchMetaEl    = document.getElementById('word-search-meta');
+    const tabNewBtn       = document.getElementById('tab-new');
+    const tabAllBtn       = document.getElementById('tab-all');
+
+    let _lastFullList = []; // 마지막으로 본 전체 단어 목록 (모두 확인 처리에 사용)
+    let _newWordsCache = []; // 현재 NEW 로 표시 중인 단어들
+    let _initialTabApplied = false; // 페이지 최초 진입 시점에만 자동 탭 선택을 한 번 수행
+
+    // ── 탭 전환 ──────────────────────────────────────────────
+    const TAB_KEY = 'itda:avatar:active_tab';
+    function _activeTab() {
+      try { return localStorage.getItem(TAB_KEY) || 'all'; }
+      catch (e) { return 'all'; }
+    }
+    function _setActiveTab(name, persist = true) {
+      const tabBtns = [tabNewBtn, tabAllBtn];
+      const panels = document.querySelectorAll('.word-panel');
+      tabBtns.forEach(b => b && b.classList.toggle('active', b.dataset.tab === name));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+      if (persist) {
+        try { localStorage.setItem(TAB_KEY, name); } catch (e) {}
+      }
+      // 활성 탭 기준으로 검색 재적용 (스코프 변경)
+      if (typeof _applyWordSearch === 'function') _applyWordSearch();
+    }
+    tabNewBtn?.addEventListener('click', () => _setActiveTab('new'));
+    tabAllBtn?.addEventListener('click', () => _setActiveTab('all'));
+
+    function _renderNewWordsSection(newWords) {
+      _newWordsCache = newWords.slice();
+      newListEl.innerHTML = '';
+      if (!newWords.length) {
+        const empty = document.createElement('div');
+        empty.className = 'new-words-empty';
+        empty.innerHTML = '🌱 최근에 추가된 단어가 없습니다.<br><small style="opacity:0.7">새로 단어를 훈련하면 여기에 표시됩니다.</small>';
+        newListEl.appendChild(empty);
+      } else {
+        newWords.forEach(word => {
+          const item = document.createElement('div');
+          item.className = 'new-word-item';
+          item.textContent = word;
+          item.dataset.word = word;
+          item.title = `${word} — 클릭하면 재생/영상`;
+          item.onclick = () => {
+            if (isVideoMode) showWordVideo(word);
+            else playMotion(word, item);
+          };
+          newListEl.appendChild(item);
+        });
+      }
+      newCountBadge.textContent = String(newWords.length);
+    }
+
+    btnMarkSeen?.addEventListener('click', () => {
+      // 현재 전체 단어 목록을 "본 것"으로 표시 → NEW 패널 비우기
+      const seen = new Set(_lastFullList);
+      _saveSeen(seen);
+      _renderNewWordsSection([]);
+      // 새 단어가 0이 되면 자연스럽게 기존 단어 탭으로 전환
+      if (tabAllBtn) _setActiveTab('all');
+    });
+
+    async function loadWordList() {
+      try {
+        const resp = await fetch(`${API_BASE}/api/sign-language/list-motions`);
+        const data = await resp.json();
+
+        if (data.words && data.words.length > 0) {
+          // ── 새 단어 계산 ──
+          const seen = _loadSeen();
+          const isFirstSnapshot = seen.size === 0;
+          const newWords = data.words.filter(w => !seen.has(w));
+          _lastFullList = data.words.slice();
+
+          if (isFirstSnapshot) {
+            // 최초 진입 — 현재 단어를 "이미 본 것" 으로 기록. NEW 패널은 비워둔다.
+            _saveSeen(new Set(data.words));
+            _renderNewWordsSection([]);
+          } else {
+            _renderNewWordsSection(newWords);
+          }
+
+          // ── 기존 단어 패널 — 전체에서 NEW 를 제외하여 명확히 분리 ──
+          const newSet = new Set(_newWordsCache);
+          const existingOnly = data.words.filter(w => !newSet.has(w));
+          wordListEl.innerHTML = '';
+          existingOnly.forEach(word => {
+            const item = document.createElement('div');
+            item.className = 'word-item';
+            item.textContent = word;
+            item.dataset.word = word;
+            item.onclick = () => {
+              if (isVideoMode) showWordVideo(word);
+              else playMotion(word, item);
+            };
+            wordListEl.appendChild(item);
+          });
+          if (allCountBadge) allCountBadge.textContent = String(existingOnly.length);
+
+          // 최초 1회 — 새 단어가 있고 사용자가 탭을 명시적으로 선택한 적 없다면 NEW 탭으로 진입
+          if (!_initialTabApplied) {
+            _initialTabApplied = true;
+            let initialTab;
+            try { initialTab = localStorage.getItem(TAB_KEY); } catch (e) {}
+            if (!initialTab) initialTab = _newWordsCache.length > 0 ? 'new' : 'all';
+            _setActiveTab(initialTab, /* persist */ false);
+          }
+        } else {
+          _renderNewWordsSection([]);
+          _lastFullList = [];
+          wordListEl.innerHTML = '<div style="color: #475569; font-size: 0.85rem; padding: 2rem; text-align: center;">학습된 단어가 없습니다.<br><small style="opacity:0.6">훈련을 먼저 진행해 주세요.</small></div>';
+          if (allCountBadge) allCountBadge.textContent = '0';
+          if (!_initialTabApplied) { _initialTabApplied = true; _setActiveTab(_activeTab(), false); }
+        }
+        // 단어 목록이 갱신되었으니 현재 검색어 기준으로 강조 재적용
+        if (typeof _applyWordSearch === 'function') _applyWordSearch();
+      } catch(e) {
+        wordListEl.innerHTML = '<div style="color: #f43f5e; font-size: 0.85rem; padding: 2rem; text-align: center;">서버 연결 실패</div>';
+      }
+    }
+
+    // ── 단어 검색 (입력 시 일치 단어 강조 + 자동 스크롤) ──────────
+    function _escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+      }[c]));
+    }
+    function _highlightLabel(text, query) {
+      if (!query) return _escapeHtml(text);
+      const lower = text.toLowerCase();
+      const q = query.toLowerCase();
+      const idx = lower.indexOf(q);
+      if (idx < 0) return _escapeHtml(text);
+      return _escapeHtml(text.slice(0, idx))
+        + '<mark>' + _escapeHtml(text.slice(idx, idx + q.length)) + '</mark>'
+        + _escapeHtml(text.slice(idx + q.length));
+    }
+    function _resetSearchHighlight() {
+      document.querySelectorAll('.word-item.search-hit, .new-word-item.search-hit')
+        .forEach(el => {
+          el.classList.remove('search-hit');
+        });
+      // 모든 항목 텍스트 원형 복구
+      document.querySelectorAll('.word-item[data-word], .new-word-item[data-word]')
+        .forEach(el => {
+          // 재생 중 항목은 건드리지 않음 (playMotion 이 자체 복구함)
+          if (el.classList.contains('playing')) return;
+          el.textContent = el.dataset.word;
+        });
+    }
+    function _applyWordSearch() {
+      if (!searchInput) return;
+      const raw = searchInput.value || '';
+      const q = raw.trim();
+      // 토글: 비어 있으면 강조 해제 + clear 버튼 숨김 + 메타 비움
+      _resetSearchHighlight();
+      searchClearBtn?.classList.toggle('show', !!q);
+      if (!q) {
+        searchMetaEl.innerHTML = '';
+        return;
+      }
+      const ql = q.toLowerCase();
+      // 활성 탭 패널 내부만 검색 (숨겨진 탭의 항목은 스크롤되지 않으므로 노이즈만 됨)
+      const activePanel = document.querySelector('.word-panel.active');
+      const targets = activePanel
+        ? activePanel.querySelectorAll('[data-word]')
+        : [];
+      let hits = [];
+      targets.forEach(el => {
+        const w = el.dataset.word || '';
+        if (w.toLowerCase().includes(ql)) {
+          el.classList.add('search-hit');
+          // 재생 중 항목 텍스트는 덮어쓰지 않음
+          if (!el.classList.contains('playing')) {
+            el.innerHTML = _highlightLabel(w, q);
+          }
+          hits.push(el);
+        }
+      });
+      // 비활성 탭에 일치 항목이 있는지 안내 (자동 전환은 하지 않음)
+      const inactivePanel = document.querySelector('.word-panel:not(.active)');
+      let otherHits = 0;
+      if (inactivePanel) {
+        inactivePanel.querySelectorAll('[data-word]').forEach(el => {
+          if ((el.dataset.word || '').toLowerCase().includes(ql)) otherHits++;
+        });
+      }
+      if (hits.length === 0) {
+        if (otherHits > 0) {
+          const otherTab = inactivePanel?.dataset.panel === 'new' ? '🆕 새 단어' : '📚 기존 단어';
+          searchMetaEl.innerHTML = `<span class="miss">현재 탭에 없음</span> — "${_escapeHtml(q)}" (${otherTab} 탭에 ${otherHits}개 있음)`;
+        } else {
+          searchMetaEl.innerHTML = `<span class="miss">검색 결과 없음</span> — "${_escapeHtml(q)}"`;
+        }
+        return;
+      }
+      const otherTxt = otherHits > 0 ? ` <span style="opacity:0.7">(다른 탭 +${otherHits})</span>` : '';
+      searchMetaEl.innerHTML = `<span class="hit">${hits.length}개 일치</span> — Enter 로 다음 이동${otherTxt}`;
+      // 첫 매치로 스크롤
+      const first = hits[0];
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Enter 키: 다음 매치로 순환 이동
+    let _searchCycleIdx = 0;
+    function _searchNextMatch() {
+      const hits = Array.from(document.querySelectorAll('.word-item.search-hit, .new-word-item.search-hit'));
+      if (hits.length === 0) return;
+      _searchCycleIdx = (_searchCycleIdx + 1) % hits.length;
+      hits[_searchCycleIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // 잠깐 더 강한 강조 (한 번만 재생되는 search-flash 애니메이션 재실행)
+      const tgt = hits[_searchCycleIdx];
+      tgt.classList.remove('search-hit'); void tgt.offsetWidth; tgt.classList.add('search-hit');
+    }
+
+    if (searchInput) {
+      let _debounce = null;
+      searchInput.addEventListener('input', () => {
+        _searchCycleIdx = 0;
+        clearTimeout(_debounce);
+        _debounce = setTimeout(_applyWordSearch, 80);
+      });
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          _searchNextMatch();
+        } else if (e.key === 'Escape') {
+          searchInput.value = '';
+          _applyWordSearch();
+          searchInput.blur();
+        }
+      });
+    }
+    if (searchClearBtn) {
+      searchClearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        _applyWordSearch();
+        searchInput.focus();
+      });
+    }
+
+    async function playMotion(word, element = null) {
+      const allItems = document.querySelectorAll('.word-item');
+      allItems.forEach(el => el.classList.remove('playing'));
+      
+      // 만약 외부 인식(WS)으로 호출된 경우 목록에서 해당 단어를 찾아 하이라이트
+      if (!element) {
+        element = Array.from(allItems).find(el => el.textContent === word || el.getAttribute('data-original') === word);
+      }
+      
+      const originalText = element ? (element.getAttribute('data-original') || element.textContent) : word;
+      if (element) {
+        if (!element.getAttribute('data-original')) {
+          element.setAttribute('data-original', originalText);
+        }
+        element.classList.add('playing');
+        element.innerHTML = `<span style="display:inline-block; animation: spin 1.5s linear infinite; margin-right: 6px;">⏳</span>생성 중...`;
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      
+      try {
+        // [진단] V3 bone quaternion 방식 일시 비활성화 — NPY 직접 좌표 방식만 사용
+        // V3 방식은 좌표계 불일치 문제가 있을 수 있으므로 NPY로 테스트
+        /*
+        if (window.ITDAMotionV3) {
+          try {
+            const motion = await window.ITDAMotionV3.load(word);
+            if (motion && motion.keyframes?.length) {
+              await window.ITDAMotionV3.play(word);
+              return;
+            }
+          } catch (e) {
+            console.warn('[Motion] V3 로드 실패, NPY 폴백:', e.message);
+          }
+        }
+        */
+
+        if (window.ITDAMotionNPY) {
+          await window.ITDAMotionNPY.play(word, { loop: isGuideMode });
+        }
+      } finally {
+        if (element) {
+          element.classList.remove('playing');
+          element.textContent = originalText;
+        }
+      }
+    }
+
+    // vision.js 가 /ws/vision 연결을 관리하므로 별도 WebSocket 을 만들지 않는다.
+    // 인식 결과는 itda:rag:result 이벤트로 받고, 연결 상태는 itda:vision:ws_state 로 표시한다.
+    // 인식된 단어/문장 표시 (아바타 자동 재생은 의도적으로 비활성 — 단어 누적 + 문장 구성을 방해하지 않기 위함)
+    const recogDisplay = document.getElementById('recognition-display');
+    let recogHideTimer = null;
+    function showRecognition(text) {
+      if (!recogDisplay) return;
+      const isSentence = text.startsWith('💬');
+      recogDisplay.textContent = text;
+      recogDisplay.classList.toggle('sentence', isSentence);
+      recogDisplay.classList.add('show');
+      clearTimeout(recogHideTimer);
+      // 문장이면 길게(8초), 개별 단어면 짧게(2.5초) 표시
+      recogHideTimer = setTimeout(() => recogDisplay.classList.remove('show'), isSentence ? 8000 : 2500);
+    }
+
+    window.addEventListener('itda:rag:result', (e) => {
+      const ack = e.detail || {};
+      const rag = ack.rag_result;
+      if (!rag || rag.type !== 'final') return;
+      const word = rag.text;
+      if (word === '대기 중' || (word && word.includes('미인식'))) return;
+      // 아바타 동작 재생은 하지 않고 텍스트로만 알림
+      showRecognition(word);
+    });
+    window.addEventListener('itda:vision:ws_state', (e) => {
+      const s = e.detail?.state;
+      if (s === 'connected') {
+        statusEl.textContent = '● LIVE CONNECTED';
+        statusEl.style.color = '#00f2fe';
+      } else if (s === 'disconnected' || s === 'error') {
+        statusEl.textContent = '○ DISCONNECTED';
+        statusEl.style.color = '#f43f5e';
+      } else if (s === 'connecting') {
+        statusEl.textContent = '… 연결 중';
+        statusEl.style.color = '#fde68a';
+      }
+    });
+
+
+    skeletonBtn.addEventListener('click', () => {
+      isSkeletonMode = !isSkeletonMode;
+      const avatar = window.ITDAAvatar5;
+      if (!avatar) return;
+      
+      if (isSkeletonMode) {
+        avatar.setViewMode('skeleton');
+        skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: ON';
+        skeletonBtn.classList.add('active');
+      } else {
+        avatar.setViewMode('avatar');
+        skeletonBtn.innerHTML = '<span>💀</span> 스켈레톤 모델: OFF';
+        skeletonBtn.classList.remove('active');
+      }
+    });
+
+    // 5. 가이드 모드 토글 (반복 재생)
+    guideBtn.addEventListener('click', () => {
+      isGuideMode = !isGuideMode;
+      if (isGuideMode) {
+        guideBtn.innerHTML = '<span>🔄</span> 동작 가이드: ON';
+        guideBtn.classList.add('active');
+      } else {
+        guideBtn.innerHTML = '<span>🔄</span> 동작 가이드: OFF';
+        guideBtn.classList.remove('active');
+        // 가이드 모드 해제 시 루프 중단
+        window.ITDAMotionNPY?.stop();
+      }
+    });
+
+    // 6. 영상 보기 모드 토글 — ON 시 단어 클릭 = 국립국어원 수어사전 영상
+    videoBtn?.addEventListener('click', () => {
+      isVideoMode = !isVideoMode;
+      videoBtn.innerHTML = `<span>▶</span> 영상 보기: ${isVideoMode ? 'ON' : 'OFF'}`;
+      videoBtn.classList.toggle('active', isVideoMode);
+    });
+
+    async function showWordVideo(word) {
+      const overlay = document.getElementById('video-overlay');
+      const titleEl = document.getElementById('video-title');
+      const video = document.getElementById('ref-video-player');
+      titleEl.textContent = `${word} — 로딩 중…`;
+      overlay.classList.add('active');
+      try {
+        const res = await fetch(`${API_BASE}/api/sign-language/video-url?word=${encodeURIComponent(word)}`);
+        if (!res.ok) {
+          titleEl.textContent = `'${word}' 영상을 찾을 수 없습니다.`;
+          video.removeAttribute('src');
+          video.load();
+          return;
+        }
+        const data = await res.json();
+        titleEl.textContent = word;
+        video.src = data.video_url;
+        video.play().catch(() => { /* 자동재생 차단은 무시 — controls 로 재생 가능 */ });
+      } catch (e) {
+        console.error('영상 로드 실패:', e);
+        titleEl.textContent = `'${word}' 영상 로드 실패`;
+      }
+    }
+
+    document.getElementById('btn-close-video')?.addEventListener('click', () => {
+      const overlay = document.getElementById('video-overlay');
+      const video = document.getElementById('ref-video-player');
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      overlay.classList.remove('active');
+    });
+
+    // 모델 변경 채널 브로드캐스트 리스너
+    // - 'model_changed' : 인식 모델 전환 (단어셋 다름) → 목록 새로고침 (현재 모델 키 갱신)
+    // - 'words_updated' : KNN 훈련 완료 등으로 학습 단어 목록이 바뀐 경우 → NEW 단어 계산 위해 새로고침
+    const modelChannel = new BroadcastChannel('itda_model_channel');
+    modelChannel.onmessage = (event) => {
+      const msg = event.data || {};
+      if (msg.type === 'model_changed') {
+        console.info('[AvatarOnly] 모델이 변경되어 단어 목록을 갱신합니다:', msg.model_type);
+        window._currentModelType = msg.model_type || window._currentModelType;
+        loadWordList();
+      } else if (msg.type === 'words_updated') {
+        console.info('[AvatarOnly] 학습 단어 갱신 신호 — 목록을 다시 불러옵니다.');
+        loadWordList();
+      }
+    };
+
+    window.addEventListener('itda:avatar:ready', () => {
+      loadWordList();
+    });
+
+    // ── 우측 사이드바(수집 패널) 접기/펴기 토글 ──────────────
+    // 상태는 localStorage 에 영속화. 토글 후 Three.js 렌더 크기 갱신을 위해 resize 이벤트 디스패치.
+    (function setupRightSidebarToggle() {
+      const sidebar = document.getElementById('sidebar-right');
+      const btn = document.getElementById('sidebar-right-toggle');
+      if (!sidebar || !btn) return;
+      const KEY = 'itda:avatar:right_sidebar_collapsed';
+      function _apply(collapsed) {
+        sidebar.classList.toggle('collapsed', collapsed);
+        btn.classList.toggle('collapsed-state', collapsed);
+        btn.setAttribute('aria-expanded', String(!collapsed));
+        // 전환 종료 후 캔버스 리사이즈 (avatar.js 가 window resize 를 구독함)
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
+      }
+      // 초기 상태 복원
+      let initial = false;
+      try { initial = localStorage.getItem(KEY) === '1'; } catch (e) {}
+      _apply(initial);
+
+      btn.addEventListener('click', () => {
+        const next = !sidebar.classList.contains('collapsed');
+        try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+        _apply(next);
+      });
+    })();
+
+    // 부트스트랩 — 아바타 준비 이벤트는 동기 dispatch 라 listener 가 놓칠 수 있으므로
+    // 단어 목록 로드와 카메라 시작을 직접 호출한다. (둘 다 1회만 실행되도록 가드)
+    let _booted = false;
+    async function _bootstrap() {
+      if (_booted) return;
+      _booted = true;
+      // 현재 활성 모델 타입을 먼저 조회 → 모델별 seen 키 분리에 사용
+      try {
+        const r = await fetch(`${API_BASE}/api/collect/get-model-type`);
+        const j = await r.json();
+        if (j.ok && j.model_type) window._currentModelType = j.model_type;
+      } catch (e) { /* 백엔드 미연결 시 무시 — default 키 사용 */ }
+      loadWordList();
+      window.ITDAVision5?.init();
+      // 주기적 폴링 — 다른 클라이언트(메인 창)에서 훈련된 결과를 놓치지 않도록 백업
+      setInterval(loadWordList, 20000);
+    }
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', _bootstrap);
+    } else {
+      _bootstrap();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+# IDE and Tooling
+.claude/
+.vscode/
+.idea/
+
+# Environment and Secrets
+.env
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/ksl_motions/*.json
+!data/ksl_motions/.gitkeep
+
+# 다운로드한 원천 데이터 (AI Hub 수십 GB)
+api/data/aihub_raw/
+
+# 수집 중 생성되는 임시 영상 파일
+api/data/ksl_training/temp_*
+tmp_video.mp4
+
+# 백업 파일
+*.bak
+
+# 실험용 일회성 스크립트 (버전 관리 제외)
+scratch/
+
+# 학습으로 재생성되는 KNN 모델 (CSV 에서 /train 으로 즉시 재생성 가능)
+api/data/ksl_training/*.pkl
+# FAISS 인덱스 (data_pipeline 으로 재빌드)
+api/data/faiss.index
+
+frontend/data/ksl_motions/
