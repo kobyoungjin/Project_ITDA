@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from pathlib import Path
 from api.services.rag_engine import rag_engine
 from api.services.data_pipeline import data_pipeline
 from api.services.motion_extractor import motion_extractor
+from api.services.slm_agent import slm_agent
 
 router = APIRouter()
 
@@ -24,6 +25,15 @@ class SearchResponse(BaseModel):
 
 class ResolveMotionRequest(BaseModel):
     word: str
+
+class BuildSentenceRequest(BaseModel):
+    words: List[str] = Field(..., description="KSL 단어 리스트 (인식 순서)")
+
+class BuildSentenceResponse(BaseModel):
+    status: str
+    words: List[str]
+    sentence: str
+    source: str  # "gemini" | "ollama" | "fallback"
 
 @router.post("/search", response_model=SearchResponse)
 async def search_sign_language(request: SearchRequest):
@@ -93,6 +103,44 @@ async def get_video_url(word: str):
     if video_url.startswith("http://sldict.korean.go.kr"):
         video_url = video_url.replace("http://", "https://", 1)
     return {"word": word, "video_url": video_url}
+
+
+@router.post("/build-sentence", response_model=BuildSentenceResponse)
+async def build_sentence(request: BuildSentenceRequest):
+    """[Sentence Builder] KSL 단어 리스트를 자연스러운 한국어 문장 하나로 합성합니다.
+
+    - Gemini API 가 활성화되어 있고 크레딧이 남아 있으면 Gemini 사용
+    - 실패하면 Ollama(로컬) 폴백, 둘 다 실패 시 단어 띄어쓰기 폴백
+    - 카메라(WebSocket) 경로와 동일한 slm_agent.build_sentence() 를 호출하므로
+      이 엔드포인트로 정상 동작 여부를 단독 검증할 수 있습니다.
+    """
+    words = [w.strip() for w in request.words if w and w.strip()]
+    if not words:
+        raise HTTPException(status_code=400, detail="words 리스트가 비어 있습니다.")
+
+    sentence = await slm_agent.build_sentence(words)
+
+    # 결과가 단순 띄어쓰기 폴백인지 판별 (Gemini/Ollama 둘 다 실패한 케이스)
+    fallback_text = " ".join(words)
+    if sentence == fallback_text:
+        source = "fallback"
+    elif sentence == words[0] and len(words) == 1:
+        source = "passthrough"
+    else:
+        source = "gemini" if slm_agent.status()["gemini_available"] else "ollama"
+
+    return BuildSentenceResponse(
+        status="success",
+        words=words,
+        sentence=sentence,
+        source=source,
+    )
+
+
+@router.get("/sentence-builder/status")
+async def sentence_builder_status():
+    """문장 구성기(Gemini/Ollama) 상태 진단 — API 키·쿼터·서킷브레이커 상태를 반환."""
+    return slm_agent.status()
 
 
 @router.get("/list-motions")

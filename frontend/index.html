@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>잇다(ITDA) — 5단계: 얼굴 표정 + 손동작 동기화</title>
   <meta name="description" content="MediaPipe FaceLandmarker + Hands로 수어 비수지 기호(표정)와 수지 동작(손)을 3D 아바타에 실시간 동기화 — 잇다 프로젝트 5단계" />
+  <!-- 브라우저 탭 / 모바일 홈스크린(PWA) 아이콘 — 원형 투명 배경 -->
+  <link rel="icon" type="image/png" href="assets/itda-logo-circle.png" />
+  <link rel="apple-touch-icon" href="assets/itda-icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#050810" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ITDA" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -84,9 +92,12 @@
       font-size: 1.15rem; font-weight: 800; letter-spacing: -0.04em;
     }
     .logo-icon {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; background: transparent;
+    }
+    .logo-icon img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
     }
     .logo em { color: var(--accent-cyan); font-style: normal; }
 
@@ -514,7 +525,7 @@
     <!-- ── 헤더 ──────────────────────────────────────────── -->
     <header>
       <div class="logo">
-        <div class="logo-icon">✋</div>
+        <div class="logo-icon"><img src="assets/itda-logo-circle.png" alt="ITDA" /></div>
         ITDA
       </div>
       <div class="header-right">

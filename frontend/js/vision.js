@@ -608,17 +608,66 @@ async function processFrame(timestamp) {
   updateFPS(timestamp);
 }
 
+// ── Cover-fit 좌표 변환 ──────────────────────────────────────
+// 비디오가 object-fit:cover 로 컨테이너에 잘려 보일 때, 원본 비디오 좌표(0~1)를
+// "실제 표시 영역" 기준 캔버스 좌표(0~1)로 매핑한다.
+// 모바일 세로 화면에서 1280×720 비디오가 세로로 늘어나 보이던 손 관절 평탄화 문제를 해결.
+function _coverFitTransform(srcW, srcH, dstW, dstH) {
+  if (!srcW || !srcH || !dstW || !dstH) {
+    return { scale: 1, offX: 0, offY: 0, dispW: dstW, dispH: dstH };
+  }
+  const scale = Math.max(dstW / srcW, dstH / srcH);
+  const dispW = srcW * scale;
+  const dispH = srcH * scale;
+  return {
+    scale,
+    dispW,
+    dispH,
+    offX: (dstW - dispW) / 2,
+    offY: (dstH - dispH) / 2,
+  };
+}
+
+// 정규화 랜드마크 배열(원본 비디오 0~1)을 캔버스 표시 영역에 맞춘 0~1 좌표로 변환.
+// DrawingUtils 가 normalized*canvas.width 로 그리므로, 변환 후 다시 정규화해서 넘긴다.
+function _remapLandmarksToCanvas(landmarks, fit, canvW, canvH) {
+  if (!landmarks) return landmarks;
+  return landmarks.map(p => ({
+    x: (fit.offX + p.x * fit.dispW) / canvW,
+    y: (fit.offY + p.y * fit.dispH) / canvH,
+    z: p.z,
+    visibility: p.visibility,
+    presence: p.presence,
+  }));
+}
+
 /**
  * 전용 캔버스에 랜드마크 그리기
  */
 function drawResults(faceResult, handResult, poseResult) {
   if (!canvasCtx || !drawingUtils) return;
 
-  // 1. 캔버스 크기 동기화
-  if (canvasEl.width !== videoEl.videoWidth) {
-    canvasEl.width = videoEl.videoWidth;
-    canvasEl.height = videoEl.videoHeight;
+  // 1. 캔버스 내부 좌표를 "표시 영역(CSS px)"에 맞춤.
+  //    이전엔 비디오 원본 해상도(예: 1280×720)로 설정해서 세로 모바일에선
+  //    CSS 스케일이 비균등(가로/세로 비율 차이)으로 일어나 랜드마크가 평탄/왜곡됐다.
+  const cssW = canvasEl.clientWidth || canvasEl.width;
+  const cssH = canvasEl.clientHeight || canvasEl.height;
+  // DPR 보정으로 화면이 흐려지지 않게 (저사양 모바일은 2 까지만 사용)
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const targetW = Math.max(1, Math.round(cssW * dpr));
+  const targetH = Math.max(1, Math.round(cssH * dpr));
+  if (canvasEl.width !== targetW || canvasEl.height !== targetH) {
+    canvasEl.width = targetW;
+    canvasEl.height = targetH;
   }
+
+  // 비디오 원본 → 캔버스(=표시 영역) 좌표 매핑 (object-fit:cover 보정)
+  const fit = _coverFitTransform(
+    videoEl.videoWidth,
+    videoEl.videoHeight,
+    canvasEl.width,
+    canvasEl.height,
+  );
 
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -626,8 +675,9 @@ function drawResults(faceResult, handResult, poseResult) {
   // 2. 얼굴 랜드마크 그리기
   if (faceResult.faceLandmarks) {
     for (const landmarks of faceResult.faceLandmarks) {
+      const mapped = _remapLandmarksToCanvas(landmarks, fit, canvasEl.width, canvasEl.height);
       drawingUtils.drawConnectors(
-        landmarks,
+        mapped,
         FACEMESH_TESSELATION,
         { color: "#C0C0C070", lineWidth: 1 }
       );
@@ -641,18 +691,19 @@ function drawResults(faceResult, handResult, poseResult) {
       const isPredicted = predictedFlags[i] === true;
       const connColor = isPredicted ? "rgba(0, 242, 254, 0.55)" : "#FF00FF";
       const pointColor = isPredicted ? "rgba(0, 242, 254, 0.75)" : "#FF00FF";
+      const mapped = _remapLandmarksToCanvas(landmarks, fit, canvasEl.width, canvasEl.height);
       // 외곽선 (글로우 효과)
-      drawingUtils.drawConnectors(landmarks, HAND_CONNECTIONS, {
+      drawingUtils.drawConnectors(mapped, HAND_CONNECTIONS, {
         color: isPredicted ? "rgba(0, 0, 0, 0.25)" : "rgba(0, 0, 0, 0.5)",
         lineWidth: isPredicted ? 3 : 5,
       });
       // 실제/예측 관절 선
-      drawingUtils.drawConnectors(landmarks, HAND_CONNECTIONS, {
+      drawingUtils.drawConnectors(mapped, HAND_CONNECTIONS, {
         color: connColor,
         lineWidth: isPredicted ? 1.5 : 2,
       });
       // 관절 포인트
-      drawingUtils.drawLandmarks(landmarks, {
+      drawingUtils.drawLandmarks(mapped, {
         color: pointColor,
         lineWidth: 1,
         radius: (data) => {
@@ -661,7 +712,7 @@ function drawResults(faceResult, handResult, poseResult) {
       });
     });
   }
-  // 4. 포즈 관절 점 (어깨=빨강, 팔꿈치=초록, 손목=파랑)
+  // 4. 포즈 관절 점 (어깨=빨강, 팔꿈치=초록, 손목=파랑) — cover 보정된 좌표로 직접 그림
   if (poseResult?.landmarks?.[0]) {
     const lms = poseResult.landmarks[0];
     const JOINTS = [
@@ -674,29 +725,34 @@ function drawResults(faceResult, handResult, poseResult) {
     ];
     const BONES = [[11, 13], [13, 15], [12, 14], [14, 16]];
 
-    canvasCtx.lineWidth = 2;
+    const toCanvas = (lm) => ({
+      x: fit.offX + lm.x * fit.dispW,
+      y: fit.offY + lm.y * fit.dispH,
+    });
+
+    canvasCtx.lineWidth = 2 * dpr;
     canvasCtx.strokeStyle = 'rgba(255,255,255,0.5)';
     for (const [a, b] of BONES) {
       const la = lms[a], lb = lms[b];
       if (!la || !lb || (la.visibility ?? 0) < 0.3 || (lb.visibility ?? 0) < 0.3) continue;
+      const pa = toCanvas(la), pb = toCanvas(lb);
       canvasCtx.beginPath();
-      canvasCtx.moveTo(la.x * canvasEl.width, la.y * canvasEl.height);
-      canvasCtx.lineTo(lb.x * canvasEl.width, lb.y * canvasEl.height);
+      canvasCtx.moveTo(pa.x, pa.y);
+      canvasCtx.lineTo(pb.x, pb.y);
       canvasCtx.stroke();
     }
 
     for (const { idx, color, label } of JOINTS) {
       const lm = lms[idx];
       if (!lm || (lm.visibility ?? 0) < 0.3) continue;
-      const x = lm.x * canvasEl.width;
-      const y = lm.y * canvasEl.height;
+      const { x, y } = toCanvas(lm);
       canvasCtx.beginPath();
-      canvasCtx.arc(x, y, 7, 0, Math.PI * 2);
+      canvasCtx.arc(x, y, 7 * dpr, 0, Math.PI * 2);
       canvasCtx.fillStyle = color;
       canvasCtx.fill();
       canvasCtx.fillStyle = '#ffffff';
-      canvasCtx.font = 'bold 11px monospace';
-      canvasCtx.fillText(label, x + 10, y + 4);
+      canvasCtx.font = `bold ${11 * dpr}px monospace`;
+      canvasCtx.fillText(label, x + 10 * dpr, y + 4 * dpr);
     }
   }
 
