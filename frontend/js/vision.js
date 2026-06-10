@@ -742,17 +742,46 @@ function drawResults(faceResult, handResult, poseResult) {
       canvasCtx.stroke();
     }
 
+    // 전면 카메라일 때 캔버스는 CSS scaleX(-1)로 미러링되어 텍스트도 뒤집힌다.
+    // 라벨만 ctx 에서 scale(-1,1)로 역방향 그려 CSS 미러가 한 번 더 뒤집어
+    // 결과적으로 사용자에게는 정상 방향으로 보이게 한다.
+    const isMirrored = (currentFacingMode === 'user');
+
     for (const { idx, color, label } of JOINTS) {
       const lm = lms[idx];
       if (!lm || (lm.visibility ?? 0) < 0.3) continue;
+<<<<<<< Updated upstream
       const { x, y } = toCanvas(lm);
+=======
+      const x = lm.x * canvasEl.width;
+      const y = lm.y * canvasEl.height;
+
+      // 관절 점 (원형은 대칭이라 그대로 그려도 OK)
+>>>>>>> Stashed changes
       canvasCtx.beginPath();
       canvasCtx.arc(x, y, 7 * dpr, 0, Math.PI * 2);
       canvasCtx.fillStyle = color;
       canvasCtx.fill();
+
+      // 라벨 — 미러 환경에서는 counter-flip
+      canvasCtx.save();
       canvasCtx.fillStyle = '#ffffff';
+<<<<<<< Updated upstream
       canvasCtx.font = `bold ${11 * dpr}px monospace`;
       canvasCtx.fillText(label, x + 10 * dpr, y + 4 * dpr);
+=======
+      canvasCtx.font = 'bold 11px monospace';
+      if (isMirrored) {
+        // 관절 위치를 원점으로 옮긴 뒤 x축 반전 → 그 좌표계에서 +x 방향으로 그리면
+        // 화면상 관절 오른쪽(사용자 관점) 으로 라벨이 자연스럽게 정렬된다.
+        canvasCtx.translate(x, y);
+        canvasCtx.scale(-1, 1);
+        canvasCtx.fillText(label, 10, 4);
+      } else {
+        canvasCtx.fillText(label, x + 10, y + 4);
+      }
+      canvasCtx.restore();
+>>>>>>> Stashed changes
     }
   }
 
