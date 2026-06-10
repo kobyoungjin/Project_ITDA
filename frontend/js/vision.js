@@ -756,11 +756,19 @@ function drawResults(faceResult, handResult, poseResult) {
       canvasCtx.fillStyle = color;
       canvasCtx.fill();
 
-      // 라벨 — 미러 환경에서는 counter-flip
+      // 라벨 — 미러 환경(전면 카메라)에서는 canvas 가 scaleX(-1) 되어 있어 텍스트도 거꾸로 보임.
+      // 관절 위치를 원점으로 옮긴 뒤 다시 x축 반전(scale(-1,1)) 하면 거울 효과가 상쇄되어 글자가 정방향이 된다.
       canvasCtx.save();
       canvasCtx.fillStyle = '#ffffff';
       canvasCtx.font = `bold ${11 * dpr}px monospace`;
-      canvasCtx.fillText(label, x + 10 * dpr, y + 4 * dpr);
+      if (isMirrored) {
+        canvasCtx.translate(x, y);
+        canvasCtx.scale(-1, 1);
+        canvasCtx.fillText(label, 10 * dpr, 4 * dpr);
+      } else {
+        canvasCtx.fillText(label, x + 10 * dpr, y + 4 * dpr);
+      }
+      canvasCtx.restore();
     }
   }
 
