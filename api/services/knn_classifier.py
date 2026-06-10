@@ -66,6 +66,33 @@ from api.core.ml_utils import (
     restore_prev_state,
 )
 
+
+# 포즈의 좌/우 짝 — 양손 스왑 시 동시에 바뀌어야 함 (어깨·팔꿈치·손목·엉덩이)
+_POSE_LR_PAIRS = [
+    ("left_shoulder", "right_shoulder"),
+    ("left_elbow", "right_elbow"),
+    ("left_wrist", "right_wrist"),
+    ("left_hip", "right_hip"),
+]
+
+
+def _swap_pose_lr(pose_lms):
+    """포즈 데이터의 좌/우 짝을 교환해 새 dict 반환. 원본 보존."""
+    if not pose_lms:
+        return pose_lms
+    inner = pose_lms.get("landmarks") if isinstance(pose_lms, dict) else None
+    if inner is None:
+        return pose_lms
+    new_inner = dict(inner)
+    for a, b in _POSE_LR_PAIRS:
+        if a in inner or b in inner:
+            new_inner[a], new_inner[b] = inner.get(b), inner.get(a)
+            # 비어있는 값 정리
+            if new_inner[a] is None: new_inner.pop(a, None)
+            if new_inner[b] is None: new_inner.pop(b, None)
+    return {**pose_lms, "landmarks": new_inner}
+
+
 # 필수적으로 양손을 모두 사용해야 하는 수어 단어 정의
 TWO_HANDED_SIGNS = {"친구", "집", "감사", "오늘", "안녕"}
 
@@ -116,8 +143,11 @@ def predict(
     # 아래 역방향(스왑) 시도는 보조 추론이므로 이 상태를 오염시키면 안 된다.
     state_after_normal = snapshot_prev_state()
 
-    # 2. 역방향 시도 (오른손=L, 왼손=R) - 좌우 반전/스왑 대응
-    feats_swap = extract_ksl_features(left_lms, right_lms, pose_lms)
+    # 2. 역방향 시도 (오른손=L, 왼손=R) — 좌우 반전/스왑 대응 (왼손잡이 / 거울)
+    #    손 좌표뿐 아니라 포즈의 좌/우 짝(어깨·팔꿈치·손목·엉덩이)도 동시에 스왑해야
+    #    상대 위치 특성(rel_pos)과 팔 각도(arm_feats)가 올바르게 계산된다.
+    pose_lms_swapped = _swap_pose_lr(pose_lms)
+    feats_swap = extract_ksl_features(left_lms, right_lms, pose_lms_swapped)
     conf_swap = 0.0
     label_swap = None
     if feats_swap is not None:
