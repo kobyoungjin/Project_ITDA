@@ -338,9 +338,10 @@ function sendFrameWS(hands) {
 
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-  // [과제 3] 0.3초(300ms) 단위로 버퍼링/제한 (기존 500ms에서 속도 상향)
+  // [과제 3] WS 전송 간격 — 100ms (~10 fps). 너무 작으면 백엔드 큐가 밀리고,
+  // 너무 크면 동작 따라가는 느낌이 사라짐. stable 단계에선 즉시 전송.
   const isFinalTrigger = motionState.phase === 'stable';
-  if (!isFinalTrigger && now - lastSendTime < 300) return;
+  if (!isFinalTrigger && now - lastSendTime < 100) return;
   lastSendTime = now;
 
   // [P0] 손 관절 랜드마크 전송: 21개 전체 랜드마크 전송
