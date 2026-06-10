@@ -110,6 +110,14 @@ ONE_HANDED_SIGNS = {
     "가다",
 }
 
+# 라벨별 추가 신뢰도 임계 — 오인식 잦은 라벨은 더 엄격하게
+# 전역 CONFIDENCE_THRESHOLD(0.35) 를 통과해도 여기서 다시 검사. 값이 클수록 통과 어려움.
+# 운영 중 false positive 가 잦은 라벨을 여기에 추가해 인식 정확도 보정.
+LABEL_CONFIDENCE_OVERRIDES = {
+    "안녕하세요": 0.60,     # 다른 동작과 모양 겹쳐 false positive 잦음
+    "온갖,형형색색": 0.65,  # 손 위치 다양해 다른 사인 (예: 안녕하세요) 와 충돌 잦음
+}
+
 
 def predict(
     right_lms: Optional[list], left_lms: Optional[list], pose_lms: Optional[dict] = None
@@ -186,6 +194,15 @@ def predict(
                     f"[KNN Proximity Guard] '{final_label}' 차단: 양손 거리 너무 멀음 (y={y_dist:.3f}, x={x_dist:.3f})"
                 )
                 return None, 0.0
+
+    # [라벨별 추가 임계] 특정 단어는 더 높은 신뢰도가 필요 — false positive 억제
+    label_threshold = LABEL_CONFIDENCE_OVERRIDES.get(final_label)
+    if label_threshold is not None and final_conf < label_threshold:
+        print(
+            f"[KNN Label Threshold] '{final_label}' 차단: 신뢰도 {final_conf:.2%} "
+            f"< 라벨별 임계 {label_threshold:.0%} (오인식 억제)"
+        )
+        return None, final_conf
 
     if final_conf < CONFIDENCE_THRESHOLD:
         return None, final_conf
