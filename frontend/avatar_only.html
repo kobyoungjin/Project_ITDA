@@ -8,35 +8,65 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
   <style>
+    /* Warm Connection 디자인 토큰 (DESIGN.md) */
     :root {
-      --bg-deep: #050810;
-      --accent-cyan: #00f2fe;
-      --accent-purple: #7c3aed;
-      --text-main: #f8fafc;
-      --border: rgba(255, 255, 255, 0.1);
-      --card-bg: rgba(30, 41, 59, 0.5);
+      --bg-deep:        #fff8f6;
+      --bg-glass:       #fff1ed;
+      --accent-cyan:    #006a63;   /* 티얼 */
+      --accent-purple:  #a33d23;   /* 다크 코랄 */
+      --accent-orange:  #e76f51;
+      --text-main:      #241916;
+      --text-muted:     #57423d;
+      --border:         #dec0b9;
+      --card-bg:        #ffffff;
+      --shadow-md:      0 4px 20px rgba(46, 25, 22, 0.06);
+      --radius-md:      0.75rem;
+      --radius-lg:      1rem;
     }
     body {
       margin: 0; padding: 0; background: var(--bg-deep); color: var(--text-main);
-      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
       overflow: hidden; height: 100vh; display: flex; flex-direction: column;
+      letter-spacing: -0.005em;
     }
     header {
-      padding: 0.8rem 1.5rem; background: rgba(15, 23, 42, 0.95);
-      border-bottom: 1px solid var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;
-      z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      padding: 0.8rem 1.5rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      z-index: 100;
+      box-shadow: var(--shadow-md);
     }
     .status-badge {
-      padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700;
-      background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); color: var(--accent-cyan);
+      padding: 4px 12px; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 700;
+      background: rgba(0, 106, 99, 0.10);
+      border: 1px solid rgba(0, 106, 99, 0.35);
+      color: var(--accent-cyan);
     }
     .control-btn {
-      padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--card-bg); color: var(--text-main); cursor: pointer;
-      font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 0.85rem; font-weight: 600;
+      transition: all 0.2s;
       display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 1px 2px rgba(46, 25, 22, 0.04);
     }
-    .control-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-cyan); transform: translateY(-1px); }
+    .control-btn:hover {
+      background: var(--bg-glass);
+      border-color: var(--accent-orange);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    .control-btn.active {
+      background: var(--accent-orange);
+      color: #ffffff;
+      border-color: var(--accent-orange);
+    }
     .control-btn.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
 
     main { flex: 1; position: relative; display: flex; overflow: hidden; min-height: 0; min-width: 0; }

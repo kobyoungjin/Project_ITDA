@@ -18,59 +18,81 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 
   <style>
-    /* ── 루트 변수 ────────────────────────────────────── */
+    /* ── 루트 변수 — Warm Connection (DESIGN.md) ──────── */
     :root {
-      --bg-deep:    #050810;
-      --bg-glass:   rgba(15, 23, 42, 0.75);
-      --bg-card:    rgba(15, 23, 42, 0.9);
-      --accent-cyan:   #00f2fe;
-      --accent-purple: #7c3aed;
-      --accent-green:  #00e6a0;
-      --accent-orange: #ff9f43;
-      --accent-pink:   #ff6baf;
-      --text-main:  #f8fafc;
-      --text-muted: #94a3b8;
-      --border:     rgba(255, 255, 255, 0.08);
-      --shadow-lg:  0 20px 50px rgba(0, 0, 0, 0.7);
+      /* surface (배경 계층) */
+      --bg-deep:                 #fff8f6;  /* 메인 아이보리 */
+      --bg-glass:                #fff1ed;
+      --bg-card:                 #ffffff;  /* 카드/모달 흰색 */
+      --surface-container:       #ffe9e4;
+      --surface-container-high:  #f9e4df;
+      --surface-container-low:   #fff1ed;
+      --inverse-surface:         #3a2e2b;
+
+      /* 강조 색 — 코랄·티얼 */
+      --accent-cyan:    #006a63;   /* 티얼 (tertiary) */
+      --accent-purple:  #a33d23;   /* 다크 코랄 (primary) */
+      --accent-green:   #00a49a;   /* 라이트 티얼 */
+      --accent-orange:  #e76f51;   /* 워밍 오렌지-코랄 */
+      --accent-pink:    #ffb4a2;   /* 라이트 코랄 */
+
+      /* 텍스트 */
+      --text-main:      #241916;   /* 딥 브라운 (on-surface) */
+      --text-muted:     #57423d;   /* 미듬 브라운 (on-surface-variant) */
+      --text-on-accent: #ffffff;
+
+      /* 보더·그림자 */
+      --border:         #dec0b9;   /* outline-variant */
+      --border-strong:  #8a716c;
+      --shadow-lg:      0 20px 50px rgba(46, 25, 22, 0.12);
+      --shadow-md:      0 4px 20px rgba(46, 25, 22, 0.06);
+
+      /* 라디우스 (DESIGN.md) */
+      --radius-sm:    0.5rem;
+      --radius-md:    0.75rem;
+      --radius-lg:    1rem;
+      --radius-xl:    1.5rem;
+      --radius-pill:  9999px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
       background: var(--bg-deep);
       color: var(--text-main);
       height: 100vh;
       margin: 0;
       overflow: hidden;
       display: flex;
-      justify-content: center; /* 앱 컨테이너 중앙 정렬 */
+      justify-content: center;
       align-items: center;
+      letter-spacing: -0.005em;
     }
 
     #app-container {
       width: 100%;
-      max-width: 450px; /* 모바일 해상도 고정 */
+      max-width: 450px;
       height: 100%;
       max-height: 100vh;
       position: relative;
       display: flex;
       flex-direction: column;
       background: var(--bg-deep);
-      box-shadow: 0 0 80px rgba(0,0,0,0.6);
+      box-shadow: 0 0 80px rgba(46, 25, 22, 0.08);
       border-left: 1px solid var(--border);
       border-right: 1px solid var(--border);
       z-index: 10;
       overflow: hidden;
     }
 
-    /* 배경 그라디언트 */
+    /* 배경 그라디언트 — 따뜻한 코랄·티얼 잔잔한 글로우 */
     body::before {
       content: '';
       position: fixed; inset: 0;
       background:
-        radial-gradient(ellipse 50% 60% at 15% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 85% 80%, rgba(0, 242, 254, 0.10) 0%, transparent 60%);
+        radial-gradient(ellipse 50% 60% at 15% 20%, rgba(231, 111, 81, 0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 85% 80%, rgba(0, 164, 154, 0.08) 0%, transparent 60%);
       pointer-events: none;
       z-index: 0;
     }
@@ -103,31 +125,31 @@
 
     .header-right { display: flex; align-items: center; gap: 0.5rem; }
 
-    /* 컴팩트 상태 표시(헤더용). hud-item 보다 작고 조용함. */
+    /* 컴팩트 상태 표시(헤더용) — pill 형태, 조용한 톤 */
     .status-pill {
       display: inline-flex; align-items: center; gap: 0.4rem;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'JetBrains Mono', 'Noto Sans KR', monospace;
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em;
       color: var(--text-muted);
-      background: rgba(15, 23, 42, 0.55);
+      background: var(--bg-glass);
       border: 1px solid var(--border);
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       padding: 3px 10px;
     }
     .status-dot {
       width: 7px; height: 7px; border-radius: 50%;
-      background: #64748b;
-      box-shadow: 0 0 6px rgba(100,116,139,0.6);
+      background: #b8a8a3;
+      box-shadow: 0 0 6px rgba(184,168,163,0.55);
     }
-    .status-dot.ok   { background: #00e6a0; box-shadow: 0 0 6px rgba(0,230,160,0.75); }
-    .status-dot.warn { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.75); }
-    .status-dot.err  { background: #ff4757; box-shadow: 0 0 6px rgba(255,71,87,0.75); }
+    .status-dot.ok   { background: var(--accent-cyan);  box-shadow: 0 0 6px rgba(0,106,99,0.55); }
+    .status-dot.warn { background: var(--accent-orange);box-shadow: 0 0 6px rgba(231,111,81,0.55); }
+    .status-dot.err  { background: #ba1a1a;             box-shadow: 0 0 6px rgba(186,26,26,0.55); }
     .badge {
-      padding: 0.2rem 0.65rem; border-radius: 99px;
+      padding: 0.2rem 0.65rem; border-radius: var(--radius-pill);
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
     }
-    .badge-step   { background: rgba(124,58,237,.2); color: #c4b5fd; border: 1px solid rgba(124,58,237,.3); }
-    .badge-status { background: rgba(0,242,254,.1);  color: var(--accent-cyan); border: 1px solid rgba(0,242,254,.25); }
+    .badge-step   { background: rgba(163,61,35,.10);  color: var(--accent-purple); border: 1px solid rgba(163,61,35,.25); }
+    .badge-status { background: rgba(0,106,99,.10);   color: var(--accent-cyan);   border: 1px solid rgba(0,106,99,.25); }
 
     /* ── 메인 레이아웃 ────────────────────────────────── */
     main {
@@ -145,14 +167,18 @@
       position: absolute;
       top: 1.2rem; right: 1.2rem;
       width: 240px;
-      border-radius: 14px;
+      border-radius: var(--radius-lg);
       overflow: hidden;
       border: 2px solid var(--border);
-      box-shadow: var(--shadow-lg);
-      background: #000;
-      transition: border-color 0.3s, transform 0.3s;
+      box-shadow: var(--shadow-md);
+      background: #1c1917;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
     }
-    #cam-pip:hover { border-color: var(--accent-cyan); transform: scale(1.03); }
+    #cam-pip:hover {
+      border-color: var(--accent-orange);
+      transform: scale(1.03);
+      box-shadow: var(--shadow-lg);
+    }
     #cam-pip video { width: 100%; display: block; transform: scaleX(-1); aspect-ratio: 4/3; object-fit: cover; }
     #vision-canvas {
       position: absolute;
@@ -160,13 +186,17 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
-      transform: scaleX(-1); /* Mirror as video */
+      transform: scaleX(-1);
     }
     .pip-label {
       position: absolute; top: 0.5rem; left: 0.5rem;
-      background: rgba(0,0,0,.6);
-      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; color: #fff;
+      background: rgba(36, 25, 22, 0.78);
+      padding: 3px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.65rem; color: #fff8f6;
+      font-weight: 600;
       z-index: 5;
+      backdrop-filter: blur(8px);
     }
 
     /* ── 수어 참조 영상 (AI Hub) PIP ─────────────────── */
@@ -203,49 +233,59 @@
       pointer-events: none;
     }
     .hud-item {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--accent-cyan);
-      background: rgba(15, 23, 42, 0.8);
-      padding: 4px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(0, 242, 254, 0.3);
+      font-family: 'Noto Sans KR', 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-main);
+      background: var(--card-bg);
+      padding: 5px 13px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-md);
     }
 
     /* ── 간단한 우측 상단 상태 분석창 ───────────────────────── */
     #mini-status {
       position: absolute; top: 4.5rem; left: 1.2rem;
-      background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px);
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;
-      z-index: 30; box-shadow: var(--shadow-lg); font-size: 0.7rem; color: var(--text-main);
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.6rem 0.8rem;
+      display: flex; flex-direction: column; gap: 0.4rem;
+      z-index: 30;
+      box-shadow: var(--shadow-md);
+      font-size: 0.72rem;
+      color: var(--text-main);
       pointer-events: none;
     }
     .mini-row {
       display: flex; justify-content: space-between; align-items: center; gap: 1rem;
     }
     .mini-label { color: var(--text-muted); font-weight: 600; }
-    .mini-val { font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan); font-weight: bold; }
+    .mini-val { font-family: 'JetBrains Mono', 'Noto Sans KR', monospace; color: var(--accent-orange); font-weight: 700; }
     .mini-val em { font-style: normal; }
 
     /* ── [P0 HUD] handshape 배지 · motion 신호등 ───────────── */
     .hs-badge {
       display: inline-block;
-      padding: 2px 7px;
+      padding: 2px 8px;
       margin-right: 3px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', 'Noto Sans KR', monospace;
       font-size: 0.68rem;
       font-weight: 700;
-      background: rgba(0, 242, 254, 0.12);
-      border: 1px solid rgba(0, 242, 254, 0.4);
-      color: var(--accent-cyan);
+      background: rgba(231, 111, 81, 0.12);
+      border: 1px solid rgba(231, 111, 81, 0.35);
+      color: var(--accent-orange);
     }
-    .hs-badge.unknown { color: #94a3b8; border-color: rgba(148,163,184,0.4); background: rgba(148,163,184,0.08); }
+    .hs-badge.unknown {
+      color: var(--text-muted);
+      border-color: var(--border);
+      background: var(--bg-glass);
+    }
     .region-chip {
       font-size: 0.65rem; color: var(--text-muted); margin-left: 4px;
     }
@@ -280,18 +320,18 @@
       100% { box-shadow: inset 0 0 0 0 rgba(0,242,254,0); background: var(--bg-card); }
     }
 
-    /* ── [NEW] Recognition Hero — 카메라 ON 일 때 아바타 영역에 떠 있는 큰 인식 카드 ── */
+    /* ── Recognition Hero — 카드 (Warm Connection) ── */
     #recognition-hero {
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       width: min(86%, 560px);
-      background: linear-gradient(140deg, rgba(15,23,42,0.92), rgba(15,23,42,0.78));
+      background: var(--card-bg);
       backdrop-filter: blur(18px);
-      border: 1px solid rgba(0, 242, 254, 0.28);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
       padding: 1.5rem 1.7rem 1.3rem;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+      box-shadow: var(--shadow-lg);
       z-index: 10;
       display: flex; flex-direction: column; gap: 0.6rem;
       transition: opacity .35s ease, transform .35s ease;
@@ -304,19 +344,19 @@
     }
     .hero-label {
       font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em;
-      color: var(--accent-cyan); text-transform: uppercase;
+      color: var(--accent-orange); text-transform: uppercase;
     }
     .hero-current {
       font-size: 2.6rem; font-weight: 900; letter-spacing: -0.02em;
-      color: #fff; line-height: 1.15;
+      color: var(--text-main); line-height: 1.15;
       min-height: 3rem;
       word-break: keep-all;
     }
-    .hero-current.sentence { color: #c4b5fd; font-size: 1.9rem; }
+    .hero-current.sentence { color: var(--accent-cyan); font-size: 1.9rem; }
     .hero-current.idle { color: var(--text-muted); font-size: 1.4rem; font-weight: 600; font-style: italic; }
     .hero-current.flash { animation: hero-flash 0.8s ease-out 1; }
     @keyframes hero-flash {
-      0%   { transform: scale(0.92); opacity: 0; filter: drop-shadow(0 0 24px rgba(0,242,254,0.7)); }
+      0%   { transform: scale(0.92); opacity: 0; filter: drop-shadow(0 0 24px rgba(231,111,81,0.55)); }
       60%  { transform: scale(1.03); opacity: 1; }
       100% { transform: scale(1);    opacity: 1; filter: none; }
     }
@@ -326,17 +366,17 @@
     }
     .hero-conf-bar {
       flex: 1; height: 6px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 999px; overflow: hidden;
+      background: var(--bg-glass);
+      border-radius: var(--radius-pill); overflow: hidden;
     }
     .hero-conf-fill {
       height: 100%; width: 0%;
-      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
-      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent-orange), var(--accent-purple));
+      border-radius: var(--radius-pill);
       transition: width .35s ease;
     }
     .hero-conf-text {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'JetBrains Mono', 'Noto Sans KR', monospace;
       font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
       min-width: 44px; text-align: right;
     }
@@ -351,15 +391,15 @@
     .hero-chip {
       display: inline-flex; align-items: center;
       font-size: 0.78rem; font-weight: 700;
-      background: rgba(0, 242, 254, 0.1);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      color: var(--accent-cyan);
-      padding: 3px 10px; border-radius: 999px;
+      background: rgba(231, 111, 81, 0.12);
+      border: 1px solid rgba(231, 111, 81, 0.35);
+      color: var(--accent-orange);
+      padding: 3px 10px; border-radius: var(--radius-pill);
     }
     .hero-chip.sentence {
-      background: rgba(124, 58, 237, 0.12);
-      border-color: rgba(124, 58, 237, 0.4);
-      color: #c4b5fd;
+      background: rgba(0, 106, 99, 0.10);
+      border-color: rgba(0, 106, 99, 0.35);
+      color: var(--accent-cyan);
     }
     .hero-chip.empty {
       background: transparent; border-style: dashed;
@@ -425,25 +465,61 @@
     /* ── 음성 및 텍스트 입력 패널 ────────────────────── */
     .input-group {
       display: flex; gap: 0.5rem; width: 100%; margin-bottom: 0.4rem;
-      padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 0.8rem; border-bottom: 1px solid var(--border);
     }
     .text-input {
-      flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0.5rem 0.8rem;
-      color: var(--text-main); font-family: inherit; font-size: 0.9rem;
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.55rem 0.9rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .text-input:focus { outline: none; border-color: var(--accent-cyan); }
+    .text-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+    .text-input:focus {
+      outline: none;
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 0 3px rgba(231, 111, 81, 0.15);
+    }
     .btn-action {
-      width: 36px; height: 36px; border-radius: 8px;
+      width: 38px; height: 38px;
+      border-radius: var(--radius-md);
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; border: none; font-size: 1rem; transition: all 0.2s;
+      cursor: pointer; border: none; font-size: 1rem;
+      transition: all 0.2s;
     }
-    .btn-mic { background: rgba(124, 58, 237, 0.2); color: #c4b5fd; border: 1px solid rgba(124, 58, 237, 0.4); }
-    .btn-mic.recording { background: rgba(255, 71, 87, 0.3); color: #ff4757; border-color: rgba(255, 71, 87, 0.6); animation: pulse 1.5s infinite; }
-    .btn-send { background: var(--accent-cyan); color: #000; border: none; font-weight: bold; }
-    .btn-send:hover, .btn-mic:hover { transform: translateY(-2px); }
-    
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); } 70% { box-shadow: 0 0 0 8px rgba(255,71,87,0); } 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0); } }
+    .btn-mic {
+      background: rgba(0, 106, 99, 0.10);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 106, 99, 0.35);
+    }
+    .btn-mic.recording {
+      background: rgba(186, 26, 26, 0.18);
+      color: #ba1a1a;
+      border-color: rgba(186, 26, 26, 0.45);
+      animation: pulse 1.5s infinite;
+    }
+    .btn-send {
+      background: var(--accent-orange);
+      color: var(--text-on-accent);
+      border: none;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(231, 111, 81, 0.25);
+    }
+    .btn-send:hover, .btn-mic:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(46, 25, 22, 0.10);
+    }
+    .btn-send:hover { box-shadow: 0 6px 16px rgba(231, 111, 81, 0.35); }
+
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(186,26,26,0.40); }
+      70%  { box-shadow: 0 0 0 8px rgba(186,26,26,0); }
+      100% { box-shadow: 0 0 0 0 rgba(186,26,26,0); }
+    }
 
     /* ── 컨트롤 (하단 우측) ───────────────────────────── */
     .controls {
@@ -536,16 +612,16 @@
         <!-- 헤더 메뉴: 음성 토글 / 새창 / 모델 선택을 한곳으로 묶음 -->
         <div id="header-menu-wrap" style="position: relative;">
           <button id="btn-header-menu" class="hud-item" title="메뉴" aria-haspopup="true" aria-expanded="false"
-            style="cursor:pointer; background: rgba(15,23,42,0.8); border: 1px solid var(--border); color: var(--text-main); padding: 5px 11px; font-size: 1rem; font-weight: 700;">☰</button>
+            style="cursor:pointer; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 5px 11px; font-size: 1rem; font-weight: 700; border-radius: var(--radius-md);">☰</button>
           <div id="header-menu-panel" role="menu" aria-hidden="true"
-            style="display:none; flex-direction:column; gap:0.55rem; position:absolute; top: calc(100% + 8px); right: 0; min-width: 240px; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); padding: 0.7rem; z-index: 200;">
-            <button id="btn-toggle-camera" class="hud-item" style="cursor:pointer; background: #00f2fe; border: none; color: #000; padding: 6px 10px; border-radius: 6px; font-weight: 800; width: 100%; text-align: center; box-shadow: 0 0 10px rgba(0,242,254,0.3);">📷 카메라: ON</button>
-            <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: rgba(100, 116, 139, 0.15); border: 1px solid var(--border); color: var(--text-muted); width: 100%; text-align: center;">🔇 음성: OFF</button>
-            <button id="btn-open-avatar-window" class="hud-item" style="cursor:pointer; background: var(--accent-purple); border: 1px solid rgba(124, 58, 237, 0.5); color: #fff; font-weight: 800; width: 100%;">🪟 새창 열기</button>
-            <label style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+            style="display:none; flex-direction:column; gap:0.55rem; position:absolute; top: calc(100% + 8px); right: 0; min-width: 240px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 0.7rem; z-index: 200;">
+            <button id="btn-toggle-camera" class="hud-item" style="cursor:pointer; background: var(--accent-orange); border: none; color: #ffffff; padding: 7px 12px; border-radius: var(--radius-md); font-weight: 700; width: 100%; text-align: center; box-shadow: 0 4px 10px rgba(231, 111, 81, 0.30);">📷 카메라: ON</button>
+            <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: var(--bg-glass); border: 1px solid var(--border); color: var(--text-muted); padding: 7px 12px; border-radius: var(--radius-md); width: 100%; text-align: center; font-weight: 600;">🔇 음성: OFF</button>
+            <button id="btn-open-avatar-window" class="hud-item" style="cursor:pointer; background: var(--accent-cyan); border: 1px solid rgba(0, 106, 99, 0.45); color: #ffffff; padding: 7px 12px; border-radius: var(--radius-md); font-weight: 700; width: 100%;">🪟 새창 열기</button>
+            <label style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight: 600;">
               인식 모델
-              <select id="sel-model" class="hud-item" style="cursor:pointer; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(0, 242, 254, 0.4); color: #00f2fe; font-weight: 800; border-radius: 6px; padding: 6px 8px; outline: none; font-size: 0.78rem; box-shadow: 0 0 10px rgba(0, 242, 254, 0.15); width: 100%;">
-                <option value="dialogue" style="background:#0f172a; color:#fff;">💬 대화 모델 (80단어)</option>
+              <select id="sel-model" class="hud-item" style="cursor:pointer; background: var(--bg-glass); border: 1px solid var(--border); color: var(--accent-purple); font-weight: 700; border-radius: var(--radius-md); padding: 7px 9px; outline: none; font-size: 0.82rem; box-shadow: 0 1px 2px rgba(46, 25, 22, 0.04); width: 100%;">
+                <option value="dialogue" style="background:#ffffff; color:var(--text-main);">💬 대화 모델 (80단어)</option>
               </select>
             </label>
           </div>
