@@ -31,10 +31,10 @@ const BONE_CONSTRAINTS = {
 
 console.log('[ITDA Avatar] ✅ avatar.js 로드됨. THREE 버전:', THREE.REVISION);
 
-// ── 씬 ───────────────────────────────────────────────────────
+// ── 씬 ─── Warm Connection (아이보리 배경) ────────────────────
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x02040a);
-scene.fog = new THREE.FogExp2(0x02040a, 0.05);
+scene.background = new THREE.Color(0xfff8f6);     // 메인 아이보리
+scene.fog = new THREE.FogExp2(0xfff1ed, 0.025);   // 부드러운 워밍 글로우
 
 // ── 렌더러 및 카메라 (모바일 컨테이너 대응) ──────────────────────
 const canvas = document.querySelector('#three-canvas');
