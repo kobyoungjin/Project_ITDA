@@ -1,3 +1,102 @@
+/**
+ * vision.js ─ Step 5: 얼굴 + 손 + 포즈 통합 비전 엔진
+ */
+
+// MediaPipe 모듈 임포트
+import { FilesetResolver, FaceLandmarker, HandLandmarker, PoseLandmarker } from '...';
+
+let faceLandmarker = null;
+let handLandmarker = null;
+let poseLandmarker = null;
+let videoStream = null;
+let isRunning = false;
+
+const videoEl = document.getElementById('vision-video');
+
+// ── 1. 모델 초기화 및 카메라 시작 ───────────────────────────
+async function init() {
+  const vision = await FilesetResolver.forVisionTasks('...');
+
+  // ① FaceLandmarker (얼굴 표정 Blendshapes)
+  faceLandmarker = await FaceLandmarker.createFromOptions(vision, { ... });
+  // ② HandLandmarker (손가락 21관절)
+  handLandmarker = await HandLandmarker.createFromOptions(vision, { ... });
+  // ③ PoseLandmarker (팔, 어깨, 몸통 등)
+  poseLandmarker = await PoseLandmarker.createFromOptions(vision, { ... });
+
+  await startCamera(); // 웹캠 시작
+}
+
+async function startCamera() {
+  videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+  videoEl.srcObject = videoStream;
+  videoEl.play();
+  isRunning = true;
+  requestAnimationFrame(processFrame); // 메인 루프 시작
+}
+
+
+// ── 2. 메인 처리 루프 (매 프레임마다 실행됨) ─────────────────
+async function processFrame(timestamp) {
+  if (!isRunning) return;
+  requestAnimationFrame(processFrame);
+
+  // ① 포즈 감지
+  const poseResult = poseLandmarker.detectForVideo(videoEl, timestamp);
+  latestPoseLandmarks = poseResult.landmarks?.[0] ?? null;
+
+  // ② 얼굴 감지
+  const faceResult = faceLandmarker.detectForVideo(videoEl, timestamp);
+  if (faceResult.faceBlendshapes && faceResult.faceBlendshapes.length > 0) {
+    const smoothed = smoothBlendshapes(faceResult.faceBlendshapes[0].categories);
+    // 아바타 표정 동기화를 위한 이벤트 발행
+    window.dispatchEvent(new CustomEvent('itda:face:results', { detail: { blendshapes: smoothed } }));
+  }
+
+  // ③ 손 감지
+  const handResult = handLandmarker.detectForVideo(videoEl, timestamp);
+  
+  if (handResult.landmarks && handResult.landmarks.length > 0) {
+    const hands = handResult.landmarks.map((lm, i) => ({
+      handedness: handResult.handedness[i]?.[0]?.displayName ?? 'Unknown',
+      landmarks: lm,
+    }));
+    // 손 모양 실시간 동기화 이벤트 발행
+    window.dispatchEvent(new CustomEvent('itda:hands:results', { detail: { hands } }));
+    
+    // 백엔드로 웹소켓 전송
+    sendFrameWS(hands);
+  } else {
+    sendFrameWS([]);
+  }
+}
+
+
+// ── 3. 백엔드(WebSocket) 데이터 전송 ─────────────────────────
+function sendFrameWS(hands) {
+  const now = performance.now();
+
+  // (속도/정지 여부 판단 등 모션 상태 업데이트 로직)
+  _updateMotionPhase(hands, now);
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+  // (데이터 정제 및 전송 주기를 0.5초로 스로틀링)
+  if (motionState.phase !== 'stable' && now - lastSendTime < 500) return;
+  lastSendTime = now;
+
+  // 웹소켓으로 백엔드(RAG 서버)에 데이터 전송
+  ws.send(JSON.stringify({
+    timestamp_ms: now,
+    hands: handDataList,      // 정규화된 21개 손가락 관절 데이터
+    pose: poseField,          // 어깨, 팔꿈치, 엉덩이 등의 좌표
+    meta_features: {
+      movement: movement_desc, // "위에서 아래로 내려옵니다" 등
+      hand_count: hands.length,
+      motion_phase: motionState.phase, // 'idle', 'moving', 'stable'
+    }
+  }));
+}
 {
   "id": "월요일",
   "description": "auto-generated from OpenPose keypoints NIA_SL_WORD0336_REAL01_F",
