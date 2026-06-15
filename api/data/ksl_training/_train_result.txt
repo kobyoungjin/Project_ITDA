@@ -1,0 +1,1 @@
+{'ok': True, 'samples': 190, 'labels': [np.str_('구기다'), np.str_('새롭다')], 'label_count': 2, 'accuracy': 52.6, 'model_path': 'C:\\Users\\dodreamai\\Documents\\GitHub\\Project_ITDA\\api\\data\\ksl_training\\knn_model.pkl', 'message': 'KNN 모델 훈련 완료! 2개 단어, 190개 샘플'}
