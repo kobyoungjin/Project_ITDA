@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITDA — 수어 직접 녹화 학습</title>
+  <style>
+    :root {
+      --bg:     #050810;
+      --card:   rgba(15, 23, 42, 0.92);
+      --border: rgba(255,255,255,0.09);
+      --cyan:   #00f2fe;
+      --purple: #7c3aed;
+      --green:  #00e6a0;
+      --red:    #ff4757;
+      --text:   #f0f4f8;
+      --muted:  #94a3b8;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 50% 60% at 15% 20%, rgba(124,58,237,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 85% 80%, rgba(0,242,254,0.10) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--cyan);
+      margin-bottom: 0.25rem;
+    }
+    .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      backdrop-filter: blur(20px);
+      margin-bottom: 1rem;
+    }
+
+    /* ── 카메라 뷰 ── */
+    .cam-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+    }
+    .cam-wrap.recording { border-color: var(--red); }
+    .cam-wrap.ready     { border-color: var(--green); }
+
+    #cam-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* 거울 모드 */
+      display: block;
+    }
+
+    /* 녹화 중 REC 표시 */
+    #rec-badge {
+      display: none;
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      background: var(--red);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      letter-spacing: 1px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* 카운트다운 */
+    #countdown {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      font-weight: 900;
+      color: var(--cyan);
+    }
+
+    /* 타이머 */
+    #timer {
+      display: none;
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(0,0,0,0.5);
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    /* 카메라 없을 때 플레이스홀더 */
+    #cam-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    #cam-placeholder .icon { font-size: 2.5rem; }
+
+    /* 재생 미리보기 (녹화 후) */
+    #playback-wrap {
+      display: none;
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--green);
+    }
+    #playback-video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    .playback-label {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      background: var(--green);
+      color: #000;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    /* ── 단어 입력 ── */
+    .field { margin-top: 1.2rem; }
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+    }
+    .field input {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--cyan); }
+    .field input::placeholder { color: var(--muted); }
+
+    /* ── 버튼들 ── */
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.2rem;
+    }
+    .btn {
+      flex: 1;
+      padding: 0.8rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    #btn-cam   { background: rgba(0,242,254,0.15); border: 1px solid var(--cyan); color: var(--cyan); }
+    #btn-rec   { background: var(--red);    color: #fff; }
+    #btn-stop  { background: rgba(255,255,255,0.12); border: 1px solid var(--border); color: var(--text); display: none; }
+    #btn-retry { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); display: none; }
+
+    #btn-augment {
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.9rem;
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      display: none;
+    }
+    #btn-augment:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    #btn-augment:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── 진행 ── */
+    #progress-section { display: none; }
+    .progress-bar-wrap {
+      background: rgba(255,255,255,0.07);
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+      margin: 1rem 0 0.5rem;
+    }
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple), var(--cyan));
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    #progress-label { font-size: 0.85rem; color: var(--muted); text-align: center; }
+
+    /* ── 완료 ── */
+    #result-section { display: none; text-align: center; }
+    .result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+    .result-title { font-size: 1.2rem; font-weight: 700; color: var(--green); margin-bottom: 0.4rem; }
+    .result-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.4rem; }
+    #btn-download {
+      padding: 0.75rem 2rem;
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #btn-download:hover { opacity: 0.85; }
+    #btn-csv {
+      display: none;
+      margin: 0.6rem auto 0;
+      padding: 0.7rem 1.8rem;
+      background: rgba(0,230,160,0.12);
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    #btn-csv:hover:not(:disabled) { background: rgba(0,230,160,0.25); }
+    #btn-csv:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-upload-supabase {
+      display: none;
+      margin: 0.6rem auto 0;
+      padding: 0.7rem 1.8rem;
+      background: rgba(124,58,237,0.18);
+      border: 1px solid var(--purple);
+      color: #c4b5fd;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    #btn-upload-supabase:hover:not(:disabled) { background: rgba(124,58,237,0.32); }
+    #btn-upload-supabase:disabled { opacity: 0.4; cursor: not-allowed; }
+    #upload-result {
+      display: none;
+      margin-top: 0.7rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+    #upload-result.ok  { background: rgba(0,230,160,0.1); border: 1px solid rgba(0,230,160,0.3); color: var(--green); }
+    #upload-result.err { background: rgba(255,71,87,0.1);  border: 1px solid rgba(255,71,87,0.3);  color: #ff6b78; }
+    #btn-reset {
+      display: block;
+      margin: 0.8rem auto 0;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    #btn-reset:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    /* ── 에러 ── */
+    #error-msg {
+      display: none;
+      margin-top: 0.8rem;
+      padding: 0.7rem 1rem;
+      background: rgba(255,71,87,0.12);
+      border: 1px solid rgba(255,71,87,0.35);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #ff6b78;
+    }
+
+    /* ── 안내 칩 ── */
+    .steps {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+    }
+    .step-chip {
+      background: rgba(0,242,254,0.07);
+      border: 1px solid rgba(0,242,254,0.18);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .step-chip span { color: var(--cyan); font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>수어 직접 녹화 학습</h1>
+  <p class="subtitle">카메라로 직접 녹화 → 100개 증강 자동 생성 → ZIP 다운로드</p>
+
+  <!-- 단계 안내 -->
+  <div class="steps">
+    <div class="step-chip"><span>1</span> 카메라 켜기</div>
+    <div class="step-chip"><span>2</span> 단어 입력</div>
+    <div class="step-chip"><span>3</span> 수어 녹화</div>
+    <div class="step-chip"><span>4</span> 100개 증강 생성</div>
+    <div class="step-chip"><span>5</span> ZIP 다운로드</div>
+  </div>
+
+  <!-- 녹화 카드 -->
+  <div class="card" id="record-section">
+
+    <!-- 카메라 뷰 -->
+    <div class="cam-wrap" id="cam-wrap">
+      <div id="cam-placeholder">
+        <div class="icon">📷</div>
+        <div>카메라 켜기 버튼을 눌러주세요</div>
+      </div>
+      <video id="cam-video" autoplay muted playsinline style="display:none;"></video>
+      <div id="rec-badge">● REC</div>
+      <div id="timer">00:00</div>
+      <div id="countdown" style="display:flex;"></div>
+    </div>
+
+    <!-- 녹화 후 재생 미리보기 -->
+    <div id="playback-wrap">
+      <div class="playback-label">✅ 녹화 완료</div>
+      <video id="playback-video" controls loop></video>
+    </div>
+
+    <!-- 단어 입력 -->
+    <div class="field">
+      <label>수어 단어 레이블</label>
+      <input type="text" id="word-input" placeholder="예: 안녕하세요" autocomplete="off" />
+    </div>
+
+    <!-- 버튼 행 -->
+    <div class="btn-row">
+      <button class="btn" id="btn-cam">📷 카메라 켜기</button>
+      <button class="btn" id="btn-rec" disabled>⏺ 녹화 시작</button>
+      <button class="btn" id="btn-stop">⏹ 중지</button>
+      <button class="btn" id="btn-retry">🔄 다시 녹화</button>
+    </div>
+
+    <button id="btn-augment">✨ 100개 증강 생성 시작</button>
+    <div id="error-msg"></div>
+  </div>
+
+  <!-- 진행 카드 -->
+  <div class="card" id="progress-section">
+    <div style="font-size:0.95rem;font-weight:700;color:var(--cyan);">증강 처리 중...</div>
+    <div class="progress-bar-wrap"><div id="progress-bar"></div></div>
+    <div id="progress-label">MediaPipe 랜드마크 추출 중...</div>
+  </div>
+
+  <!-- 완료 카드 -->
+  <div class="card" id="result-section">
+    <div class="result-icon">✅</div>
+    <div class="result-title">100개 증강 완료!</div>
+    <div class="result-desc" id="result-desc"></div>
+    <button id="btn-download">📦 ZIP 다운로드</button>
+    <button id="btn-csv">📄 CSV 다운로드</button>
+    <button id="btn-upload-supabase">☁️ Supabase에 업로드</button>
+    <div id="upload-result"></div>
+    <button id="btn-reset">다시 녹화하기</button>
+  </div>
+
+</div>
+
+<script>
+const API        = 'http://localhost:8000/api/augment/video';
+const UPLOAD_API = 'http://localhost:8000/api/augment/upload';
+const CSV_API    = 'http://localhost:8000/api/augment/to-csv';
+
+// DOM
+const camWrap         = document.getElementById('cam-wrap');
+const camPlaceholder  = document.getElementById('cam-placeholder');
+const camVideo        = document.getElementById('cam-video');
+const recBadge        = document.getElementById('rec-badge');
+const timerEl         = document.getElementById('timer');
+const countdown       = document.getElementById('countdown');
+const playbackWrap    = document.getElementById('playback-wrap');
+const playbackVid     = document.getElementById('playback-video');
+const wordInput       = document.getElementById('word-input');
+const btnCam          = document.getElementById('btn-cam');
+const btnRec          = document.getElementById('btn-rec');
+const btnStop         = document.getElementById('btn-stop');
+const btnRetry        = document.getElementById('btn-retry');
+const btnAugment      = document.getElementById('btn-augment');
+const errorMsg        = document.getElementById('error-msg');
+const recordSec       = document.getElementById('record-section');
+const progressSec     = document.getElementById('progress-section');
+const progressBar     = document.getElementById('progress-bar');
+const progressLbl     = document.getElementById('progress-label');
+const resultSec       = document.getElementById('result-section');
+const resultDesc      = document.getElementById('result-desc');
+const btnDownload     = document.getElementById('btn-download');
+const btnCsv          = document.getElementById('btn-csv');
+const btnUpload       = document.getElementById('btn-upload-supabase');
+const uploadResult    = document.getElementById('upload-result');
+const btnReset        = document.getElementById('btn-reset');
+
+let stream = null;
+let recorder = null;
+let chunks = [];
+let recordedBlob = null;
+let timerInterval = null;
+let elapsed = 0;
+
+// ── 카메라 켜기 ──────────────────────────────────────────
+btnCam.addEventListener('click', async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    camVideo.srcObject = stream;
+    camVideo.style.display = 'block';
+    camPlaceholder.style.display = 'none';
+    btnCam.disabled = true;
+    btnCam.textContent = '📷 카메라 ON';
+    btnRec.disabled = false;
+    camWrap.classList.add('ready');
+  } catch (e) {
+    showError('카메라 접근 권한을 허용해 주세요: ' + e.message);
+  }
+});
+
+// ── 녹화 시작 (3초 카운트다운 후) ─────────────────────────
+btnRec.addEventListener('click', async () => {
+  if (!stream) return;
+
+  // 이전 녹화 초기화
+  resetRecording();
+  btnRec.disabled = true;
+  btnStop.style.display = 'none';
+
+  // 3초 카운트다운
+  for (let i = 3; i >= 1; i--) {
+    countdown.style.display = 'flex';
+    countdown.textContent = i;
+    await sleep(1000);
+  }
+  countdown.style.display = 'none';
+
+  // 녹화 시작
+  chunks = [];
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9'
+    : 'video/webm';
+  recorder = new MediaRecorder(stream, { mimeType });
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = onRecordingStop;
+  recorder.start(100);
+
+  recBadge.style.display = 'block';
+  timerEl.style.display = 'block';
+  camWrap.classList.remove('ready');
+  camWrap.classList.add('recording');
+  btnStop.style.display = 'block';
+
+  // 타이머
+  elapsed = 0;
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
+});
+
+// ── 녹화 중지 ─────────────────────────────────────────────
+btnStop.addEventListener('click', () => {
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
+});
+
+function onRecordingStop() {
+  clearInterval(timerInterval);
+  recBadge.style.display = 'none';
+  timerEl.style.display = 'none';
+  camWrap.classList.remove('recording');
+  btnStop.style.display = 'none';
+
+  recordedBlob = new Blob(chunks, { type: 'video/webm' });
+
+  // 미리보기
+  playbackVid.src = URL.createObjectURL(recordedBlob);
+  camWrap.style.display = 'none';
+  playbackWrap.style.display = 'block';
+
+  btnRetry.style.display = 'block';
+  checkReady();
+}
+
+// ── 다시 녹화 ─────────────────────────────────────────────
+btnRetry.addEventListener('click', () => {
+  resetRecording();
+  playbackWrap.style.display = 'none';
+  camWrap.style.display = 'block';
+  camWrap.classList.add('ready');
+  btnRec.disabled = false;
+  btnRetry.style.display = 'none';
+  btnAugment.style.display = 'none';
+  hideError();
+});
+
+function resetRecording() {
+  chunks = [];
+  recordedBlob = null;
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
+  recorder = null;
+  clearInterval(timerInterval);
+  elapsed = 0;
+  timerEl.textContent = '00:00';
+}
+
+// ── 버튼 활성화 체크 ─────────────────────────────────────
+wordInput.addEventListener('input', checkReady);
+
+function checkReady() {
+  const ok = recordedBlob && wordInput.value.trim();
+  btnAugment.style.display = recordedBlob ? 'block' : 'none';
+  btnAugment.disabled = !ok;
+}
+
+// ── 증강 시작 ─────────────────────────────────────────────
+btnAugment.addEventListener('click', async () => {
+  hideError();
+  const word = wordInput.value.trim();
+  if (!recordedBlob || !word) return;
+
+  recordSec.style.display = 'none';
+  progressSec.style.display = 'block';
+
+  // 가짜 진행바
+  let pct = 0;
+  const fakeTimer = setInterval(() => {
+    if (pct < 85) {
+      pct += pct < 30 ? 3 : pct < 60 ? 1.5 : 0.4;
+      progressBar.style.width = pct + '%';
+      if (pct < 30) progressLbl.textContent = 'MediaPipe 랜드마크 추출 중...';
+      else if (pct < 60) progressLbl.textContent = '100가지 변형 계산 중...';
+      else progressLbl.textContent = 'ZIP 패키징 중...';
+    }
+  }, 200);
+
+  try {
+    const fd = new FormData();
+    fd.append('video', recordedBlob, `${word}.webm`);
+    fd.append('word', word);
+
+    const res = await fetch(API, { method: 'POST', body: fd });
+
+    clearInterval(fakeTimer);
+    progressBar.style.width = '100%';
+    progressLbl.textContent = '완료!';
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let detail = `HTTP ${res.status}`;
+      try { detail = JSON.parse(text).detail || detail; } catch {}
+      if (!text) detail = `HTTP ${res.status} — 서버 응답 없음 (서버 크래시 가능성)`;
+      throw new Error(detail);
+    }
+
+    const zipBlob = await res.blob();
+    await sleep(400);
+
+    progressSec.style.display = 'none';
+    resultSec.style.display = 'block';
+    resultDesc.textContent = `"${word}" 수어 녹화 → 100개 증강 완료 (${(zipBlob.size / 1024).toFixed(0)} KB)`;
+
+    btnDownload.onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = `ITDA_${word.replace(/ /g, '_')}_x100.zip`;
+      a.click();
+    };
+
+    // CSV 다운로드 버튼
+    btnCsv.style.display = 'block';
+    btnCsv.disabled = false;
+    btnCsv.onclick = async () => {
+      btnCsv.disabled = true;
+      btnCsv.textContent = '📄 CSV 변환 중...';
+      try {
+        const fd = new FormData();
+        fd.append('zip_file', zipBlob, 'augmented.zip');
+        const r = await fetch(CSV_API, { method: 'POST', body: fd });
+        if (!r.ok) {
+          const t = await r.text().catch(() => '');
+          let msg = `HTTP ${r.status}`;
+          try { msg = JSON.parse(t).detail || msg; } catch {}
+          throw new Error(msg);
+        }
+        const csvBlob = await r.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(csvBlob);
+        a.download = `ITDA_${word.replace(/ /g, '_')}_x100.csv`;
+        a.click();
+      } catch (e) {
+        showError(`CSV 오류: ${e.message}`);
+      }
+      btnCsv.disabled = false;
+      btnCsv.textContent = '📄 CSV 다운로드';
+    };
+
+    // Supabase 업로드 버튼
+    btnUpload.style.display = 'block';
+    uploadResult.style.display = 'none';
+    btnUpload.disabled = false;
+    btnUpload.onclick = async () => {
+      btnUpload.disabled = true;
+      btnUpload.textContent = '☁️ 업로드 중...';
+      uploadResult.style.display = 'none';
+      try {
+        const fd = new FormData();
+        fd.append('zip_file', zipBlob, 'augmented.zip');
+        const r = await fetch(UPLOAD_API, { method: 'POST', body: fd });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+        uploadResult.className = 'ok';
+        uploadResult.textContent =
+          `✅ Supabase 업로드 완료: ${data.uploaded}/${data.total}개 (버킷: ${data.bucket}/${data.path_prefix})`;
+      } catch (e) {
+        uploadResult.className = 'err';
+        uploadResult.textContent = `❌ 업로드 실패: ${e.message}`;
+        btnUpload.disabled = false;
+      }
+      btnUpload.textContent = '☁️ Supabase에 업로드';
+      uploadResult.style.display = 'block';
+    };
+
+  } catch (e) {
+    clearInterval(fakeTimer);
+    progressSec.style.display = 'none';
+    recordSec.style.display = 'block';
+    showError(`오류: ${e.message}`);
+  }
+});
+
+// ── 리셋 ─────────────────────────────────────────────────
+btnReset.addEventListener('click', () => {
+  resetRecording();
+  wordInput.value = '';
+  progressBar.style.width = '0%';
+  playbackWrap.style.display = 'none';
+  camWrap.style.display = 'block';
+  camWrap.classList.add('ready');
+  btnRec.disabled = false;
+  btnRetry.style.display = 'none';
+  btnAugment.style.display = 'none';
+  hideError();
+  resultSec.style.display = 'none';
+  recordSec.style.display = 'block';
+});
+
+// ── 유틸 ─────────────────────────────────────────────────
+function updateTimer() {
+  elapsed++;
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  timerEl.textContent = `${m}:${s}`;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+function hideError() { errorMsg.style.display = 'none'; }
+</script>
+</body>
+</html>

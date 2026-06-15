@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
+from pathlib import Path
 from api.core.config import settings
 from api.routers import sign_language
 from api.routers import ws_vision
 from api.routers import stt as stt_adapter
 from api.routers import collect as collect_router
+from api.routers import video_proxy
+from api.routers import augmentation as augmentation_router
 from api.services.data_pipeline import data_pipeline
 
 app = FastAPI(
@@ -17,7 +21,7 @@ app = FastAPI(
 # 안티그래비티 규칙: 프론트엔드 포트(3000)를 위한 CORS 허용
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:8000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:8000", "null"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +48,20 @@ app.include_router(
     tags=["KSL Data Collection"]
 )
 
+# 수어 영상 프록시 스트리밍
+app.include_router(
+    video_proxy.router,
+    prefix="/api/video",
+    tags=["Video Proxy"]
+)
+
+# 수어 영상 데이터 증강 (1개 → 100개)
+app.include_router(
+    augmentation_router.router,
+    prefix="/api/augment",
+    tags=["Augmentation"]
+)
+
 # [P3] 6단계 통합: STT 라우터 (step6_stt 어댑터)
 # stt_adapter.router 는 로드 성공 시 step6_stt.stt_router(자체 prefix="/api") 이고,
 # 실패 시 /status/stt 만 노출하는 fallback 라우터 → prefix 추가 지정 불필요
@@ -51,6 +69,22 @@ app.include_router(
     stt_adapter.router,
     tags=["STT (6단계)"]
 )
+
+# 프론트엔드 정적 파일 서비스 (API 라우터보다 뒤에 선언해야 충돌 없음)
+_FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
+if _FRONTEND_DIR.exists():
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.requests import Request as StarletteRequest
+
+    class NoCacheMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: StarletteRequest, call_next):
+            response = await call_next(request)
+            if request.url.path.startswith("/ui/"):
+                response.headers["Cache-Control"] = "no-store"
+            return response
+
+    app.add_middleware(NoCacheMiddleware)
+    app.mount("/ui", StaticFiles(directory=str(_FRONTEND_DIR)), name="frontend")
 
 @app.on_event("startup")
 async def startup_event():

@@ -489,7 +489,6 @@
       </div>
       <div class="header-right">
         <button id="btn-toggle-voice" class="hud-item" style="cursor:pointer; background: rgba(100, 116, 139, 0.15); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; min-width: 95px; text-align: center;">🔇 음성: OFF</button>
-        <button id="btn-open-avatar-window" class="hud-item" style="cursor:pointer; background: var(--accent-purple); border: 1px solid rgba(124, 58, 237, 0.5); color: #fff; font-weight: 800;">🪟 새 창에서 보기</button>
         <div class="hud-item" id="backend-status" style="color: #ff4757; border-color: rgba(255, 71, 87, 0.4);">Backend: OFFLINE</div>
         <div class="hud-item" id="fps-display">FPS: 0</div>
         <div class="hud-item" id="joint-status">Joints: ACTIVE</div>
@@ -541,32 +540,30 @@
         </div>
       </div>
 
-      <!-- [아래쪽 60%] 아바타 + 텍스트 입력 -->
+      <!-- [아래쪽 60%] 수어 영상 + 텍스트 입력 -->
       <div id="bottom-section" style="flex: 6; display: flex; flex-direction: column; position: relative; background: var(--bg-deep);">
-        <!-- 아바타 영역 -->
-        <div id="avatar-area" style="flex: 1; position: relative; overflow: hidden;">
-          <canvas id="three-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
-          
-          <!-- 뷰 모드 토글 버튼 -->
-          <div style="position: absolute; top: 0.6rem; right: 0.6rem; z-index: 30; display: flex; gap: 0.4rem;">
-            <button id="btn-view-avatar" title="아바타 모드" onclick="window.ITDAAvatar5?.setViewMode('avatar')"
-              style="background: rgba(124,58,237,0.85); border: 1px solid #7c3aed; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
-              🧍 아바타
-            </button>
-            <button id="btn-view-skeleton" title="스켈레톤 모드" onclick="window.ITDAAvatar5?.setViewMode('skeleton')"
-              style="background: rgba(0,230,160,0.2); border: 1px solid rgba(0,230,160,0.5); color: #00e6a0; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
-              🦴 스켈레톤
-            </button>
-          </div>
-          
-          <!-- AI Hub 참조 영상 PIP (아바타 위에 플로팅) -->
-          <div id="ref-pip">
-            <div class="ref-label">🎓 AI Hub 수어 교육 영상</div>
-            <button id="btn-close-ref">✕</button>
-            <video id="ref-video" controls muted></video>
+        <!-- 영상 영역 -->
+        <div id="video-area" style="flex: 1; position: relative; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center;">
+          <video id="sign-video"
+            style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;"
+            controls loop muted></video>
+
+          <!-- 영상 없을 때 플레이스홀더 -->
+          <div id="video-placeholder"
+            style="display: flex; flex-direction: column; align-items: center; justify-content: center;
+                   gap: 0.6rem; color: var(--text-muted); width: 100%; height: 100%;">
+            <span style="font-size: 2.5rem;">🤟</span>
+            <span class="placeholder-msg" style="font-size: 0.9rem;">수어를 입력하면 영상이 재생됩니다</span>
           </div>
 
-          <!-- 기존 mini-status 삭제됨 (손 개수/표정은 카메라 상단으로 이동) -->
+          <!-- 현재 재생 중인 단어 레이블 -->
+          <div id="video-word-label"
+            style="position: absolute; bottom: 0.8rem; left: 50%; transform: translateX(-50%);
+                   background: rgba(0,0,0,0.75); color: var(--accent-cyan);
+                   padding: 4px 18px; border-radius: 99px; font-size: 0.85rem; font-weight: 700;
+                   display: none; white-space: nowrap;"></div>
+
+          <!-- 숨겨진 상태 요소 (HUD 이벤트 핸들러 참조용) -->
           <div id="mini-status" style="display:none;">
             <div id="mini-handshape-output"></div>
             <div id="mini-pose-output"></div>
@@ -652,20 +649,7 @@
 
   </div> <!-- end of app-container -->
 
-  <!-- ── Three.js Import Map ─────────────────────────── -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three":          "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/":  "https://unpkg.com/three@0.160.0/examples/jsm/"
-      }
-    }
-  </script>
-
-  <!-- ── 모듈 로딩 순서: avatar → retargeting → vision ── -->
-  <!-- [캐시버스팅] 모든 주요 JS 에 v 쿼리 파라미터 부여. 코드 수정 시 아래 버전만 올리면 브라우저 강제 fetch -->
-  <script type="module" src="./js/avatar.js?v=20260422c"></script>
-  <script type="module" src="./js/retargeting.js?v=20260422c"></script>
+  <!-- ── 비전 모듈 ──────────────────────────────────── -->
   <script type="module" src="./js/vision.js?v=20260422c"></script>
 
   <!-- ── [③ STT] Web Speech primary + Whisper fallback ── -->
@@ -677,15 +661,11 @@
   <!-- ── 텍스트/음성 양방향 번역 스크립트 ──────────────── -->
   <script type="module" src="./js/translator.js?v=20260422c"></script>
 
-  <!-- ── [2단계] 수형 라이브러리 로더 (motion_loader_v3 이전에 로드) ── -->
+  <!-- ── [2단계] 수형 라이브러리 로더 ── -->
   <script type="module" src="./js/handshape_loader.js?v=20260424d"></script>
 
-  <!-- ── [Option A / V3] MediaPipe 추출 keyframe JSON 로더 ─── -->
-  <!-- translator 이후에 로드 — window.ITDAMotionV3 노출해 우선 재생 시도 -->
-  <script type="module" src="./js/motion_loader_v3.js?v=20260428"></script>
-
-  <!-- ── [NEW] 국립국어원 관절 데이터 (.npy -> .json) 로더 ─── -->
-  <script type="module" src="./js/motion_loader_npy.js?v=20260429"></script>
+  <!-- ── 수어 영상 플레이어 ─── -->
+  <script type="module" src="./js/video_player.js?v=20260520a"></script>
 
   <!-- ── [⑥ Education] 수어 학습 모드 ─────────────────── -->
   <script type="module" src="./js/education.js"></script>
@@ -698,11 +678,6 @@
     // MediaPipe 준비 완료 → 로딩 오버레이 해제
     window.addEventListener('itda:vision:ready', () => {
       document.getElementById('vision-overlay').classList.add('hidden');
-    });
-
-    // 아바타 준비 완료 알림
-    window.addEventListener('itda:avatar:ready', () => {
-      // document.getElementById('phase-badge').textContent = '표정 동기화 · 모델 로드 완료';
     });
 
     // 감정 Morph Target 값을 HUD 퍼센트에 반영
@@ -943,10 +918,8 @@
 
           outputEl.innerHTML = `<span style="color:var(--accent-cyan); font-weight:800; font-size:1.15rem;">✨ ${result.text}</span> ${conf} ${emotionsHtml}`;
           
-          // [NEW] 인식 성공 시 아바타 동작 연동 (Sign-to-Motion)
-          if (window.ITDAMotionNPY) {
-            window.ITDAMotionNPY.play(result.text);
-          }
+          // 인식 성공 시 수어 영상 재생
+          window.ITDAVideoPlayer?.play(result.text);
           
           // [NEW] TTS 음성 출력 (Voice Toggle 반영)
           if (window.speechSynthesis && window._isVoiceOn) {
@@ -1050,28 +1023,6 @@
       }
     });
     */
-
-    document.getElementById('btn-reset')?.addEventListener('click', () => {
-      window.ITDAAvatar5?.reset();
-    });
-
-    document.getElementById('btn-cam')?.addEventListener('click', () => {
-      // OrbitControls target 초기화는 avatar.js 내부이므로 페이지 재로드로 대체
-      window.location.reload();
-    });
-
-    // 참조 영상 닫기
-    document.getElementById('btn-close-ref').addEventListener('click', () => {
-      document.getElementById('ref-pip').style.display = 'none';
-      const v = document.getElementById('ref-video');
-      v.pause();
-      v.src = "";
-    });
-
-    // 아바타 전용 창 열기
-    document.getElementById('btn-open-avatar-window')?.addEventListener('click', () => {
-      window.open('./avatar_only.html', 'AvatarViewer', 'width=800,height=800,menubar=no,toolbar=no,location=no,status=no');
-    });
 
     // 자동 시작
     window.ITDAVision5?.init();

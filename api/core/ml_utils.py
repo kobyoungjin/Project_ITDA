@@ -3,13 +3,43 @@ import numpy as np
 from typing import Optional
 
 
+# 오른손 11개 핵심 랜드마크 인덱스 (× xyz = 33차원)
+# 엄지: MCP(2), IP(3), Tip(4)  /  검지: MCP(5), Tip(8)
+# 중지: MCP(9), Tip(12)        /  약지: MCP(13), Tip(16)
+# 소지: MCP(17), Tip(20)
+_HAND_KEY_IDXS = [2, 3, 4, 5, 8, 9, 12, 13, 16, 17, 20]
+
+
+def _extract_key_positions(landmarks: Optional[list]) -> list:
+    """오른손 11개 핵심 랜드마크 (x,y,z) — 손목 기준 정규화 → 33차원. 미감지 시 0."""
+    if not landmarks or len(landmarks) < 21:
+        return [0.0] * 33
+    wrist = landmarks[0]
+    ref   = landmarks[9]  # 중지 MCP → 스케일 기준
+    scale = math.sqrt((wrist['x']-ref['x'])**2 + (wrist['y']-ref['y'])**2
+                      + (wrist.get('z',0)-ref.get('z',0))**2)
+    if scale < 1e-6:
+        scale = 1.0
+    out = []
+    for idx in _HAND_KEY_IDXS:
+        lm = landmarks[idx]
+        out.extend([
+            (lm['x']         - wrist['x'])         / scale,
+            (lm['y']         - wrist['y'])         / scale,
+            (lm.get('z', 0)  - wrist.get('z', 0)) / scale,
+        ])
+    return out  # 11 × 3 = 33
+
+
 def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Optional[list], pose_landmarks: Optional[dict] = None) -> Optional[list]:
     """
-    양손의 MediaPipe 랜드마크 + 팔 관절 -> 37차원 통합 특징 벡터
-    - 오른손 (16차원): 15개 각도 + 1개 스케일
-    - 왼손 (16차원): 15개 각도 + 1개 스케일
-    - 양손 상대 위치 (3차원): 오른손 손목 기준 왼손 손목의 (dx, dy, dz)
-    - 팔 관절 (2차원): 좌우 팔꿈치 굴곡 각도 (도 단위, 0~180 -> 0~1 정규화)
+    양손 MediaPipe 랜드마크 + 팔 관절 → 76차원 특징 벡터
+    - 오른손 각도    (16): 관절 각도 15 + 스케일 플래그 1
+    - 왼손  각도    (16): 관절 각도 15 + 스케일 플래그 1
+    - 상대 위치     ( 9): 어깨 기준 손목 위치 + 손목 간 거리
+    - 오른손 키포인트(33): 11개 핵심 랜드마크 × (x,y,z) 정규화
+    - 팔꿈치 각도   ( 2): 좌우 팔꿈치 굴곡
+    합계: 16+16+9+33+2 = 76
     """
     
     def _extract_single_hand_features(landmarks: Optional[list]) -> list[float]:
@@ -107,13 +137,16 @@ def extract_ksl_features(right_landmarks: Optional[list], left_landmarks: Option
             return 0.5
         arm_feats = [_get_elbow_angle("right"), _get_elbow_angle("left")]
 
-    # 4. 통합 (43차원: 16 + 16 + 9 + 2)
-    combined = right_feats + left_feats + rel_pos + arm_feats
-    
+    # 4. 오른손 핵심 랜드마크 (33차원)
+    right_key_pos = _extract_key_positions(right_landmarks)
+
+    # 5. 통합 (76차원: 16+16+9+33+2)
+    combined = right_feats + left_feats + rel_pos + right_key_pos + arm_feats
+
     # 둘 다 감지 안 된 경우 무시
     if right_feats[-1] == 0.0 and left_feats[-1] == 0.0:
         return None
-        
+
     return combined
 
 

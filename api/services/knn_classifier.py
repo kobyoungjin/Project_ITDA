@@ -3,14 +3,13 @@ KNN 기반 수어 분류기 서비스
 - 훈련된 knn_model.pkl 을 로드하여 실시간 예측 수행
 - 신뢰도(confidence) 임계값 이상인 경우만 결과 반환
 """
-import math
 import joblib
 import numpy as np
 from pathlib import Path
 from typing import Optional
 
-MODEL_PATH = Path("api/data/ksl_training/knn_model.pkl")
-CONFIDENCE_THRESHOLD = 0.35  # 신뢰도 임계값을 0.35로 하향 (80-90% 유사도 대응 및 인식률 향상)
+MODEL_PATH = Path(__file__).resolve().parents[2] / "api" / "data" / "ksl_training" / "knn_model.pkl"
+CONFIDENCE_THRESHOLD = 0.60  # 낮은 임계값은 손 없는 상태도 단어로 분류함
 
 _model = None  # 싱글톤 캐시
 

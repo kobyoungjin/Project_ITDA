@@ -89,8 +89,6 @@ function playJoints(word, options = { loop: false }) {
         stop();
         isPlaying = true;
 
-        // 스켈레톤 뷰 모드 전환
-        avatar?.setViewMode?.('skeleton');
         avatar?.stopIdle?.();
 
         let frameIdx = 0;

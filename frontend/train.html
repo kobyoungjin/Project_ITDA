@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITDA — 수어 학습 & 인식</title>
+  <style>
+    :root {
+      --bg:     #050810;
+      --card:   rgba(15, 23, 42, 0.92);
+      --border: rgba(255,255,255,0.09);
+      --cyan:   #00f2fe;
+      --purple: #7c3aed;
+      --green:  #00e6a0;
+      --red:    #ff4757;
+      --text:   #f0f4f8;
+      --muted:  #94a3b8;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 50% 60% at 15% 20%, rgba(124,58,237,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 85% 80%, rgba(0,242,254,0.10) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .page { position: relative; max-width: 560px; margin: 0 auto; }
+
+    h1 { font-size: 1.5rem; font-weight: 800; color: var(--cyan); margin-bottom: 0.2rem; }
+    .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.2rem; }
+
+    /* 탭 */
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
+    .tab {
+      flex: 1; padding: 0.6rem; border-radius: 10px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04); color: var(--muted);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .tab.active { background: rgba(0,242,254,0.1); border-color: var(--cyan); color: var(--cyan); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* 카드 */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.25rem;
+      backdrop-filter: blur(20px); margin-bottom: 1rem;
+    }
+
+    /* 카메라 */
+    .cam-wrap {
+      position: relative; width: 100%; aspect-ratio: 4/3;
+      background: #000; border-radius: 12px; overflow: hidden;
+      border: 2px solid var(--border);
+    }
+    .cam-wrap.ready    { border-color: var(--green); }
+    .cam-wrap.recording{ border-color: var(--red); }
+    .cam-video {
+      width: 100%; height: 100%; object-fit: cover;
+      transform: scaleX(-1); display: none;
+    }
+    .cam-placeholder {
+      position: absolute; inset: 0; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.5rem; color: var(--muted); font-size: 0.9rem;
+    }
+    .cam-placeholder .icon { font-size: 2.5rem; }
+    #rec-badge {
+      display: none; position: absolute; top: 0.75rem; left: 0.75rem;
+      background: var(--red); color: #fff; font-size: 0.75rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 99px; letter-spacing: 1px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #timer-train {
+      display: none; position: absolute; top: 0.75rem; right: 0.75rem;
+      font-size: 0.85rem; font-weight: 700; color: #fff;
+      background: rgba(0,0,0,0.5); padding: 3px 10px; border-radius: 99px;
+    }
+
+    /* 인식 오버레이 */
+    #predict-badge {
+      display: none; position: absolute; inset-x: 0; bottom: 0.8rem;
+      text-align: center;
+    }
+    #predict-badge span {
+      background: rgba(0,0,0,0.72); color: var(--cyan);
+      font-size: 1.6rem; font-weight: 900; padding: 0.3rem 1.2rem;
+      border-radius: 12px; letter-spacing: 0.05em;
+    }
+    #predict-conf {
+      display: none; position: absolute; top: 0.75rem; left: 0.75rem;
+      background: rgba(0,0,0,0.55); color: var(--green);
+      font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 99px;
+    }
+
+    /* 필드 */
+    .field { margin-top: 1rem; }
+    .field label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 600; }
+    .field input {
+      width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.65rem 1rem; color: var(--text); font-size: 1rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--cyan); }
+    .field input::placeholder { color: var(--muted); }
+
+    /* 버튼 행 */
+    .btn-row { display: flex; gap: 0.6rem; margin-top: 1rem; }
+    .btn {
+      flex: 1; padding: 0.75rem; border: none; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-cam   { background: rgba(0,242,254,0.12); border: 1px solid var(--cyan); color: var(--cyan); }
+    .btn-rec   { background: var(--red); color: #fff; }
+    .btn-stop  { background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: var(--text); display: none; }
+
+    .btn-full {
+      width: 100%; margin-top: 0.9rem; padding: 0.85rem; border: none;
+      border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-full:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn-full:disabled { opacity: 0.35; cursor: not-allowed; }
+    #btn-add-train {
+      background: linear-gradient(135deg, var(--purple), var(--cyan)); color: #fff;
+    }
+    #btn-train-model {
+      background: var(--green); color: #000;
+    }
+    #btn-toggle-recog {
+      background: linear-gradient(135deg, #1e40af, var(--cyan)); color: #fff;
+    }
+
+    /* 학습된 단어 뱃지 */
+    .word-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem; min-height: 2rem; }
+    .word-badge {
+      background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.25);
+      border-radius: 99px; padding: 3px 12px; font-size: 0.78rem; color: var(--cyan);
+    }
+    .no-words { font-size: 0.82rem; color: var(--muted); }
+
+    /* 결과/상태 메시지 */
+    .msg {
+      display: none; margin-top: 0.7rem; padding: 0.65rem 1rem;
+      border-radius: 10px; font-size: 0.85rem;
+    }
+    .msg.ok  { background: rgba(0,230,160,0.1); border: 1px solid rgba(0,230,160,0.3); color: var(--green); }
+    .msg.err { background: rgba(255,71,87,0.1);  border: 1px solid rgba(255,71,87,0.3);  color: #ff6b78; }
+    .msg.info{ background: rgba(0,242,254,0.08); border: 1px solid rgba(0,242,254,0.2);  color: var(--cyan); }
+
+    /* 훈련 결과 */
+    #train-result-box { display: none; margin-top: 0.8rem; }
+    .result-row { display: flex; justify-content: space-between; align-items: center;
+                  padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .result-row:last-child { border: none; }
+    .result-label { color: var(--muted); }
+    .result-val   { font-weight: 700; color: var(--text); }
+    .result-val.good { color: var(--green); }
+
+    /* 인식 히스토리 */
+    #recog-history {
+      margin-top: 0.8rem; max-height: 120px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0.3rem;
+    }
+    .hist-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.35rem 0.7rem; background: rgba(255,255,255,0.04);
+      border-radius: 8px; font-size: 0.85rem;
+    }
+    .hist-word { color: var(--cyan); font-weight: 700; }
+    .hist-conf { color: var(--muted); font-size: 0.78rem; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>수어 학습 & 인식</h1>
+  <p class="subtitle">영상 녹화 → KNN 모델 학습 → 실시간 수어 인식</p>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab active" data-tab="learn">📚 학습</button>
+    <button class="tab"        data-tab="recog">👁️ 인식</button>
+  </div>
+
+  <!-- ══════════════ 학습 탭 ══════════════ -->
+  <div class="panel active" id="panel-learn">
+
+    <!-- 카메라 + 녹화 -->
+    <div class="card">
+      <div class="cam-wrap" id="cam-wrap-train">
+        <div class="cam-placeholder" id="cam-ph-train">
+          <div class="icon">📷</div>
+          <div>카메라 켜기를 눌러주세요</div>
+        </div>
+        <video class="cam-video" id="cam-vid-train" autoplay muted playsinline></video>
+        <div id="rec-badge">● REC</div>
+        <div id="timer-train">00:00</div>
+      </div>
+
+      <!-- 단어 입력 -->
+      <div class="field">
+        <label>수어 단어 레이블</label>
+        <input type="text" id="word-input-train" placeholder="예: 안녕하세요" autocomplete="off" />
+      </div>
+
+      <!-- 버튼 -->
+      <div class="btn-row">
+        <button class="btn btn-cam" id="btn-cam-train">📷 카메라 켜기</button>
+        <button class="btn btn-rec" id="btn-rec-train" disabled>⏺ 녹화 시작</button>
+        <button class="btn btn-stop" id="btn-stop-train">⏹ 중지</button>
+      </div>
+
+      <button class="btn-full" id="btn-add-train" disabled>➕ 학습에 추가</button>
+      <div class="msg" id="msg-add"></div>
+    </div>
+
+    <!-- 학습된 단어 목록 -->
+    <div class="card">
+      <div style="font-size:0.9rem;font-weight:700;color:var(--cyan);margin-bottom:0.6rem;">
+        학습된 단어
+      </div>
+      <div class="word-badges" id="word-badges">
+        <span class="no-words">아직 학습된 단어가 없습니다</span>
+      </div>
+      <button class="btn-full" id="btn-train-model" style="margin-top:1rem;" disabled>
+        🧠 KNN 모델 훈련
+      </button>
+      <button class="btn-full" id="btn-reset-data" style="margin-top:0.5rem;background:rgba(255,71,87,0.15);border:1px solid var(--red);color:var(--red);">
+        🗑 데이터 초기화 (전체 삭제)
+      </button>
+      <div class="msg" id="msg-train"></div>
+      <div id="train-result-box">
+        <div class="result-row">
+          <span class="result-label">학습 단어 수</span>
+          <span class="result-val" id="res-words">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">총 샘플 수</span>
+          <span class="result-val" id="res-samples">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">교차검증 정확도</span>
+          <span class="result-val good" id="res-acc">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-learn -->
+
+  <!-- ══════════════ 인식 탭 ══════════════ -->
+  <div class="panel" id="panel-recog">
+
+    <div class="card">
+      <div class="cam-wrap" id="cam-wrap-recog">
+        <div class="cam-placeholder" id="cam-ph-recog">
+          <div class="icon">👁️</div>
+          <div>인식 시작을 눌러주세요</div>
+        </div>
+        <video class="cam-video" id="cam-vid-recog" autoplay muted playsinline></video>
+        <div id="predict-badge"><span id="predict-word"></span></div>
+        <div id="predict-conf"></div>
+      </div>
+
+      <button class="btn-full" id="btn-toggle-recog">▶ 인식 시작</button>
+      <div class="msg" id="msg-recog"></div>
+    </div>
+
+    <!-- 인식 히스토리 -->
+    <div class="card" id="history-card" style="display:none;">
+      <div style="font-size:0.9rem;font-weight:700;color:var(--cyan);margin-bottom:0.4rem;">
+        인식 결과 히스토리
+      </div>
+      <div id="recog-history"></div>
+    </div>
+
+  </div><!-- /panel-recog -->
+
+</div><!-- /page -->
+
+<canvas id="cap-canvas" style="display:none;"></canvas>
+
+<script>
+const API_BASE = 'http://localhost:8000/api/collect';
+
+// ── 탭 전환 ───────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ══════════════ 학습 탭 ══════════════
+
+const camWrapTrain = document.getElementById('cam-wrap-train');
+const camPhTrain   = document.getElementById('cam-ph-train');
+const camVidTrain  = document.getElementById('cam-vid-train');
+const recBadge     = document.getElementById('rec-badge');
+const timerEl      = document.getElementById('timer-train');
+const wordInput    = document.getElementById('word-input-train');
+const btnCamTrain  = document.getElementById('btn-cam-train');
+const btnRecTrain  = document.getElementById('btn-rec-train');
+const btnStopTrain = document.getElementById('btn-stop-train');
+const btnAdd       = document.getElementById('btn-add-train');
+const msgAdd       = document.getElementById('msg-add');
+const wordBadges   = document.getElementById('word-badges');
+const btnTrainModel= document.getElementById('btn-train-model');
+const msgTrain     = document.getElementById('msg-train');
+
+let trainStream = null, recorder = null, chunks = [], recordedBlob = null;
+let timerInterval = null, elapsed = 0;
+
+// 카메라 켜기
+btnCamTrain.addEventListener('click', async () => {
+  try {
+    trainStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    camVidTrain.srcObject = trainStream;
+    camVidTrain.style.display = 'block';
+    camPhTrain.style.display = 'none';
+    btnCamTrain.disabled = true;
+    btnCamTrain.textContent = '📷 카메라 ON';
+    btnRecTrain.disabled = false;
+    camWrapTrain.classList.add('ready');
+  } catch (e) {
+    showMsg(msgAdd, 'err', '카메라 권한 오류: ' + e.message);
+  }
+});
+
+// 녹화 시작
+btnRecTrain.addEventListener('click', () => {
+  if (!trainStream) return;
+  chunks = []; recordedBlob = null;
+  btnAdd.disabled = true;
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9' : 'video/webm';
+  recorder = new MediaRecorder(trainStream, { mimeType });
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = onTrainStop;
+  recorder.start(100);
+  recBadge.style.display = 'block';
+  timerEl.style.display = 'block';
+  camWrapTrain.classList.remove('ready');
+  camWrapTrain.classList.add('recording');
+  btnRecTrain.style.display = 'none';
+  btnStopTrain.style.display = 'block';
+  elapsed = 0; updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
+});
+
+// 녹화 중지
+btnStopTrain.addEventListener('click', () => {
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
+});
+
+function onTrainStop() {
+  clearInterval(timerInterval);
+  recBadge.style.display = 'none';
+  timerEl.style.display = 'none';
+  camWrapTrain.classList.remove('recording');
+  camWrapTrain.classList.add('ready');
+  btnStopTrain.style.display = 'none';
+  btnRecTrain.style.display = 'block';
+  btnRecTrain.disabled = false;
+  recordedBlob = new Blob(chunks, { type: 'video/webm' });
+  checkAddReady();
+}
+
+wordInput.addEventListener('input', checkAddReady);
+function checkAddReady() {
+  btnAdd.disabled = !(recordedBlob && wordInput.value.trim());
+}
+
+// 학습에 추가
+btnAdd.addEventListener('click', async () => {
+  const word = wordInput.value.trim();
+  if (!recordedBlob || !word) return;
+  btnAdd.disabled = true;
+  btnAdd.textContent = '⏳ 분석 중...';
+  showMsg(msgAdd, 'info', 'MediaPipe 분석 중... (10~30초 소요)');
+
+  try {
+    const fd = new FormData();
+    fd.append('file', recordedBlob, `${word}.webm`);
+    const r = await fetch(`${API_BASE}/video?label=${encodeURIComponent(word)}`,
+                          { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.message || `HTTP ${r.status}`);
+    showMsg(msgAdd, 'ok', `✅ "${word}" — ${data.saved_samples}개 샘플 추가 완료`);
+    recordedBlob = null;
+    chunks = [];
+    await refreshStatus();
+  } catch (e) {
+    showMsg(msgAdd, 'err', `오류: ${e.message}`);
+  }
+  btnAdd.textContent = '➕ 학습에 추가';
+  checkAddReady();
+});
+
+// 데이터 초기화
+document.getElementById('btn-reset-data').addEventListener('click', async () => {
+  if (!confirm('⚠️ 학습 데이터와 모델을 전부 삭제합니다.\n계속하시겠습니까?')) return;
+  try {
+    const r = await fetch(`${API_BASE}/reset`, { method: 'POST' });
+    const text = await r.text();
+    let d = {};
+    try { d = JSON.parse(text); } catch { d = { ok: false, message: `서버 오류 (${r.status})` }; }
+    showMsg(msgTrain, d.ok ? 'ok' : 'err', d.ok ? '✅ 초기화 완료. 처음부터 다시 학습하세요.' : d.message);
+    document.getElementById('train-result-box').style.display = 'none';
+    wordBadges.innerHTML = '<span class="no-words">아직 학습된 단어가 없습니다</span>';
+    btnTrainModel.disabled = true;
+  } catch (e) {
+    showMsg(msgTrain, 'err', '오류: ' + e.message);
+  }
+});
+
+// KNN 모델 훈련
+btnTrainModel.addEventListener('click', async () => {
+  btnTrainModel.disabled = true;
+  btnTrainModel.textContent = '⏳ 훈련 중...';
+  showMsg(msgTrain, 'info', 'KNN 모델 훈련 중...');
+  document.getElementById('train-result-box').style.display = 'none';
+
+  try {
+    const r = await fetch(`${API_BASE}/train`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ n_neighbors: 5 }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.message || `HTTP ${r.status}`);
+
+    showMsg(msgTrain, 'ok', `✅ 훈련 완료! ${data.label_count}개 단어`);
+    document.getElementById('res-words').textContent = data.label_count + '개';
+    document.getElementById('res-samples').textContent = data.samples + '개';
+    document.getElementById('res-acc').textContent =
+      typeof data.accuracy === 'number' ? data.accuracy + '%' : data.accuracy;
+    document.getElementById('train-result-box').style.display = 'block';
+    // 훈련 후 단어 목록 즉시 갱신
+    if (data.labels && data.labels.length > 0) {
+      wordBadges.innerHTML = data.labels.map(w => `<span class="word-badge">${w}</span>`).join('');
+    } else {
+      await fetchKnownWords();
+    }
+  } catch (e) {
+    showMsg(msgTrain, 'err', `오류: ${e.message}`);
+  }
+  btnTrainModel.textContent = '🧠 KNN 모델 훈련';
+  btnTrainModel.disabled = false;
+});
+
+// 상태 동기화 (학습된 단어 목록)
+async function refreshStatus() {
+  try {
+    const r = await fetch(`${API_BASE}/status`);
+    const d = await r.json();
+    updateWordBadges(d.csv_exists, d.model_exists);
+  } catch {}
+}
+
+function updateWordBadges(csvExists, modelExists) {
+  btnTrainModel.disabled = !csvExists;
+  if (!csvExists) {
+    wordBadges.innerHTML = '<span class="no-words">아직 학습된 단어가 없습니다</span>';
+    return;
+  }
+  wordBadges.innerHTML = '<span class="no-words">데이터 수집됨 — 모델 훈련 후 단어 목록 표시</span>';
+  if (modelExists) {
+    // 모델이 있으면 predict 엔드포인트에서 known_words 가져오기
+    fetchKnownWords();
+  }
+}
+
+async function fetchKnownWords() {
+  try {
+    const canvas = document.getElementById('cap-canvas');
+    canvas.width = 2; canvas.height = 2;
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
+    const fd = new FormData();
+    fd.append('frame', blob, 'blank.jpg');
+    const r = await fetch(`${API_BASE}/predict-frame`, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.known_words && d.known_words.length > 0) {
+      wordBadges.innerHTML = d.known_words.map(w =>
+        `<span class="word-badge">${w}</span>`).join('');
+    }
+  } catch {}
+}
+
+function updateTimer() {
+  elapsed++;
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  timerEl.textContent = `${m}:${s}`;
+}
+
+// ══════════════ 인식 탭 ══════════════
+
+const camWrapRecog = document.getElementById('cam-wrap-recog');
+const camPhRecog   = document.getElementById('cam-ph-recog');
+const camVidRecog  = document.getElementById('cam-vid-recog');
+const predictBadge = document.getElementById('predict-badge');
+const predictWord  = document.getElementById('predict-word');
+const predictConf  = document.getElementById('predict-conf');
+const btnToggle    = document.getElementById('btn-toggle-recog');
+const msgRecog     = document.getElementById('msg-recog');
+const historyCard  = document.getElementById('history-card');
+const recogHistory = document.getElementById('recog-history');
+
+const capCanvas = document.getElementById('cap-canvas');
+const capCtx    = capCanvas.getContext('2d');
+
+let recogStream = null, recogActive = false, recogTimer = null;
+let lastWord = null, pendingWord = null, pendingCount = 0;
+const STABLE_FRAMES = 3; // 동일 결과 N회 연속일 때만 표시
+
+btnToggle.addEventListener('click', async () => {
+  if (!recogActive) {
+    await startRecog();
+  } else {
+    stopRecog();
+  }
+});
+
+async function startRecog() {
+  try {
+    recogStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    camVidRecog.srcObject = recogStream;
+    camVidRecog.style.display = 'block';
+    camPhRecog.style.display = 'none';
+    camWrapRecog.classList.add('ready');
+    recogActive = true;
+    btnToggle.textContent = '⏹ 인식 중지';
+    btnToggle.style.background = 'rgba(255,71,87,0.2)';
+    predictBadge.style.display = 'block';
+    predictConf.style.display = 'block';
+    historyCard.style.display = 'block';
+    showMsg(msgRecog, 'info', '손을 카메라 앞에 놓고 수어를 해주세요');
+    recogTimer = setInterval(captureAndPredict, 600);
+  } catch (e) {
+    showMsg(msgRecog, 'err', '카메라 오류: ' + e.message);
+  }
+}
+
+function stopRecog() {
+  clearInterval(recogTimer);
+  recogActive = false;
+  if (recogStream) { recogStream.getTracks().forEach(t => t.stop()); recogStream = null; }
+  camVidRecog.srcObject = null;
+  camVidRecog.style.display = 'none';
+  camPhRecog.style.display = 'flex';
+  camWrapRecog.classList.remove('ready');
+  predictBadge.style.display = 'none';
+  predictConf.style.display = 'none';
+  btnToggle.textContent = '▶ 인식 시작';
+  btnToggle.style.background = '';
+  msgRecog.style.display = 'none';
+}
+
+async function captureAndPredict() {
+  if (!recogActive || !camVidRecog.videoWidth) return;
+  capCanvas.width  = camVidRecog.videoWidth;
+  capCanvas.height = camVidRecog.videoHeight;
+  // 거울 모드 보정 (서버는 정방향 이미지 필요)
+  capCtx.save();
+  capCtx.translate(capCanvas.width, 0);
+  capCtx.scale(-1, 1);
+  capCtx.drawImage(camVidRecog, 0, 0);
+  capCtx.restore();
+
+  try {
+    const blob = await new Promise(res => capCanvas.toBlob(res, 'image/jpeg', 0.7));
+    const fd = new FormData();
+    fd.append('frame', blob, 'frame.jpg');
+    const r = await fetch(`${API_BASE}/predict-frame`, { method: 'POST', body: fd });
+    const d = await r.json();
+
+    if (d.label) {
+      if (d.label === pendingWord) {
+        pendingCount++;
+      } else {
+        pendingWord = d.label;
+        pendingCount = 1;
+      }
+      if (pendingCount >= STABLE_FRAMES) {
+        predictWord.textContent = d.label;
+        predictConf.textContent = `${Math.round(d.confidence * 100)}%`;
+        if (d.label !== lastWord) {
+          lastWord = d.label;
+          addHistory(d.label, d.confidence);
+        }
+      }
+    } else {
+      pendingWord = null;
+      pendingCount = 0;
+      predictWord.textContent = '—';
+      predictConf.textContent = '';
+    }
+  } catch {}
+}
+
+function addHistory(word, conf) {
+  const el = document.createElement('div');
+  el.className = 'hist-item';
+  el.innerHTML = `<span class="hist-word">${word}</span>
+                  <span class="hist-conf">${Math.round(conf * 100)}%</span>`;
+  recogHistory.prepend(el);
+  if (recogHistory.children.length > 20)
+    recogHistory.removeChild(recogHistory.lastChild);
+}
+
+// ── 유틸 ─────────────────────────────────────────────────────
+function showMsg(el, type, text) {
+  el.className = `msg ${type}`;
+  el.textContent = text;
+  el.style.display = 'block';
+}
+
+// 초기 상태 로드
+(async () => {
+  try {
+    const r = await fetch(`${API_BASE}/status`);
+    const d = await r.json();
+    updateWordBadges(d.csv_exists, d.model_exists);
+  } catch {}
+})();
+</script>
+</body>
+</html>

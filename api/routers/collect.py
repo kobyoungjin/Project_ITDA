@@ -8,7 +8,6 @@
 """
 import os
 import csv
-import math
 import time
 import uuid
 import json
@@ -17,18 +16,37 @@ import anyio
 import joblib
 import numpy as np
 from pathlib import Path
+import cv2
 from fastapi import APIRouter, UploadFile, File
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import shutil
-import cv2
-import mediapipe as mp
 from api.core.ml_utils import extract_ksl_features, augment_landmarks
+
+# MediaPipe Tasks API 모델 경로 (mp.solutions 대신 사용)
+_ROOT = Path(__file__).resolve().parents[2]
+POSE_MODEL_PATH = _ROOT / "api" / "data" / "pose_landmarker_lite.task"
+HAND_MODEL_PATH = _ROOT / "api" / "data" / "hand_landmarker.task"
+_HAND_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/"
+    "hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task"
+)
+
+
+def _ensure_hand_model() -> None:
+    """hand_landmarker.task 없으면 자동 다운로드."""
+    if HAND_MODEL_PATH.exists():
+        return
+    print("[Collect] hand_landmarker.task 다운로드 중...")
+    import urllib.request
+    urllib.request.urlretrieve(_HAND_MODEL_URL, str(HAND_MODEL_PATH))
+    print(f"[Collect] 다운로드 완료: {HAND_MODEL_PATH}")
 
 router = APIRouter()
 
-# ── 저장 경로 ────────────────────────────────────────────────
-DATA_DIR = Path("api/data/ksl_training")
+# ── 저장 경로 (절대 경로 — 서버 실행 위치에 무관) ──────────────
+DATA_DIR = Path(__file__).resolve().parents[2] / "api" / "data" / "ksl_training"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 CSV_PATH = DATA_DIR / "ksl_dataset.csv"
 MODEL_PATH = DATA_DIR / "knn_model.pkl"
@@ -71,6 +89,31 @@ def start_collection(req: StartRequest):
     _collect_state["count"] = 0
     _collect_state["started_at"] = time.time()
     return {"ok": True, "label": _collect_state["label"], "message": f"'{req.label}' 수집 시작!"}
+
+
+def _do_reset() -> dict:
+    removed = []
+    for path in [CSV_PATH, MODEL_PATH]:
+        try:
+            if path.exists():
+                path.unlink()
+                removed.append(path.name)
+        except Exception:
+            pass
+    try:
+        from api.services.knn_classifier import reload_model
+        reload_model()
+    except Exception:
+        pass
+    return {"ok": True, "removed": removed, "message": "데이터 초기화 완료. 처음부터 학습하세요."}
+
+@router.get("/reset")
+def reset_get():
+    return _do_reset()
+
+@router.post("/reset")
+def reset_post():
+    return _do_reset()
 
 
 @router.post("/stop")
@@ -135,7 +178,11 @@ def add_sample(req: SampleRequest):
 @router.post("/train")
 def train_knn(req: TrainRequest):
     """수집된 CSV 데이터로 KNN 모델 훈련"""
-    return train_knn_model(req.n_neighbors)
+    import traceback
+    try:
+        return train_knn_model(req.n_neighbors)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(e), "trace": traceback.format_exc()})
 
 def train_knn_model(n_neighbors: int = 5):
     """내부 학습 로직"""
@@ -152,7 +199,7 @@ def train_knn_model(n_neighbors: int = 5):
     original_len = len(df)
     df = df.drop_duplicates() # 중복 노이즈 제거
     # 클래스 불균형 해소: 단어당 최대 100개 샘플만 사용하여 오버피팅 방지
-    df = df.groupby('label').head(100).reset_index(drop=True)
+    df = df.groupby('label').head(300).reset_index(drop=True)
     
     if len(df) < original_len:
         print(f"[Collect] 데이터 정제: {original_len} -> {len(df)} (중복 및 초과 샘플 제거)")
@@ -161,20 +208,20 @@ def train_knn_model(n_neighbors: int = 5):
     if len(df) < 10:
         return {"ok": False, "message": f"샘플 수 부족 ({len(df)}개). 최소 10개 이상 필요합니다."}
 
-    X = df.drop("label", axis=1).values
-    y = df["label"].values
-    labels = sorted(set(y))
+    X = df.drop("label", axis=1).to_numpy(dtype=float)
+    y = df["label"].to_numpy(dtype=str)
+    labels = sorted({str(l) for l in y})
 
     # [개선] n_neighbors 를 데이터 크기에 맞춰 동적으로 조정
     final_n = min(n_neighbors, len(df) // 2)
     if final_n < 1: final_n = 1
 
     # [개선] 동작의 '형태'를 중시하는 코사인 유사도(Cosine) 메트릭 적용 및 가중치 강화
-    model = KNeighborsClassifier(n_neighbors=final_n, metric="cosine", weights="distance")
-    
-    # 교차 검증으로 정확도 측정
+    model = KNeighborsClassifier(n_neighbors=final_n, metric="cosine", weights="distance", n_jobs=1)
+
+    # 교차 검증 (n_jobs=1: joblib 멀티프로세싱 비활성화 — FastAPI 스레드 충돌 방지)
     if len(df) >= 20:
-        scores = cross_val_score(model, X, y, cv=min(5, len(labels)), scoring="accuracy")
+        scores = cross_val_score(model, X, y, cv=min(5, len(labels)), scoring="accuracy", n_jobs=1)
         accuracy = float(scores.mean())
     else:
         accuracy = None
@@ -206,8 +253,8 @@ async def collect_from_video(label: str, file: UploadFile = File(...)):
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    saved_count = _process_video_file(temp_path, label)
-    
+    saved_count = await anyio.to_thread.run_sync(_process_video_file, temp_path, label)
+
     if temp_path.exists():
         os.remove(temp_path)
 
@@ -302,87 +349,194 @@ async def collect_batch(limit_words: int = 50):
         "train_result": train_res
     }
 
+_POSE_KEYS = {
+    "left_shoulder": 11, "right_shoulder": 12,
+    "left_elbow": 13,    "right_elbow": 14,
+    "left_wrist": 15,    "right_wrist": 16,
+}
+
+
+# ── MediaPipe 싱글톤 (매 프레임 재생성 방지) ─────────────────────
+_hand_det = None
+_pose_det = None
+
+
+def _get_detectors():
+    """HandLandmarker / PoseLandmarker 싱글톤 반환 (최초 1회만 초기화)."""
+    global _hand_det, _pose_det
+    if _hand_det is not None:
+        return _hand_det, _pose_det
+
+    from mediapipe.tasks import python as mp_python
+    from mediapipe.tasks.python import vision
+
+    _ensure_hand_model()
+
+    hand_opts = vision.HandLandmarkerOptions(
+        base_options=mp_python.BaseOptions(model_asset_path=str(HAND_MODEL_PATH)),
+        running_mode=vision.RunningMode.IMAGE,
+        num_hands=2,
+        min_hand_detection_confidence=0.5,
+    )
+    _hand_det = vision.HandLandmarker.create_from_options(hand_opts)
+
+    if POSE_MODEL_PATH.exists():
+        pose_opts = vision.PoseLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=str(POSE_MODEL_PATH)),
+            running_mode=vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=0.3,
+        )
+        _pose_det = vision.PoseLandmarker.create_from_options(pose_opts)
+
+    return _hand_det, _pose_det
+
+
+def _mp_tasks_detect(rgb: np.ndarray):
+    """
+    RGB 이미지 한 장에서 손/포즈 랜드마크 추출.
+    싱글톤 landmarker 재사용 — 매 프레임 초기화 오버헤드 제거.
+    반환: (right_lms, left_lms, pose_res)
+    """
+    from mediapipe import Image as MpImage, ImageFormat
+
+    hand_det, pose_det = _get_detectors()
+
+    mp_image = MpImage(
+        image_format=ImageFormat.SRGB,
+        data=np.ascontiguousarray(rgb, dtype=np.uint8),
+    )
+
+    # ── 손 검출 ──────────────────────────────────────────────────
+    right_lms, left_lms = None, None
+    h = hand_det.detect(mp_image)
+    if h.hand_landmarks and h.handedness:
+        for i, hh in enumerate(h.handedness):
+            if hh[0].score < 0.5:
+                continue
+            lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in h.hand_landmarks[i]]
+            wrist, mid_tip = lms[0], lms[12]
+            hand_size = ((wrist["x"] - mid_tip["x"]) ** 2 + (wrist["y"] - mid_tip["y"]) ** 2) ** 0.5
+            if hand_size < 0.04:
+                continue
+            side = hh[0].category_name
+            if side == "Right":
+                right_lms = lms
+            else:
+                left_lms = lms
+
+    # ── 포즈 검출 ────────────────────────────────────────────────
+    pose_res = None
+    if pose_det:
+        p = pose_det.detect(mp_image)
+        if p.pose_landmarks:
+            lm = p.pose_landmarks[0]
+            pose_res = {"landmarks": {
+                k: {"x": lm[idx].x, "y": lm[idx].y, "z": lm[idx].z, "visibility": lm[idx].visibility}
+                for k, idx in _POSE_KEYS.items()
+            }}
+
+    return right_lms, left_lms, pose_res
+
+
 def _process_video_file(video_path: Path, label: str):
     """
     실제 비디오 분석 (CPU 집약적 작업)
+    PyAV로 WebM/VP9 포함 모든 브라우저 녹화 포맷 지원.
+    MediaPipe Tasks API 사용.
     [증강 적용] 프레임 1개 -> 원본 1 + 증강 8 = 총 9배 샘플 자동 생성
     """
-    mp_hands = mp.solutions.hands
-    mp_pose = mp.solutions.pose
+    import av
     saved_count = 0
-    
-    POSE_KEYS = {
-        "left_shoulder": 11, "right_shoulder": 12,
-        "left_elbow": 13,    "right_elbow": 14,
-        "left_wrist": 15,    "right_wrist": 16,
-    }
 
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
+    # PyAV로 모든 프레임 읽기 (WebM/VP9 지원)
+    all_frames = []
+    try:
+        container = av.open(str(video_path))
+        for packet in container.demux(video=0):
+            for frame in packet.decode():
+                all_frames.append(frame.to_ndarray(format="rgb24"))
+        container.close()
+    except Exception as e:
+        print(f"[Collect] 영상 읽기 실패 ({video_path.name}): {e}")
+        return 0
+
+    if not all_frames:
         return 0
 
     try:
-        with mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, \
-             mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5) as pose:
-            
-            count = 0
-            while cap.isOpened() and saved_count < 100:
-                ret, frame = cap.read()
-                if not ret: break
-                
-                count += 1
-                if count % 5 != 0: continue
-                
-                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                res_hands = hands.process(image)
-                res_pose = pose.process(image)
-                
-                pose_res = None
-                if res_pose.pose_landmarks:
-                    lm_dict = {}
-                    for k, idx in POSE_KEYS.items():
-                        lm = res_pose.pose_landmarks.landmark[idx]
-                        lm_dict[k] = {"x": lm.x, "y": lm.y, "z": lm.z, "visibility": lm.visibility}
-                    pose_res = {"landmarks": lm_dict}
+        for count, image in enumerate(all_frames):
+            if saved_count >= 300:
+                break
+            if count % 5 != 0:
+                continue
 
-                if res_hands.multi_hand_landmarks:
-                    right_lms = None
-                    left_lms = None
-                    if res_hands.multi_handedness:
-                        for idx, hand_handedness in enumerate(res_hands.multi_handedness):
-                            label_side = hand_handedness.classification[0].label
-                            hlm = res_hands.multi_hand_landmarks[idx]
-                            lms = [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hlm.landmark]
-                            if label_side == "Right": right_lms = lms
-                            else: left_lms = lms
-                    
-                    # 원본 저장
-                    features = extract_ksl_features(right_lms, left_lms, pose_res)
-                    if features:
-                        _save_sample(features, label)
-                        saved_count += 1
+            right_lms, left_lms, pose_res = _mp_tasks_detect(image)
 
-                    # 증강 샘플 (팔 관절은 원본 유지, 양손 독립 증강으로 개선)
-                    for _ in range(8):
-                        if saved_count >= 100: break
+            if right_lms or left_lms:
+                features = extract_ksl_features(right_lms, left_lms, pose_res)
+                if features:
+                    _save_sample(features, label)
+                    saved_count += 1
+
+                    for _ in range(29):
+                        if saved_count >= 300:
+                            break
                         aug_r = augment_landmarks(right_lms, n=1)[0] if right_lms else None
                         aug_l = augment_landmarks(left_lms, n=1)[0] if left_lms else None
-                        
                         aug_feats = extract_ksl_features(aug_r, aug_l, pose_res)
                         if aug_feats:
                             _save_sample(aug_feats, label)
                             saved_count += 1
+    except Exception as e:
+        print(f"[Collect] MediaPipe 처리 오류: {e}")
 
-    finally:
-        cap.release()
-        
     return saved_count
 
 def _save_sample(features, label):
     is_new = not CSV_PATH.exists()
+    if is_new:
+        # BOM 포함으로 신규 파일 생성 → Excel에서 한글 정상 표시
+        with open(CSV_PATH, "w", newline="", encoding="utf-8-sig") as f:
+            csv.writer(f).writerow([f"f{i}" for i in range(len(features))] + ["label"])
     with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if is_new:
-            header = [f"f{i}" for i in range(len(features))] + ["label"]
-            writer.writerow(header)
-        writer.writerow(features + [label])
+        csv.writer(f).writerow(features + [label])
+
+
+# ── 실시간 인식 ───────────────────────────────────────────────
+
+def _run_mediapipe_on_image(rgb: np.ndarray) -> tuple:
+    """단일 RGB 이미지에서 손/포즈 랜드마크 추출 → (right_lms, left_lms, pose_res)"""
+    return _mp_tasks_detect(rgb)
+
+
+@router.post("/predict-frame")
+async def predict_frame(frame: UploadFile = File(...)):
+    """
+    카메라에서 캡처한 단일 JPEG/PNG 프레임 → KNN 예측 결과 반환.
+    실시간 인식용 (200~500ms 폴링).
+    """
+    from api.services.knn_classifier import predict, is_model_ready, get_labels
+
+    if not is_model_ready():
+        return JSONResponse({"label": None, "confidence": 0.0,
+                             "message": "모델 없음 — 먼저 학습하세요"})
+
+    img_bytes = await frame.read()
+    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+    rgb = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    if rgb is None:
+        return JSONResponse({"label": None, "confidence": 0.0,
+                             "message": "이미지 디코딩 실패"})
+    rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+
+    right_lms, left_lms, pose_res = await anyio.to_thread.run_sync(
+        _run_mediapipe_on_image, rgb
+    )
+
+    label, conf = predict(right_lms, left_lms, pose_res)
+    return JSONResponse({
+        "label": label,
+        "confidence": round(conf, 3),
+        "known_words": get_labels(),
+    })

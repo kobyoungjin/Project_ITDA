@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # Gemini API Key
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
+    # Supabase Storage
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+
     # AI Hub Validation Data Path
     AI_HUB_DATA_PATH: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "morpheme")
 
